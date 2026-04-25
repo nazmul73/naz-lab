@@ -26,6 +26,16 @@ LIVEPORTRAIT_OUTPUT_DIR = BASE_DIR / "liveportrait_outputs"
 OLLAMA_ENDPOINT = "http://localhost:11434/api/generate"
 OLLAMA_HEALTH_ENDPOINT = "http://localhost:11434/api/tags"
 
+GENERAL_CHAT_SYSTEM_PROMPT = """You are Naz Lab General Assistant.
+You are a helpful, conversational AI assistant for Nazmul.
+You can discuss any topic the user asks about, including content creation, AI tools, coding, Colab errors, business, productivity, Facebook growth, writing, prompts, and general knowledge.
+Answer naturally in the user's language.
+If the user writes Bangla, reply in Bangla.
+If the user writes English, reply in English.
+Do not restrict yourself to one content task.
+Ask clarifying questions only when needed.
+When the user's prompt is weak, vague, or missing important details, teach the user how to improve the prompt and provide a better prompt version."""
+
 for folder in [
     BASE_DIR,
     OUTPUT_DIR,
@@ -139,6 +149,10 @@ def merged_gems():
 
 def generate_with_ollama(model: str, system_prompt: str, user_prompt: str, temperature: float) -> str:
     full_prompt = f"SYSTEM:\n{system_prompt}\n\nUSER:\n{user_prompt}\n\nOUTPUT:\n"
+    return call_ollama(model, full_prompt, temperature)
+
+
+def call_ollama(model: str, full_prompt: str, temperature: float) -> str:
     payload = {
         "model": model,
         "prompt": full_prompt,
@@ -161,6 +175,16 @@ def generate_with_ollama(model: str, system_prompt: str, user_prompt: str, tempe
         return f"ERROR: {exc}"
 
 
+def build_chat_prompt(messages):
+    lines = [f"SYSTEM:\n{GENERAL_CHAT_SYSTEM_PROMPT}\n"]
+    for message in messages:
+        role = message.get("role", "user").upper()
+        content = message.get("content", "")
+        lines.append(f"{role}:\n{content}\n")
+    lines.append("ASSISTANT:\n")
+    return "\n".join(lines)
+
+
 def save_text_output(agent: str, model: str, prompt: str, output: str):
     path = OUTPUT_DIR / f"naz_lab_{now_stamp()}.txt"
     content = (
@@ -169,6 +193,17 @@ def save_text_output(agent: str, model: str, prompt: str, output: str):
         + f"\n\nAgent: {agent}\nModel: {model}\nTimestamp: {now_stamp()}\n\nPROMPT:\n{prompt}\n\nOUTPUT:\n{output}\n"
     )
     path.write_text(content, encoding="utf-8")
+    return path
+
+
+def save_chat_transcript(messages, model: str):
+    path = OUTPUT_DIR / f"naz_lab_chat_{now_stamp()}.txt"
+    lines = ["NAZ LAB GENERAL CHAT", "=" * 40, f"Model: {model}", f"Timestamp: {now_stamp()}", ""]
+    for message in messages:
+        role = message.get("role", "user").upper()
+        content = message.get("content", "")
+        lines.append(f"{role}:\n{content}\n")
+    path.write_text("\n".join(lines), encoding="utf-8")
     return path
 
 
@@ -210,8 +245,16 @@ def tool_card(title, purpose, status, output_dir, fields, job_dir, safety_note=N
         st.warning(safety_note)
 
 
+if "chat_messages" not in st.session_state:
+    st.session_state.chat_messages = [
+        {
+            "role": "assistant",
+            "content": "আমি Naz Lab General Assistant. আপনি যেকোনো বিষয়ে কথা বলতে পারেন—content, coding, Colab error, business, prompt, planning বা general প্রশ্ন।",
+        }
+    ]
+
 st.title("🧪 Naz Lab AI Workstation")
-st.caption("Free AI content workstation: Story, Script, Custom Gems, Image Tools, Voice Tools, Video Tools, and Final Content Planning.")
+st.caption("Free AI content workstation: Chat, Story, Script, Custom Gems, Image Tools, Voice Tools, Video Tools, and Final Content Planning.")
 
 with st.sidebar:
     st.header("Naz Lab Control")
@@ -220,9 +263,44 @@ with st.sidebar:
     all_gems = merged_gems()
     selected_gem = st.selectbox("Naz Gem", list(all_gems.keys()))
 
-tabs = st.tabs(["AI Agents", "Custom Gems", "Image Tools", "Voice Tools", "Video Tools", "Output Library", "Settings"])
+tabs = st.tabs(["Chat", "AI Agents", "Custom Gems", "Image Tools", "Voice Tools", "Video Tools", "Output Library", "Settings"])
 
 with tabs[0]:
+    st.header("General Chat")
+    st.write("Normal assistant mode. Ask anything: content, coding, Colab errors, business, prompts, planning, or general questions.")
+
+    clear_col, save_col = st.columns(2)
+    with clear_col:
+        if st.button("Clear Chat"):
+            st.session_state.chat_messages = []
+            st.rerun()
+    with save_col:
+        if st.button("Save Chat"):
+            try:
+                chat_path = save_chat_transcript(st.session_state.chat_messages, model)
+                st.success(f"Saved chat: {chat_path}")
+            except Exception as exc:
+                st.error(f"Chat save failed: {exc}")
+
+    for message in st.session_state.chat_messages:
+        with st.chat_message(message.get("role", "assistant")):
+            st.write(message.get("content", ""))
+
+    user_message = st.chat_input("Message Naz Lab...")
+    if user_message:
+        st.session_state.chat_messages.append({"role": "user", "content": user_message})
+        with st.chat_message("user"):
+            st.write(user_message)
+
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                full_prompt = build_chat_prompt(st.session_state.chat_messages)
+                assistant_reply = call_ollama(model, full_prompt, temperature)
+                st.write(assistant_reply)
+
+        st.session_state.chat_messages.append({"role": "assistant", "content": assistant_reply})
+
+with tabs[1]:
     st.header("AI Agents")
     gem = all_gems[selected_gem]
     st.info(gem.get("description", ""))
@@ -242,7 +320,7 @@ with tabs[0]:
                 st.error(f"Save failed: {exc}")
             st.download_button("Download Output", output, file_name="naz_lab_output.txt", mime="text/plain")
 
-with tabs[1]:
+with tabs[2]:
     st.header("Custom Gems")
     st.write("Create new specialist Naz Gems without editing code.")
     with st.form("custom_gem_form"):
@@ -285,7 +363,7 @@ with tabs[1]:
                     write_json(CUSTOM_GEMS_PATH, remaining)
                     st.success("Deleted. Refresh the page to update dropdown.")
 
-with tabs[2]:
+with tabs[3]:
     st.header("Image Tools")
     tool_card(
         "Fooocus",
@@ -296,7 +374,7 @@ with tabs[2]:
         IMAGE_JOB_DIR,
     )
 
-with tabs[3]:
+with tabs[4]:
     st.header("Voice Tools")
     tool_card(
         "XTTS v2",
@@ -308,7 +386,7 @@ with tabs[3]:
         "Use only your own voice, licensed voice, or voice with clear permission.",
     )
 
-with tabs[4]:
+with tabs[5]:
     st.header("Video Tools")
     face_col, live_col = st.columns(2)
     with face_col:
@@ -332,7 +410,7 @@ with tabs[4]:
             "Use only your own face, licensed assets, or people who gave clear permission. Do not impersonate real people or create misleading content.",
         )
 
-with tabs[5]:
+with tabs[6]:
     st.header("Output Library")
     files = sorted(OUTPUT_DIR.glob("*.txt"), key=lambda item: item.stat().st_mtime, reverse=True)[:10]
     if not files:
@@ -342,7 +420,7 @@ with tabs[5]:
         st.code(selected)
         st.text_area("Preview", Path(selected).read_text(encoding="utf-8"), height=360)
 
-with tabs[6]:
+with tabs[7]:
     st.header("Settings")
     st.write("Ollama endpoint:", OLLAMA_ENDPOINT)
     st.write("Ollama health endpoint:", OLLAMA_HEALTH_ENDPOINT)
