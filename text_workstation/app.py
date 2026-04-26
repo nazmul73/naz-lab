@@ -40,7 +40,9 @@ from shared.json_utils import (  # noqa: E402
 OLLAMA_GENERATE_ENDPOINT = "http://localhost:11434/api/generate"
 OLLAMA_HEALTH_ENDPOINT = "http://localhost:11434/api/tags"
 DEFAULT_MODEL = "gemma2:2b"
+CPU_FALLBACK_MODEL = "tinyllama"
 OPTIONAL_MODEL = "mistral"
+AVAILABLE_MODELS = [DEFAULT_MODEL, CPU_FALLBACK_MODEL, OPTIONAL_MODEL]
 
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 
@@ -303,6 +305,7 @@ def render_settings(model: str) -> None:
     st.markdown("### Paths")
     st.write({
         "model": model,
+        "available_models": AVAILABLE_MODELS,
         "generate_endpoint": OLLAMA_GENERATE_ENDPOINT,
         "health_endpoint": OLLAMA_HEALTH_ENDPOINT,
         "base_path": str(BASE_PATH),
@@ -328,11 +331,13 @@ def main() -> None:
     update_workstation_status(WORKSTATION_LINKS_JSON, "text_workstation", {"status": "running"})
     with st.sidebar:
         st.header("Naz Lab Core")
-        model = st.selectbox("Model", [DEFAULT_MODEL, OPTIONAL_MODEL], index=0)
+        model = st.selectbox("Model", AVAILABLE_MODELS, index=0)
         page = st.radio(
             "Mode",
             ["General Chat", "Free Writer", "Re-writer", "Story Writer", "Viral Script Writer", "Caption Writer", "Prompt Improver", "Output Library", "Settings"],
         )
+        if model == CPU_FALLBACK_MODEL:
+            st.info("CPU fallback model selected. Faster on CPU, lower quality than gemma2:2b.")
         st.caption("Cloudflare Tunnel is primary. Localtunnel is fallback only.")
     if page == "General Chat":
         render_general_chat(model)
