@@ -1,13 +1,12 @@
-"""Naz Lab Phase 1 Text Workstation.
+"""Naz Lab Phase 1.2 Text Workstation.
 
-A lightweight Streamlit workstation for general chat and text-generation modes.
+A lightweight Streamlit workstation for general chat and flexible text-generation modes.
 It uses Ollama as the local LLM backend and writes outputs, logs, status, and
 image job queue items to Google Drive via the Phase 0 shared utilities.
 """
 
 from __future__ import annotations
 
-import json
 import sys
 import uuid
 from datetime import datetime
@@ -46,6 +45,16 @@ OPTIONAL_MODEL = "mistral"
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 
 MODE_CONFIG = {
+    "Free Writer": {
+        "prompt_file": "free_writer.md",
+        "output_dir": TEXT_OUTPUTS,
+        "prefix": "free_writer",
+    },
+    "Re-writer": {
+        "prompt_file": "rewriter.md",
+        "output_dir": TEXT_OUTPUTS,
+        "prefix": "rewriter",
+    },
     "Story Writer": {
         "prompt_file": "story_writer.md",
         "output_dir": TEXT_OUTPUTS,
@@ -68,9 +77,23 @@ MODE_CONFIG = {
     },
 }
 
+MODE_HELP = {
+    "Free Writer": "Universal writing mode for posts, emails, letters, scripts, captions, summaries, translations, and content plans.",
+    "Re-writer": "Rewrite, polish, simplify, expand, shorten, translate, or change tone while preserving meaning.",
+    "Story Writer": "Turn any topic into a clear story format.",
+    "Viral Script Writer": "Turn any topic into a short-form video script.",
+    "Caption Writer": "Create captions for any topic or platform.",
+    "Prompt Improver": "Improve image, video, thumbnail, scene, or visual prompt ideas.",
+}
+
 
 def now_stamp() -> str:
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+
+def state_key(mode: str, suffix: str) -> str:
+    normalized = mode.lower().replace(" ", "_").replace("-", "_")
+    return f"{normalized}_{suffix}"
 
 
 def ensure_phase_0_ready() -> list[str]:
@@ -84,24 +107,19 @@ def ensure_phase_0_ready() -> list[str]:
         WORKSTATION_LINKS_JSON,
         OUTPUT_LOG_JSON,
     ]
-    missing = [str(path) for path in required if not path.exists()]
-    return missing
+    return [str(path) for path in required if not path.exists()]
 
 
 def read_prompt(prompt_file: str) -> str:
     path = PROMPTS_DIR / prompt_file
     if not path.exists():
-        return "You are a helpful Naz Lab assistant."
+        return "You are a helpful Naz Lab assistant. Accept any topic from the user."
     return path.read_text(encoding="utf-8").strip()
 
 
 def call_ollama(prompt: str, model: str, system_prompt: str | None = None) -> str:
     final_prompt = prompt if not system_prompt else f"{system_prompt}\n\nUser:\n{prompt}"
-    payload = {
-        "model": model,
-        "prompt": final_prompt,
-        "stream": False,
-    }
+    payload = {"model": model, "prompt": final_prompt, "stream": False}
     response = requests.post(OLLAMA_GENERATE_ENDPOINT, json=payload, timeout=180)
     response.raise_for_status()
     data = response.json()
@@ -211,29 +229,75 @@ def render_general_chat(model: str) -> None:
             st.error(f"Ollama connection error: {exc}")
 
 
+def clear_mode_state(mode: str) -> None:
+    for suffix in ["input", "output", "saved_path", "job_path"]:
+        key = state_key(mode, suffix)
+        if key in st.session_state:
+            del st.session_state[key]
+
+
 def render_writer_mode(mode: str, model: str) -> None:
     config = MODE_CONFIG[mode]
     st.subheader(mode)
-    system_prompt = read_prompt(config["prompt_file"])
-    user_input = st.text_area("Input context or topic", height=180, key=f"input_{mode}")
+    st.caption(MODE_HELP.get(mode, "Accept any topic. The mode controls format, not topic."))
 
-    if st.button(f"Generate {mode}", key=f"generate_{mode}"):
+    input_key = state_key(mode, "input")
+    output_key = state_key(mode, "output")
+    saved_path_key = state_key(mode, "saved_path")
+    job_path_key = state_key(mode, "job_path")
+
+    if input_key not in st.session_state:
+        st.session_state[input_key] = ""
+    if output_key not in st.session_state:
+        st.session_state[output_key] = ""
+    if saved_path_key not in st.session_state:
+        st.session_state[saved_path_key] = ""
+    if job_path_key not in st.session_state:
+        st.session_state[job_path_key] = ""
+
+    system_prompt = read_prompt(config["prompt_file"])
+    user_input = st.text_area(
+        "Input context or topic",
+        height=190,
+        key=input_key,
+        placeholder="Write any topic or task here. The selected mode will control the output format.",
+    )
+
+    col_a, col_b = st.columns(2)
+    with col_a:
+        generate_clicked = st.button(f"Generate {mode}", key=f"generate_{state_key(mode, 'button')}")
+    with col_b:
+        clear_clicked = st.button("Clear This Mode", key=f"clear_{state_key(mode, 'button')}")
+
+    if clear_clicked:
+        clear_mode_state(mode)
+        st.rerun()
+
+    if generate_clicked:
         if not user_input.strip():
             st.warning("Please provide input first.")
             return
         try:
             with st.spinner("Generating..."):
                 result = call_ollama(user_input, model=model, system_prompt=system_prompt)
-            st.markdown("### Output")
-            st.write(result)
+            st.session_state[output_key] = result
             path = save_text_output(config["output_dir"], config["prefix"], result)
-            st.success(f"Saved: {path}")
+            st.session_state[saved_path_key] = str(path)
 
             if mode == "Prompt Improver":
                 job_path = create_image_job(result)
-                st.success(f"Image job created: {job_path}")
+                st.session_state[job_path_key] = str(job_path)
         except Exception as exc:
             st.error(f"Ollama connection error: {exc}")
+            return
+
+    if st.session_state.get(output_key):
+        st.markdown("### Output")
+        st.write(st.session_state[output_key])
+        if st.session_state.get(saved_path_key):
+            st.success(f"Saved: {st.session_state[saved_path_key]}")
+        if mode == "Prompt Improver" and st.session_state.get(job_path_key):
+            st.success(f"Image job created: {st.session_state[job_path_key]}")
 
 
 def render_output_library() -> None:
@@ -243,12 +307,12 @@ def render_output_library() -> None:
         st.info("No saved outputs yet.")
         return
 
-    display = [str(path) for path in files[:50]]
+    display = [str(path) for path in files[:80]]
     selected = st.selectbox("Select output file", display)
     if selected:
         path = Path(selected)
         st.caption(str(path))
-        st.text_area("Preview", path.read_text(encoding="utf-8"), height=300)
+        st.text_area("Preview", path.read_text(encoding="utf-8"), height=320)
 
 
 def render_settings(model: str) -> None:
@@ -289,7 +353,7 @@ def render_settings(model: str) -> None:
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Text Workstation", page_icon="✍️", layout="wide")
     st.title("✍️ Naz Lab Text Workstation")
-    st.caption("Phase 1: General Chat, Story, Viral Script, Caption, Prompt Improver")
+    st.caption("Phase 1.2: General Chat, Free Writer, Re-writer, Story, Script, Caption, Prompt Improver")
 
     missing = ensure_phase_0_ready()
     if missing:
@@ -306,6 +370,8 @@ def main() -> None:
             "Mode",
             [
                 "General Chat",
+                "Free Writer",
+                "Re-writer",
                 "Story Writer",
                 "Viral Script Writer",
                 "Caption Writer",
