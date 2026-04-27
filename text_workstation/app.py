@@ -1,4 +1,4 @@
-"""Naz Lab Phase 1.3 Text Workstation.
+"""Naz Lab Phase 1.4 Text Workstation.
 
 A lightweight Streamlit workstation for general chat and flexible text-generation modes.
 It uses Ollama as the local LLM backend and writes outputs, logs, status, and
@@ -45,6 +45,11 @@ CPU_FALLBACK_MODEL = "tinyllama"
 OPTIONAL_MODEL = "mistral"
 AVAILABLE_MODELS = [DEFAULT_MODEL, CPU_FALLBACK_MODEL, OPTIONAL_MODEL]
 
+DEFAULT_NUM_PREDICT = 220
+CPU_NUM_PREDICT = 120
+TEST_NUM_PREDICT = 12
+REQUEST_TIMEOUT_SECONDS = 180
+
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 
 MODE_CONFIG = {
@@ -57,7 +62,7 @@ MODE_CONFIG = {
 }
 
 MODE_HELP = {
-    "Free Writer": "Universal writing mode for posts, emails, letters, scripts, captions, summaries, translations, and content plans.",
+    "Free Writer": "Universal writing mode for posts, emails, letters, scripts, captions, summaries, and content plans.",
     "Re-writer": "Rewrite, polish, simplify, expand, shorten, translate, or change tone while preserving meaning.",
     "Story Writer": "Turn any topic into a clear story format.",
     "Viral Script Writer": "Turn any topic into a short-form video script.",
@@ -92,13 +97,37 @@ def ensure_phase_0_ready() -> list[str]:
 def read_prompt(prompt_file: str) -> str:
     path = PROMPTS_DIR / prompt_file
     if not path.exists():
-        return "You are a helpful Naz Lab assistant. Accept any topic from the user."
+        return "You are a helpful Naz Lab assistant. Accept any topic from the user. Keep the answer concise."
     return path.read_text(encoding="utf-8").strip()
 
 
-def call_ollama(prompt: str, model: str, system_prompt: str | None = None, timeout: int = 300) -> str:
-    final_prompt = prompt if not system_prompt else f"{system_prompt}\n\nUser:\n{prompt}"
-    payload = {"model": model, "prompt": final_prompt, "stream": False}
+def model_num_predict(model: str, requested: int | None = None) -> int:
+    if requested is not None:
+        return requested
+    if model == CPU_FALLBACK_MODEL:
+        return CPU_NUM_PREDICT
+    return DEFAULT_NUM_PREDICT
+
+
+def call_ollama(
+    prompt: str,
+    model: str,
+    system_prompt: str | None = None,
+    timeout: int = REQUEST_TIMEOUT_SECONDS,
+    num_predict: int | None = None,
+) -> str:
+    final_prompt = prompt if not system_prompt else f"{system_prompt}\n\nUser:\n{prompt}\n\nAssistant:"
+    payload = {
+        "model": model,
+        "prompt": final_prompt,
+        "stream": False,
+        "options": {
+            "num_predict": model_num_predict(model, num_predict),
+            "temperature": 0.4,
+            "top_p": 0.9,
+            "repeat_penalty": 1.12,
+        },
+    }
     response = requests.post(OLLAMA_GENERATE_ENDPOINT, json=payload, timeout=timeout)
     response.raise_for_status()
     data = response.json()
@@ -239,7 +268,7 @@ def render_general_chat(model: str) -> None:
 
 
 def clear_mode_state(mode: str) -> None:
-    for suffix in ["input", "output", "saved_path", "job_path", "status"]:
+    for suffix in ["input", "output", "saved_path", "job_path", "status", "elapsed"]:
         key = state_key(mode, suffix)
         if key in st.session_state:
             del st.session_state[key]
@@ -255,12 +284,14 @@ def render_writer_mode(mode: str, model: str) -> None:
     saved_path_key = state_key(mode, "saved_path")
     job_path_key = state_key(mode, "job_path")
     status_key = state_key(mode, "status")
+    elapsed_key = state_key(mode, "elapsed")
 
     st.session_state.setdefault(input_key, "")
     st.session_state.setdefault(output_key, "")
     st.session_state.setdefault(saved_path_key, "")
     st.session_state.setdefault(job_path_key, "")
     st.session_state.setdefault(status_key, "Ready")
+    st.session_state.setdefault(elapsed_key, "")
 
     system_prompt = read_prompt(config["prompt_file"])
 
@@ -275,24 +306,23 @@ def render_writer_mode(mode: str, model: str) -> None:
         with col_a:
             generate_clicked = st.form_submit_button(f"Generate {mode}", use_container_width=True)
         with col_b:
-            save_input_clicked = st.form_submit_button("Save Input Only", use_container_width=True)
+            quick_clicked = st.form_submit_button("Quick Test", use_container_width=True)
 
-    if save_input_clicked:
-        st.session_state[input_key] = user_input
-        st.session_state[status_key] = "Input saved in session state."
-        st.success("Input saved. You can switch tabs/modes and come back.")
-
-    if generate_clicked:
+    if generate_clicked or quick_clicked:
         st.session_state[input_key] = user_input
         if not user_input.strip():
             st.warning("Please provide input first.")
             return
         try:
             st.session_state[status_key] = "Generating..."
-            with st.spinner("Generating... This can take longer on CPU runtime."):
-                result = call_ollama(user_input, model=model, system_prompt=system_prompt)
+            start = time.time()
+            limit = TEST_NUM_PREDICT if quick_clicked else model_num_predict(model)
+            with st.spinner(f"Generating with {model}. Token limit: {limit}"):
+                result = call_ollama(user_input, model=model, system_prompt=system_prompt, num_predict=limit)
+            elapsed = round(time.time() - start, 2)
+            st.session_state[elapsed_key] = f"{elapsed}s"
             if not result:
-                st.session_state[status_key] = "No text returned from Ollama. Try a shorter prompt or restart Ollama."
+                st.session_state[status_key] = "No text returned from Ollama. Try Quick Test or restart Ollama."
                 st.warning(st.session_state[status_key])
                 return
             st.session_state[output_key] = result
@@ -302,12 +332,13 @@ def render_writer_mode(mode: str, model: str) -> None:
             if mode == "Prompt Improver":
                 job_path = create_image_job(result)
                 st.session_state[job_path_key] = str(job_path)
+            st.rerun()
         except requests.exceptions.Timeout:
-            st.session_state[status_key] = "Timed out. On CPU runtime this model may be too slow. Use tinyllama or switch to T4 GPU."
+            st.session_state[status_key] = "Timed out. Use Quick Test first. On CPU, keep prompts shorter or switch to T4 GPU."
             st.error(st.session_state[status_key])
             return
         except requests.exceptions.ConnectionError:
-            st.session_state[status_key] = "Cannot connect to Ollama. Restart the Colab launcher cell and confirm Ollama is running."
+            st.session_state[status_key] = "Cannot connect to Ollama. Restart Cell 2 launcher and refresh the Cloudflare page."
             st.error(st.session_state[status_key])
             return
         except Exception as exc:
@@ -321,7 +352,9 @@ def render_writer_mode(mode: str, model: str) -> None:
             clear_mode_state(mode)
             st.rerun()
     with col_status:
-        st.caption(f"Status: {st.session_state.get(status_key, 'Ready')}")
+        elapsed = st.session_state.get(elapsed_key, "")
+        suffix = f" | Last generation: {elapsed}" if elapsed else ""
+        st.caption(f"Status: {st.session_state.get(status_key, 'Ready')}{suffix}")
 
     if st.session_state.get(input_key):
         with st.expander("Current saved input", expanded=False):
@@ -380,7 +413,7 @@ def render_settings(model: str) -> None:
         if st.button("Test Selected Model", use_container_width=True):
             try:
                 start = time.time()
-                answer = call_ollama("Reply with only one word: OK", model=model, timeout=180)
+                answer = call_ollama("Reply OK.", model=model, timeout=120, num_predict=TEST_NUM_PREDICT)
                 elapsed = round(time.time() - start, 2)
                 st.success(f"Model replied in {elapsed}s")
                 st.code(answer or "[empty response]")
@@ -396,6 +429,9 @@ def render_settings(model: str) -> None:
             "T4/GPU runtime": DEFAULT_MODEL,
             "optional_heavier_model": OPTIONAL_MODEL,
             "selected_model": model,
+            "cpu_token_limit": CPU_NUM_PREDICT,
+            "default_token_limit": DEFAULT_NUM_PREDICT,
+            "quick_test_token_limit": TEST_NUM_PREDICT,
         }
     )
 
@@ -417,10 +453,25 @@ def render_settings(model: str) -> None:
     )
 
 
+def render_direct_test(model: str) -> None:
+    st.subheader("Direct Test")
+    st.caption("Use this to isolate Ollama/model response without writer prompt files.")
+    prompt = st.text_input("Test prompt", value="Reply with only OK.")
+    if st.button("Run Direct Test"):
+        try:
+            start = time.time()
+            answer = call_ollama(prompt, model=model, system_prompt=None, timeout=120, num_predict=TEST_NUM_PREDICT)
+            elapsed = round(time.time() - start, 2)
+            st.success(f"Direct test completed in {elapsed}s")
+            st.code(answer or "[empty response]")
+        except Exception as exc:
+            st.error(f"Direct test failed: {exc}")
+
+
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Text Workstation", page_icon="✍️", layout="wide")
     st.title("✍️ Naz Lab Text Workstation")
-    st.caption("Phase 1.3: 2-cell launcher support, form-based writer UI, stable session persistence, and model testing.")
+    st.caption("Phase 1.4: CPU-safe generation limits, Quick Test, Direct Test, and stronger generation recovery.")
 
     missing = ensure_phase_0_ready()
     if missing:
@@ -445,11 +496,12 @@ def main() -> None:
                 "Prompt Improver",
                 "Output Library",
                 "Settings",
+                "Direct Test",
             ],
             key="selected_page",
         )
         if model == CPU_FALLBACK_MODEL:
-            st.info("CPU fallback selected. Faster on CPU, lower quality than gemma2:2b.")
+            st.info("CPU fallback selected. Quick Test uses a very small token limit.")
         elif model == DEFAULT_MODEL:
             st.info("Best default for T4/GPU runtime.")
         st.caption("Cloudflare Tunnel is primary. Localtunnel is fallback only.")
@@ -462,6 +514,8 @@ def main() -> None:
         render_output_library()
     elif page == "Settings":
         render_settings(model)
+    elif page == "Direct Test":
+        render_direct_test(model)
 
 
 if __name__ == "__main__":
