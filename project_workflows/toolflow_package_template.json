@@ -1,0 +1,97 @@
+{
+  "project_preset": "ToolFlow",
+  "workflow_phase": "8.1",
+  "language_default": "English",
+  "bangla_version_supported": true,
+  "topic_or_tool": "",
+  "target_audience": "",
+  "use_case": "",
+  "platform": "Facebook / Reels / Carousel",
+  "brand_voice": {
+    "tone": "modern, clean, practical, premium, trustworthy, useful, non-hype",
+    "avoid": [
+      "fake income claims",
+      "spammy marketer tone",
+      "unverified AI news",
+      "crypto speculation",
+      "political content",
+      "generic motivation fluff"
+    ]
+  },
+  "content_angle": "",
+  "main_post_package": {
+    "hook": "",
+    "problem": "",
+    "solution": "",
+    "steps": [],
+    "verdict": "",
+    "cta": ""
+  },
+  "carousel_package": {
+    "slides": [
+      "Hook / promise",
+      "Problem",
+      "Tool or workflow",
+      "Step 1",
+      "Step 2",
+      "Step 3",
+      "Result / benefit",
+      "CTA"
+    ]
+  },
+  "reel_package": {
+    "target_length": "30 seconds",
+    "hook": "",
+    "problem": "",
+    "workflow_steps": [],
+    "result_or_cta": ""
+  },
+  "image_package": {
+    "format": "1:1, 4:5, or 9:16",
+    "visual_style": "clean modern SaaS/productivity aesthetic",
+    "scene_prompt": "",
+    "negative_prompt": "no fake logos, no misleading UI, no clutter, no unreadable text"
+  },
+  "voice_package": {
+    "voice_tone": "practical",
+    "pacing": "medium",
+    "delivery": "creator explainer",
+    "pause_style": "clear sentence breaks",
+    "reference_voice_policy": "reference voice only if user-provided or explicitly authorized"
+  },
+  "video_package": {
+    "format": "9:16 Reel/Shorts",
+    "edit_style": "creator explainer",
+    "subtitle_style": "English subtitles or Bangla subtitles",
+    "scene_sequence": [
+      "Messy workflow/problem",
+      "Tool/system introduction",
+      "2-3 practical steps",
+      "Result/benefit",
+      "CTA"
+    ]
+  },
+  "posting_package": {
+    "captions": [],
+    "cta": "",
+    "hashtags": [
+      "#AITools",
+      "#Productivity",
+      "#Automation",
+      "#SaaS",
+      "#Workflow",
+      "#NoCode",
+      "#DigitalTools",
+      "#ToolFlow"
+    ]
+  },
+  "output_paths": {
+    "main_post_path": "",
+    "carousel_path": "",
+    "reel_script_path": "",
+    "image_job_path": "",
+    "voice_package_path": "",
+    "video_package_path": "",
+    "final_posting_package_path": ""
+  }
+}
