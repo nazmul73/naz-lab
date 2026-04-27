@@ -1,4 +1,4 @@
-"""Naz Lab Master Control Dashboard Phase 2.2."""
+"""Naz Lab Master Control Dashboard Phase 2.3."""
 
 from __future__ import annotations
 
@@ -29,15 +29,16 @@ from shared.drive_paths import (  # noqa: E402
 )
 from shared.json_utils import safe_read_json, update_workstation_status  # noqa: E402
 
-PHASE = "2.2"
-LANGUAGE_REQUIREMENT_EN = "Bangla and English output quality are primary requirements. Other languages are optional."
-LANGUAGE_REQUIREMENT_BN = "বাংলা হবে natural, fluent, Facebook-ready, voiceover-ready, netizen-style, এবং প্রয়োজন হলে আঞ্চলিক tone সহ। English হবে clean, practical, ready-to-use। অন্য ভাষা optional।"
+PHASE = "2.3"
+LANGUAGE_REQUIREMENT_EN = "Bangla and English output quality are primary requirements. Regional Bangla defaults to Rangpur/Nilphamari tone when requested. Other languages are optional."
+LANGUAGE_REQUIREMENT_BN = "বাংলা হবে natural, fluent, Facebook-ready, voiceover-ready, netizen-style। আঞ্চলিক বাংলা চাইলে default হবে রংপুরিয়া/নীলফামারী tone। English হবে clean, practical, ready-to-use। অন্য ভাষা optional।"
 
 BANGLA_STYLE_REQUIREMENTS = {
+    "Primary regional Bangla": "রংপুরিয়া / উত্তরবঙ্গ / নীলফামারী tone হবে default regional flavor।",
     "Core Bangla": "স্বাভাবিক, সহজ, মুখে বলার মতো, ready-to-use বাংলা।",
     "Netizen Bangla": "Facebook comment/post/reel audience-এর মতো natural online tone।",
     "Voiceover Bangla": "মুখে পড়লে যেন কাঠখোট্টা না লাগে; short sentence, clear pacing।",
-    "Regional tone": "User চাইলে ঢাকাইয়া, চাটগাঁইয়া, সিলেটি, নোয়াখালী/কুমিল্লা ইত্যাদি regional flavor support।",
+    "Secondary regional tones": "ঢাকাইয়া, চাটগাঁইয়া, সিলেটি, নোয়াখালী/কুমিল্লা tone থাকবে, কিন্তু user চাইলে ব্যবহার হবে।",
     "English": "Clean, practical, direct, ready-to-use English।",
 }
 
@@ -52,7 +53,7 @@ FOLDERS = {
 
 WORKSTATIONS = [
     {"name": "Text Workstation", "phase": "1.8 stable", "key": "text_workstation", "folder": TEXT_OUTPUTS},
-    {"name": "Master Dashboard", "phase": "2.2 current", "key": "master_dashboard", "folder": BASE_PATH},
+    {"name": "Master Dashboard", "phase": "2.3 current", "key": "master_dashboard", "folder": BASE_PATH},
     {"name": "Image Workstation", "phase": "planned next", "key": "image_workstation", "folder": IMAGE_OUTPUTS},
     {"name": "Voice Workstation", "phase": "planned", "key": "voice_workstation", "folder": BASE_PATH / "voice_outputs"},
     {"name": "Video Workstation", "phase": "planned", "key": "video_workstation", "folder": BASE_PATH / "video_outputs"},
@@ -222,7 +223,8 @@ def render_roadmap(language: str) -> None:
 
 ভাষার priority:
 - বাংলা: natural, fluent, netizen-style, voiceover-ready, ready-to-use হতে হবে।
-- আঞ্চলিক tone: user চাইলে ঢাকাইয়া, চাটগাঁইয়া, সিলেটি, নোয়াখালী/কুমিল্লা flavor support করতে হবে।
+- Primary আঞ্চলিক tone: রংপুরিয়া / উত্তরবঙ্গ / নীলফামারী flavor।
+- Secondary regional support: ঢাকাইয়া, চাটগাঁইয়া, সিলেটি, নোয়াখালী/কুমিল্লা tone থাকবে, কিন্তু user চাইলে।
 - English: clean, practical, ready-to-use হতে হবে।
 - অন্য ভাষা: optional।
 """
@@ -240,7 +242,8 @@ def render_roadmap(language: str) -> None:
 
 Language priority:
 - Bangla must be strong, natural, netizen-style, voiceover-ready, and ready to use.
-- Regional Bangla tone should be supported when requested.
+- Primary regional Bangla tone: Rangpur / North Bengal / Nilphamari flavor.
+- Secondary regional support: Dhakaiya, Chittagonian, Sylheti, Noakhali/Comilla tone when requested.
 - English must be clean, practical, and ready to use.
 - Other languages are optional.
 """
@@ -250,7 +253,7 @@ Language priority:
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Master Dashboard", page_icon="🧪", layout="wide")
     st.title("🧪 Naz Lab Master Control Dashboard")
-    st.caption("Phase 2.2 language-aware dashboard")
+    st.caption("Phase 2.3 Rangpur/Nilphamari-first Bangla dashboard")
 
     update_workstation_status(
         WORKSTATION_LINKS_JSON,
@@ -261,7 +264,7 @@ def main() -> None:
     with st.sidebar:
         st.header("Dashboard settings")
         language = st.radio("Dashboard language note", ["Bangla", "English"], index=0)
-        st.caption("Primary product languages: Bangla and English. Bangla must support natural, netizen-style, voiceover-ready output.")
+        st.caption("Primary Bangla regional default: Rangpur/Nilphamari. Secondary tones available when requested.")
 
     tab_status, tab_workstations, tab_outputs, tab_jobs, tab_roadmap = st.tabs([
         "Status", "Workstations", "Outputs", "Job Queue", "Roadmap"
