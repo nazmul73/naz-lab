@@ -1,161 +1,215 @@
 # Naz Lab AI Workstation
 
-Naz Lab is a modular, free AI content creation workstation designed for Google Colab, Streamlit, Ollama, Google Drive, and open-source creative tools.
+Naz Lab is a modular AI content production lab for Google Colab, Streamlit, Google Drive, Ollama, and future creative backends.
 
-## Vision
+## Current vision
 
 Naz Lab is designed around this workflow:
 
 ```text
-Idea -> Story -> Script -> Image Prompt -> Image Generation -> Voice Generation -> FaceFusion / LivePortrait -> Final Reel Pack
+Idea / Topic
+-> Text package
+-> Image prompt package
+-> Voice package
+-> Video package
+-> Portrait package
+-> Final posting package
 ```
 
-The system is intentionally modular. The main dashboard stays lightweight, while heavy tools run in separate Colab notebooks.
+The system is modular. Each workstation runs as a separate Streamlit app in Colab, while Google Drive stores outputs and JSON packages.
 
-## Current Main Dashboard
+## Global language rule
 
-The main dashboard is built with Streamlit and includes:
+Naz Lab is Bangla-first by default.
 
-- AI Agents
-- Custom Gems
-- Image Tools control center
-- Voice Tools control center
-- Video Tools control center
-- Output Library
-- Settings
-- Ollama health check
-- Google Drive output saving
+Priority:
 
-## Backend
+1. Bangla
+2. English
+3. Other languages optional
 
-The main AI backend is Ollama running locally inside Colab.
+Bangla must be:
 
-Default model:
+- natural spoken Bangla
+- Facebook-ready
+- netizen-friendly
+- voiceover-ready
+- subtitle-friendly when used in video
+- simple and human
+- not stiff textbook Bangla
+
+Default regional flavor:
+
+- Rangpur / Nilphamari / North Bengal
+
+Secondary regional tones are supported when requested:
+
+- Dhakaiya
+- Chattogram
+- Sylhet
+- Noakhali / Comilla
+
+True Noir Tales and ToolFlow can remain English-first project presets when selected.
+
+## Current workstation stack
+
+| Workstation | Phase | Port | Path |
+|---|---:|---:|---|
+| Text Workstation | 1.8 stable | 8501 | `text_workstation/app.py` |
+| Master Dashboard | 2.7 stable | 8502 | `master_dashboard/app.py` |
+| Image Workstation | 3.x stable | 8503 | `image_workstation/app.py` |
+| Voice Workstation | 4.x reference workflow | 8504 | `voice_workstation/app.py` |
+| Video Workstation | 5.3 stable | 8505 | `video_workstation/app.py` |
+| Portrait Workstation | 6.3 stable | 8506 | `portrait_workstation/app.py` |
+
+## Recommended launcher
+
+Use the all-in-one Colab launcher:
 
 ```text
-gemma2:2b
+launchers/all_in_one_colab_launcher.md
 ```
 
-Optional model:
+Supported `WORKSTATION` values:
 
 ```text
-mistral
+text
+dashboard
+image
+voice
+video
+portrait
 ```
 
-Ollama API endpoint:
-
-```text
-http://localhost:11434/api/generate
-```
-
-## Default Naz Gems
-
-- 📖 Storyteller
-- 📱 Viral Scripter
-- 🎬 Video Planner
-- 💼 Business Guru
-
-Custom Gems are stored in:
-
-```text
-/content/drive/MyDrive/NazLab/config/custom_gems.json
-```
-
-## Tool Architecture
-
-### Main Dashboard Notebook
-
-Lightweight control center:
-
-- Streamlit UI
-- Ollama text generation
-- Custom Gems
-- Tool links
-- Job plans
-- Output preview
-
-### FaceFusion Lab
-
-Separate Colab notebook for face swap / face enhancement workflows.
-
-Output folder:
-
-```text
-/content/drive/MyDrive/NazLab/facefusion_outputs
-```
-
-### LivePortrait Lab
-
-Separate Colab notebook for animating static portraits using a driving video.
-
-Output folder:
-
-```text
-/content/drive/MyDrive/NazLab/liveportrait_outputs
-```
-
-### Fooocus Image Lab
-
-Separate planned notebook for image generation from scene prompts.
-
-Output folder:
-
-```text
-/content/drive/MyDrive/NazLab/image_outputs
-```
-
-### XTTS v2 Voice Lab
-
-Separate planned notebook for text-to-speech and voice cloning.
-
-Output folder:
-
-```text
-/content/drive/MyDrive/NazLab/voice_outputs
-```
-
-## Why Separate Notebooks?
-
-FaceFusion, LivePortrait, Fooocus, and XTTS v2 can require heavy dependencies such as CUDA, PyTorch, ONNX Runtime, FFmpeg, and model weights. Keeping them separate prevents the main dashboard from becoming unstable.
-
-## Safety Notice
-
-Use FaceFusion, LivePortrait, and XTTS v2 only with your own face/voice, licensed assets, or people who gave clear permission. Do not impersonate real people or create misleading content.
-
-## Main Files
-
-```text
-app.py
-requirements.txt
-README.md
-colab_main_dashboard.md
-colab_facefusion_lab.md
-colab_liveportrait_lab.md
-colab_fooocus_image_lab.md
-colab_xtts_voice_lab.md
-project_plan.md
-.gitignore
-```
-
-## First Test Order
-
-1. Run the main dashboard notebook.
-2. Confirm Ollama works with gemma2:2b.
-3. Confirm the Streamlit dashboard opens.
-4. Test 📱 Viral Scripter.
-5. Save one output to Google Drive.
-6. Test Custom Gems.
-7. Then run FaceFusion Lab separately.
-8. Then run LivePortrait Lab separately.
-
-## Validation
+Example:
 
 ```bash
-python -m py_compile app.py
-grep -n "Viral" app.py
-grep -n "Fooocus" app.py
-grep -n "XTTS" app.py
-grep -n "FaceFusion" app.py
-grep -n "LivePortrait" app.py
-cat requirements.txt
+WORKSTATION="dashboard"
 ```
+
+## Project workflows
+
+Workflow documentation and templates live in:
+
+```text
+project_workflows/
+```
+
+Current workflows:
+
+- `true_noir_tales_workflow.md`
+- `true_noir_tales_package_template.json`
+- `toolflow_workflow.md`
+- `toolflow_package_template.json`
+
+## Bangla Quality Engine
+
+Core Bangla quality rules live in:
+
+```text
+docs/bangla_quality_engine.md
+shared/bangla_quality_engine.py
+docs/voice_video_bangla_quality.md
+voice_workstation/bangla_voice_quality.py
+video_workstation/bangla_video_quality.py
+```
+
+## Main Google Drive folders
+
+Base path:
+
+```text
+/content/drive/MyDrive/NazLab
+```
+
+Important folders:
+
+```text
+chat_outputs
+text_outputs
+script_outputs
+image_prompts
+image_jobs
+image_outputs
+voice_outputs
+voice_packages
+voice_references
+audio_outputs
+video_outputs
+video_packages
+video_storyboards
+portrait_packages
+portrait_outputs
+portrait_references
+logs
+config
+```
+
+## Workstation purposes
+
+### Text Workstation
+
+General Chat, Free Writer, Re-writer, Story Writer, Viral Script Writer, Caption Writer, Prompt Improver, Output Library, Settings, and Direct Test.
+
+### Master Dashboard
+
+Full-stack status, quick links, output folders, job queue, launcher notes, roadmap, and Bangla-first policy.
+
+### Image Workstation
+
+Image job builder, project presets, Bangladesh scenario policy, no-sindoor default rule, visual prompt package, and manual generator bridge.
+
+### Voice Workstation
+
+Narration direction, TTS direction, script draft, reference audio workflow, package JSON, and future audio backend metadata.
+
+Reference voice/audio workflows must use user-provided or explicitly authorized reference audio only.
+
+### Video Workstation
+
+Video hook, subtitles, scene sequence, timing guide, shot list, editor instruction, storyboard save, and video package JSON.
+
+### Portrait Workstation
+
+Portrait prompt packages, reference image path support, output path validation, positive/negative prompt, and portrait package library.
+
+Face references must be user-provided for the workflow.
+
+## Visual safety defaults
+
+General Naz Lab image/portrait prompts should use Bangladeshi people and scenarios by default.
+
+Rules:
+
+- urban and rural Bangladesh both supported
+- women should have no sindoor unless explicitly requested
+- no gore
+- no blood-focused visuals
+- no dead body
+- no visible wounds
+- no exposed violence
+- adult-only for true-crime/noir content
+
+## Backend status
+
+Current workstations mostly create planning packages and metadata.
+
+Text generation uses Ollama when running Text Workstation.
+
+Future backend integrations can include:
+
+- image generation backend
+- TTS backend
+- authorized reference voice backend
+- video generation/editing backend
+- portrait/reference workflow backend
+
+## Current next steps
+
+Recommended build order:
+
+1. Keep Bangla Quality Engine aligned across all workstations.
+2. Improve project workflow automation for True Noir Tales.
+3. Improve project workflow automation for ToolFlow.
+4. Build a dedicated workflow app/tab for one-topic-to-full-package generation.
+5. Add safer reference managers where needed.
