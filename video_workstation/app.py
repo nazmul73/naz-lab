@@ -1,7 +1,7 @@
-"""Naz Lab Video Workstation Phase 5.0.
+"""Naz Lab Video Workstation Phase 5.1.
 
-Bangla-first video package builder for project presets, scene sequences,
-shot lists, subtitles, edit direction, and future video backend workflow.
+Polished Bangla-first video package builder with hook, subtitles,
+scene timing, editor instructions, project presets, and package workflow.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ if str(REPO_ROOT) not in sys.path:
 from shared.drive_paths import BASE_PATH, OUTPUT_LOG_JSON, WORKSTATION_LINKS_JSON  # noqa: E402
 from shared.json_utils import append_output_log, safe_read_json, safe_write_json, update_workstation_status  # noqa: E402
 
-PHASE = "5.0"
+PHASE = "5.1"
 VIDEO_OUTPUTS = BASE_PATH / "video_outputs"
 VIDEO_PACKAGES = BASE_PATH / "video_packages"
 VIDEO_STORYBOARDS = BASE_PATH / "video_storyboards"
@@ -37,6 +37,9 @@ EDIT_STYLES = ["clean social edit", "cinematic suspense", "documentary reel", "c
 SUBTITLE_STYLES = ["Bangla subtitles", "English subtitles", "Bilingual subtitles", "No subtitles", "Hook-only text"]
 VISUAL_RHYTHMS = ["Hook-Context-Value-CTA", "Hook-Tension-Reveal-Question", "Problem-Solution-Steps-CTA", "Scene 1-Scene 2-Scene 3-CTA", "Narration-led"]
 BROLL_TYPES = ["Auto by context", "Bangladeshi urban b-roll", "Rangpur/Nilphamari town", "workspace/dashboard", "AI tool screen", "street/documentary", "home/interior", "market/cafe", "cinematic human closeups"]
+HOOK_STYLES = ["Question hook", "Shock hook", "Problem hook", "Story hook", "Benefit hook", "Curiosity hook"]
+TIMING_STYLES = ["5-scene standard", "3-scene short", "6-scene detailed", "Narration-led timing", "Carousel-style timing"]
+EDITOR_PLATFORMS = ["CapCut", "Premiere Pro", "DaVinci Resolve", "Mobile editor", "Generic editor"]
 PACKAGE_STATUS = ["draft", "ready_for_edit", "video_generated", "blocked", "archived"]
 
 PROJECT_DEFAULTS = {
@@ -45,6 +48,7 @@ PROJECT_DEFAULTS = {
         "edit_style": "clean social edit",
         "subtitle_style": "Bangla subtitles",
         "rhythm": "Hook-Context-Value-CTA",
+        "hook_style": "Question hook",
         "style": "Bangla-first general social video. Natural spoken Bangla, Facebook-ready, voiceover-ready, simple and human.",
     },
     "True Noir Tales": {
@@ -52,6 +56,7 @@ PROJECT_DEFAULTS = {
         "edit_style": "cinematic suspense",
         "subtitle_style": "English subtitles",
         "rhythm": "Hook-Tension-Reveal-Question",
+        "hook_style": "Curiosity hook",
         "style": "English true crime/noir storytelling. Cinematic suspense, restrained emotion, adult-focused, no gore, no dead body, no visible wounds.",
     },
     "ToolFlow": {
@@ -59,6 +64,7 @@ PROJECT_DEFAULTS = {
         "edit_style": "creator explainer",
         "subtitle_style": "English subtitles",
         "rhythm": "Problem-Solution-Steps-CTA",
+        "hook_style": "Problem hook",
         "style": "English AI tools / SaaS / productivity explainer. Clean, practical, premium, non-hype, workflow-focused.",
     },
 }
@@ -104,37 +110,100 @@ def suggested_video_filename(project: str, content_type: str) -> str:
     return f"{safe_name(project)}_{safe_name(content_type)}_{now_stamp()}.mp4"
 
 
-def build_scene_sequence(topic: str, project: str, rhythm: str, length: str) -> str:
-    source = topic.strip() or "[Paste topic/script here]"
+def build_hook(project: str, language: str, hook_style: str, topic: str) -> str:
+    source = topic.strip() or "এই বিষয়টা"
+    if project == "True Noir Tales" or language == "English":
+        if hook_style == "Question hook":
+            return "What would you notice first?"
+        if hook_style == "Shock hook":
+            return "No one expected this detail to matter."
+        if hook_style == "Problem hook":
+            return "The problem was hiding in plain sight."
+        if hook_style == "Benefit hook":
+            return "This is the detail that changes the whole story."
+        return "What looked normal at first was hiding something darker."
+    if hook_style == "Question hook":
+        return "তুমি হলে প্রথমে কোন জিনিসটা খেয়াল করতে?"
+    if hook_style == "Shock hook":
+        return "এই ছোট জিনিসটাই পুরো ব্যাপারটা বদলে দেয়।"
+    if hook_style == "Problem hook":
+        return "সমস্যাটা আসলে চোখের সামনেই ছিল।"
+    if hook_style == "Benefit hook":
+        return "এই সহজ পদ্ধতিটা তোমার সময় বাঁচাতে পারে।"
+    if hook_style == "Story hook":
+        return "ঘটনাটা শুরু হয়েছিল একদম সাধারণভাবে।"
+    return f"{source} নিয়ে এই কথাটা অনেকেই খেয়াল করে না।"
+
+
+def build_subtitle_lines(project: str, language: str, hook: str, topic: str) -> str:
+    source = topic.strip() or "[মূল কথা এখানে বসবে]"
+    if project == "ToolFlow" or language == "English":
+        return (
+            f"1. {hook}\n"
+            "2. Random tools create random results.\n"
+            "3. A simple workflow makes the output cleaner.\n"
+            "4. Use the system, not just the tool.\n"
+            "5. Would you try this?\n\n"
+            f"Source: {source}"
+        )
     if project == "True Noir Tales":
         return (
-            "Scene 1 - Hook: A tense close-up or symbolic visual that raises a question.\n"
-            "Scene 2 - Context: Establish the setting and the emotional stakes.\n"
-            "Scene 3 - Detail: Focus on the small clue or behavior that changes the meaning.\n"
-            "Scene 4 - Tension: Slow zoom, darker mood, controlled narration beat.\n"
-            "Scene 5 - Question CTA: End with a question that makes viewers comment.\n\n"
-            f"Source/topic: {source}\nTarget length: {length}\nRhythm: {rhythm}"
-        )
-    if project == "ToolFlow":
-        return (
-            "Scene 1 - Hook: Show the messy workflow/problem.\n"
-            "Scene 2 - Tool/System: Show the cleaner AI/SaaS workflow.\n"
-            "Scene 3 - Steps: Show 2-3 simple actions or dashboard shots.\n"
-            "Scene 4 - Result: Show the practical outcome or time-saving benefit.\n"
-            "Scene 5 - CTA: Ask whether the viewer would use the workflow.\n\n"
-            f"Source/topic: {source}\nTarget length: {length}\nRhythm: {rhythm}"
+            f"1. {hook}\n"
+            "2. The quiet detail matters most.\n"
+            "3. The story changes when you notice it.\n"
+            "4. Not everything is what it looks like.\n"
+            "5. What would you have noticed first?\n\n"
+            f"Source: {source}"
         )
     return (
-        "Scene 1 - Hook: Start with a strong Bangla first line and clear visual.\n"
-        "Scene 2 - Context: Show the main situation in a natural Bangladeshi setting.\n"
-        "Scene 3 - Main point: Deliver the useful/emotional/story point.\n"
-        "Scene 4 - Support: Add detail, example, or second visual.\n"
-        "Scene 5 - CTA: End with a simple question or action line.\n\n"
-        f"Source/topic: {source}\nTarget length: {length}\nRhythm: {rhythm}"
+        f"1. {hook}\n"
+        "2. বিষয়টা সহজ, কিন্তু গুরুত্বপূর্ণ।\n"
+        "3. এই জায়গাতেই অনেকের ভুল হয়।\n"
+        "4. সহজভাবে দেখলে বিষয়টা পরিষ্কার।\n"
+        "5. তোমার কী মনে হয়?\n\n"
+        f"Source: {source}"
     )
 
 
-def build_video_direction(project: str, content_type: str, language: str, video_format: str, length: str, edit_style: str, subtitle_style: str, rhythm: str, broll_type: str, topic: str, custom_note: str) -> str:
+def build_scene_sequence(topic: str, project: str, rhythm: str, length: str, hook: str, timing_style: str) -> str:
+    source = topic.strip() or "[Paste topic/script here]"
+    if timing_style == "3-scene short":
+        timing = "Scene timing: 0-3s hook, 3-10s main point, 10-15s CTA."
+    elif timing_style == "6-scene detailed":
+        timing = "Scene timing: 0-3s hook, 3-8s context, 8-15s detail, 15-25s support, 25-35s result, final CTA."
+    elif timing_style == "Carousel-style timing":
+        timing = "Scene timing: each scene behaves like one carousel slide with one clear idea."
+    else:
+        timing = "Scene timing: 0-3s hook, 3-8s context, 8-15s main point, 15-25s support, final CTA."
+
+    if project == "True Noir Tales":
+        body = (
+            f"Scene 1 - Hook: {hook}\n"
+            "Scene 2 - Context: Establish the setting and emotional stakes.\n"
+            "Scene 3 - Detail: Focus on the small clue or behavior that changes the meaning.\n"
+            "Scene 4 - Tension: Slow zoom, darker mood, controlled narration beat.\n"
+            "Scene 5 - Question CTA: End with a question that makes viewers comment."
+        )
+    elif project == "ToolFlow":
+        body = (
+            f"Scene 1 - Hook: {hook}\n"
+            "Scene 2 - Problem: Show the messy workflow or wasted time.\n"
+            "Scene 3 - System: Show the cleaner AI/SaaS workflow.\n"
+            "Scene 4 - Result: Show the practical outcome or saved effort.\n"
+            "Scene 5 - CTA: Ask whether the viewer would use the workflow."
+        )
+    else:
+        body = (
+            f"Scene 1 - Hook: {hook}\n"
+            "Scene 2 - Context: Show the situation in a natural Bangladeshi setting.\n"
+            "Scene 3 - Main point: Deliver the useful/emotional/story point.\n"
+            "Scene 4 - Support: Add detail, example, or second visual.\n"
+            "Scene 5 - CTA: End with a simple Bangla question or action line."
+        )
+    return f"{body}\n\n{timing}\nSource/topic: {source}\nTarget length: {length}\nRhythm: {rhythm}"
+
+
+def build_video_direction(project: str, content_type: str, language: str, video_format: str, length: str, edit_style: str, subtitle_style: str, rhythm: str, broll_type: str, hook_style: str, timing_style: str, editor_platform: str, topic: str, custom_note: str) -> str:
     project_style = PROJECT_DEFAULTS[project]["style"]
     parts = [
         f"Project preset: {project}",
@@ -146,6 +215,9 @@ def build_video_direction(project: str, content_type: str, language: str, video_
         f"Subtitle style: {subtitle_style}",
         f"Visual rhythm: {rhythm}",
         f"B-roll type: {broll_type}",
+        f"Hook style: {hook_style}",
+        f"Timing style: {timing_style}",
+        f"Editor platform: {editor_platform}",
         f"Project style: {project_style}",
         f"Content rule: {CONTENT_RULES.get(content_type, '')}",
         "Global language rule: Naz Lab is Bangla-first by default. Use English for True Noir Tales, ToolFlow, or when requested.",
@@ -153,14 +225,31 @@ def build_video_direction(project: str, content_type: str, language: str, video_
         "Regional rule: when useful, use Rangpur/Nilphamari/North Bengal flavor lightly and naturally.",
     ]
     if project == "True Noir Tales":
-        parts.append("True Noir Tales video rules: no gore, no dead body, no visible wounds, adult-focused, suspenseful but restrained.")
+        parts.append("True Noir Tales video rules: adult-only, no gore, no dead body, no visible wounds, suspenseful but restrained, no sensational visual violence.")
     if project == "ToolFlow":
         parts.append("ToolFlow video rules: clean, practical, premium, non-hype, dashboard/workspace friendly, useful explainer flow.")
+    if editor_platform == "CapCut":
+        parts.append("CapCut editor note: use simple cuts, captions, subtle zooms, clean transitions, and avoid overusing effects.")
     if custom_note.strip():
         parts.append(f"Custom direction: {custom_note.strip()}")
     if topic.strip():
         parts.append(f"Source topic/script:\n{topic.strip()}")
     return "\n\n".join(parts)
+
+
+def build_editor_instruction(scene_sequence: str, subtitle_lines: str, editor_platform: str, edit_style: str) -> str:
+    return (
+        f"Editor platform: {editor_platform}\n"
+        f"Edit style: {edit_style}\n\n"
+        "Editor instructions:\n"
+        "1. Put the strongest hook in the first 3 seconds.\n"
+        "2. Keep each scene visually clear and short.\n"
+        "3. Match cuts to voiceover sentence breaks.\n"
+        "4. Keep subtitles readable on mobile.\n"
+        "5. Use clean transitions; avoid distracting effects.\n"
+        "6. End with a clear question or CTA.\n\n"
+        f"Scene sequence:\n{scene_sequence}\n\nSubtitle lines:\n{subtitle_lines}"
+    )
 
 
 def build_shot_list(scene_sequence: str, broll_type: str, subtitle_style: str) -> str:
@@ -177,7 +266,7 @@ def build_shot_list(scene_sequence: str, broll_type: str, subtitle_style: str) -
     )
 
 
-def build_package_json(project: str, content_type: str, language: str, status: str, suggested_output_path: str, video_direction: str, scene_sequence: str, shot_list: str) -> dict[str, Any]:
+def build_package_json(project: str, content_type: str, language: str, status: str, suggested_output_path: str, video_direction: str, scene_sequence: str, shot_list: str, hook: str, subtitle_lines: str, editor_instruction: str) -> dict[str, Any]:
     return {
         "created_at": datetime.now().isoformat(timespec="seconds"),
         "phase": PHASE,
@@ -186,9 +275,12 @@ def build_package_json(project: str, content_type: str, language: str, status: s
         "language": language,
         "status": status,
         "suggested_video_output_path": suggested_output_path,
+        "hook": hook,
+        "subtitle_lines": subtitle_lines,
         "video_direction": video_direction,
         "scene_sequence": scene_sequence,
         "shot_list": shot_list,
+        "editor_instruction": editor_instruction,
         "future_backend": "placeholder",
     }
 
@@ -249,6 +341,9 @@ def render_builder() -> None:
     subtitle_style = st.selectbox("Subtitle style", SUBTITLE_STYLES, index=SUBTITLE_STYLES.index(defaults["subtitle_style"]))
     rhythm = st.selectbox("Visual rhythm", VISUAL_RHYTHMS, index=VISUAL_RHYTHMS.index(defaults["rhythm"]))
     broll_type = st.selectbox("B-roll type", BROLL_TYPES)
+    hook_style = st.selectbox("Hook style", HOOK_STYLES, index=HOOK_STYLES.index(defaults["hook_style"]))
+    timing_style = st.selectbox("Timing style", TIMING_STYLES)
+    editor_platform = st.selectbox("Editor platform", EDITOR_PLATFORMS)
     package_status = st.selectbox("Package status", PACKAGE_STATUS)
 
     suggested_video = VIDEO_OUTPUTS / suggested_video_filename(project, content_type)
@@ -257,20 +352,29 @@ def render_builder() -> None:
     topic = st.text_area("Source topic/script", height=170, placeholder="Paste video topic, script, voice package summary, or image prompt idea here.")
     custom_note = st.text_area("Custom video direction", height=100, placeholder="Example: More cinematic, faster edit, stronger hook, more Bangla street realism, etc.")
 
-    scene_sequence = build_scene_sequence(topic, project, rhythm, length)
-    direction = build_video_direction(project, content_type, language, video_format, length, edit_style, subtitle_style, rhythm, broll_type, topic, custom_note)
+    hook = build_hook(project, language, hook_style, topic)
+    subtitle_lines = build_subtitle_lines(project, language, hook, topic)
+    scene_sequence = build_scene_sequence(topic, project, rhythm, length, hook, timing_style)
+    direction = build_video_direction(project, content_type, language, video_format, length, edit_style, subtitle_style, rhythm, broll_type, hook_style, timing_style, editor_platform, topic, custom_note)
     shot_list = build_shot_list(scene_sequence, broll_type, subtitle_style)
-    combined = f"VIDEO DIRECTION:\n{direction}\n\nSCENE SEQUENCE:\n{scene_sequence}\n\nSHOT LIST:\n{shot_list}"
-    package = build_package_json(project, content_type, language, package_status, str(suggested_video), direction, scene_sequence, shot_list)
+    editor_instruction = build_editor_instruction(scene_sequence, subtitle_lines, editor_platform, edit_style)
+    combined = f"VIDEO DIRECTION:\n{direction}\n\nHOOK:\n{hook}\n\nSUBTITLE LINES:\n{subtitle_lines}\n\nSCENE SEQUENCE:\n{scene_sequence}\n\nSHOT LIST:\n{shot_list}\n\nEDITOR INSTRUCTION:\n{editor_instruction}"
+    package = build_package_json(project, content_type, language, package_status, str(suggested_video), direction, scene_sequence, shot_list, hook, subtitle_lines, editor_instruction)
 
+    st.markdown("### Hook")
+    st.text_area("Video hook", hook, height=80)
+    st.markdown("### Subtitle lines")
+    st.text_area("Subtitle lines", subtitle_lines, height=180)
     st.markdown("### Copy-ready video direction")
     st.text_area("Video direction", direction, height=220)
     st.markdown("### Scene sequence")
     st.text_area("Scene sequence", scene_sequence, height=220)
     st.markdown("### Shot list")
     st.text_area("Shot list", shot_list, height=220)
+    st.markdown("### Editor instruction")
+    st.text_area("Editor instruction", editor_instruction, height=240)
     st.markdown("### Combined video package")
-    st.text_area("Copy-ready combined package", combined, height=340)
+    st.text_area("Copy-ready combined package", combined, height=380)
 
     with st.expander("Video package JSON preview", expanded=False):
         st.json(package)
@@ -328,7 +432,7 @@ def render_inputs() -> None:
 
 def render_launch() -> None:
     st.header("Launch notes")
-    st.markdown("Phase 5.0 builds video packages and storyboards. It does not generate video yet.")
+    st.markdown("Phase 5.1 builds polished video packages, hooks, subtitle lines, scene timing, and editor instructions. It does not generate video yet.")
     st.markdown("Future build: video backend integration and rendered video output library.")
     st.code("streamlit run video_workstation/app.py --server.port 8505 --server.address 0.0.0.0", language="bash")
 
@@ -336,7 +440,7 @@ def render_launch() -> None:
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Video Workstation", page_icon="🎬", layout="wide")
     st.title("🎬 Naz Lab Video Workstation")
-    st.caption("Phase 5.0 foundation — Bangla-first video package, scene sequence, shot list, edit direction builder.")
+    st.caption("Phase 5.1 — polished Bangla-first video package, hooks, subtitles, timing, editor instructions.")
     st.info("Naz Lab is Bangla-first by default. True Noir Tales and ToolFlow can stay English-first when selected.")
     ensure_dirs()
     update_workstation_status(WORKSTATION_LINKS_JSON, "video_workstation", {"status": "running", "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")})
