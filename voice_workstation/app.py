@@ -1,7 +1,7 @@
-"""Naz Lab Voice Workstation Phase 4.2.
+"""Naz Lab Voice Workstation Phase 4.3 stable.
 
-Voice package workflow with suggested filenames, future audio path fields,
-package status, and dashboard-ready status tracking.
+Stable Voice Workstation for narration direction, TTS direction,
+voice packages, future audio metadata, and output library workflow.
 """
 
 from __future__ import annotations
@@ -20,7 +20,8 @@ if str(REPO_ROOT) not in sys.path:
 from shared.drive_paths import BASE_PATH, OUTPUT_LOG_JSON, WORKSTATION_LINKS_JSON  # noqa: E402
 from shared.json_utils import append_output_log, safe_read_json, safe_write_json, update_workstation_status  # noqa: E402
 
-PHASE = "4.2"
+PHASE = "4.3"
+PHASE_STATUS = "stable"
 VOICE_OUTPUTS = BASE_PATH / "voice_outputs"
 VOICE_DIRECTIONS = BASE_PATH / "voice_directions"
 AUDIO_OUTPUTS = BASE_PATH / "audio_outputs"
@@ -116,22 +117,7 @@ def validate_audio_path(path_text: str) -> tuple[bool, str]:
     return True, "Audio path exists and looks valid."
 
 
-def build_voice_direction(
-    project: str,
-    content_type: str,
-    language: str,
-    regional_tone: str,
-    voice_tone: str,
-    pacing: str,
-    energy: str,
-    accent: str,
-    length: str,
-    structure: str,
-    delivery_style: str,
-    pause_style: str,
-    input_text: str,
-    custom_note: str,
-) -> str:
+def build_voice_direction(project: str, content_type: str, language: str, regional_tone: str, voice_tone: str, pacing: str, energy: str, accent: str, length: str, structure: str, delivery_style: str, pause_style: str, input_text: str, custom_note: str) -> str:
     project_style = PROJECT_DEFAULTS.get(project, PROJECT_DEFAULTS["General"])["style"]
     parts = [
         f"Project preset: {project}",
@@ -165,29 +151,18 @@ def build_voice_direction(
     return "\n\n".join(parts)
 
 
-def build_tts_direction(
-    project: str,
-    language: str,
-    voice_tone: str,
-    pacing: str,
-    energy: str,
-    accent: str,
-    delivery_style: str,
-    pause_style: str,
-) -> str:
-    return "\n".join(
-        [
-            f"TTS project: {project}",
-            f"Voice language: {language}",
-            f"Tone: {voice_tone}",
-            f"Pacing: {pacing}",
-            f"Energy: {energy}",
-            f"Accent/style: {accent}",
-            f"Delivery style: {delivery_style}",
-            f"Pause style: {pause_style}",
-            "Avoid robotic delivery. Keep pronunciation clear. Do not overact. Keep breaths and pauses natural.",
-        ]
-    )
+def build_tts_direction(project: str, language: str, voice_tone: str, pacing: str, energy: str, accent: str, delivery_style: str, pause_style: str) -> str:
+    return "\n".join([
+        f"TTS project: {project}",
+        f"Voice language: {language}",
+        f"Tone: {voice_tone}",
+        f"Pacing: {pacing}",
+        f"Energy: {energy}",
+        f"Accent/style: {accent}",
+        f"Delivery style: {delivery_style}",
+        f"Pause style: {pause_style}",
+        "Avoid robotic delivery. Keep pronunciation clear. Do not overact. Keep breaths and pauses natural.",
+    ])
 
 
 def build_voice_script(project: str, content_type: str, language: str, structure: str, input_text: str) -> str:
@@ -196,55 +171,18 @@ def build_voice_script(project: str, content_type: str, language: str, structure
     source = input_text.strip()
     if project == "True Noir Tales":
         if structure == "Story-Context-Tension-Question":
-            return (
-                "Hook:\n"
-                "What looked normal at first was hiding something much darker.\n\n"
-                "Context:\n"
-                f"{source}\n\n"
-                "Tension:\n"
-                "The detail that matters is not the loudest one. It is the one people almost missed.\n\n"
-                "Question CTA:\n"
-                "What would you have noticed first?"
-            )
-        return f"Hook:\nWhat looked normal was not normal at all.\n\nVoiceover:\n{source}\n\nCTA:\nWhat would you have noticed first?"
+            return "Hook:\nWhat looked normal at first was hiding something much darker.\n\nContext:\n" + source + "\n\nTension:\nThe detail that matters is not the loudest one. It is the one people almost missed.\n\nQuestion CTA:\nWhat would you have noticed first?"
+        return "Hook:\nWhat looked normal was not normal at all.\n\nVoiceover:\n" + source + "\n\nCTA:\nWhat would you have noticed first?"
     if project == "ToolFlow":
         if structure == "Hook-Problem-Solution-CTA":
-            return (
-                "Hook:\n"
-                "Most people use AI tools randomly. The real advantage comes from using them as a system.\n\n"
-                "Problem:\n"
-                "Random tools create random results.\n\n"
-                "Solution:\n"
-                f"{source}\n\n"
-                "CTA:\n"
-                "Would you use this workflow?"
-            )
-        return f"Hook:\nHere is a cleaner way to use AI.\n\nVoiceover:\n{source}\n\nCTA:\nWould you try this?"
+            return "Hook:\nMost people use AI tools randomly. The real advantage comes from using them as a system.\n\nProblem:\nRandom tools create random results.\n\nSolution:\n" + source + "\n\nCTA:\nWould you use this workflow?"
+        return "Hook:\nHere is a cleaner way to use AI.\n\nVoiceover:\n" + source + "\n\nCTA:\nWould you try this?"
     if language == "Bangla":
-        return (
-            "Hook:\n"
-            "এই কথাটা অনেকেই খেয়াল করে না।\n\n"
-            "Voiceover:\n"
-            f"{source}\n\n"
-            "CTA:\n"
-            "তোমার কী মনে হয়?"
-        )
-    return f"Hook:\nHere is the simple version.\n\nVoiceover:\n{source}\n\nCTA:\nWhat do you think?"
+        return "Hook:\nএই কথাটা অনেকেই খেয়াল করে না।\n\nVoiceover:\n" + source + "\n\nCTA:\nতোমার কী মনে হয়?"
+    return "Hook:\nHere is the simple version.\n\nVoiceover:\n" + source + "\n\nCTA:\nWhat do you think?"
 
 
-def build_package_json(
-    project: str,
-    content_type: str,
-    language: str,
-    regional_tone: str,
-    status: str,
-    suggested_audio_path: str,
-    audio_output_path: str,
-    direction: str,
-    tts_direction: str,
-    script: str,
-    combined: str,
-) -> dict[str, Any]:
+def build_package_json(project: str, content_type: str, language: str, regional_tone: str, status: str, suggested_audio_path: str, audio_output_path: str, direction: str, tts_direction: str, script: str, combined: str) -> dict[str, Any]:
     return {
         "created_at": datetime.now().isoformat(timespec="seconds"),
         "project_preset": project,
@@ -265,12 +203,7 @@ def save_text_file(project: str, content: str, prefix: str) -> Path:
     ensure_dirs()
     path = VOICE_OUTPUTS / f"{prefix}_{safe_name(project)}_{now_stamp()}.txt"
     path.write_text(content, encoding="utf-8")
-    append_output_log(
-        OUTPUT_LOG_JSON,
-        workstation="voice_workstation",
-        event="voice_file_saved",
-        details={"path": str(path), "project": project, "prefix": prefix},
-    )
+    append_output_log(OUTPUT_LOG_JSON, workstation="voice_workstation", event="voice_file_saved", details={"path": str(path), "project": project, "prefix": prefix})
     return path
 
 
@@ -278,12 +211,7 @@ def save_package_json(package: dict[str, Any]) -> Path:
     ensure_dirs()
     path = VOICE_PACKAGES / f"voice_package_{safe_name(package['project_preset'])}_{now_stamp()}.json"
     safe_write_json(path, package)
-    append_output_log(
-        OUTPUT_LOG_JSON,
-        workstation="voice_workstation",
-        event="voice_package_saved",
-        details={"path": str(path), "project": package["project_preset"], "status": package["status"]},
-    )
+    append_output_log(OUTPUT_LOG_JSON, workstation="voice_workstation", event="voice_package_saved", details={"path": str(path), "project": package["project_preset"], "status": package["status"]})
     return path
 
 
@@ -291,7 +219,6 @@ def render_builder() -> None:
     st.header("Voice package builder")
     project = st.selectbox("Project preset", PROJECT_PRESETS)
     defaults = PROJECT_DEFAULTS[project]
-
     content_type = st.selectbox("Content type", CONTENT_TYPES)
     language = st.selectbox("Language", LANGUAGE_OPTIONS, index=LANGUAGE_OPTIONS.index(defaults["language"]))
     regional_tone = st.selectbox("Regional tone", REGIONAL_TONES)
@@ -322,27 +249,12 @@ def render_builder() -> None:
     combined = f"VOICE DIRECTION:\n{direction}\n\nTTS DIRECTION:\n{tts_direction}\n\nSCRIPT DRAFT:\n{script}" if script else f"VOICE DIRECTION:\n{direction}\n\nTTS DIRECTION:\n{tts_direction}"
     package_json = build_package_json(project, content_type, language, regional_tone, package_status, str(suggested_audio), audio_output_path, direction, tts_direction, script, combined)
 
-    st.markdown("### Quick workflow")
-    st.markdown(
-        """
-1. Pick project and content type.  
-2. Paste topic or draft script.  
-3. Copy narration/TTS direction.  
-4. Save package JSON.  
-5. Later, generate audio and save it to the suggested audio path.
-"""
-    )
+    st.markdown("### Stable workflow")
+    st.markdown("1. Pick project and content type.  \n2. Paste topic or draft script.  \n3. Copy narration/TTS direction.  \n4. Save package JSON.  \n5. Later, generate audio and save it to the suggested audio path.")
 
-    st.markdown("### Narration direction")
     st.text_area("Copy-ready narration direction", direction, height=230)
-
-    st.markdown("### TTS direction")
     st.text_area("Copy-ready TTS direction", tts_direction, height=150)
-
-    st.markdown("### Script draft")
     st.text_area("Script draft", script, height=200)
-
-    st.markdown("### Combined voice package")
     st.text_area("Copy-ready combined package", combined, height=300)
 
     with st.expander("Voice package JSON preview", expanded=False):
@@ -351,20 +263,16 @@ def render_builder() -> None:
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         if st.button("Save narration"):
-            path = save_text_file(project, direction, "voice_direction")
-            st.success(f"Saved: {path}")
+            st.success(f"Saved: {save_text_file(project, direction, 'voice_direction')}")
     with col2:
         if st.button("Save TTS"):
-            path = save_text_file(project, tts_direction, "tts_direction")
-            st.success(f"Saved: {path}")
+            st.success(f"Saved: {save_text_file(project, tts_direction, 'tts_direction')}")
     with col3:
         if st.button("Save combined"):
-            path = save_text_file(project, combined, "voice_package")
-            st.success(f"Saved: {path}")
+            st.success(f"Saved: {save_text_file(project, combined, 'voice_package')}")
     with col4:
         if st.button("Save package JSON"):
-            path = save_package_json(package_json)
-            st.success(f"Saved: {path}")
+            st.success(f"Saved: {save_package_json(package_json)}")
 
 
 def render_library() -> None:
@@ -372,25 +280,18 @@ def render_library() -> None:
     ensure_dirs()
     files = sorted([path for path in VOICE_OUTPUTS.glob("*.txt") if path.is_file()], key=lambda item: item.stat().st_mtime, reverse=True)
     packages = sorted([path for path in VOICE_PACKAGES.glob("*.json") if path.is_file()], key=lambda item: item.stat().st_mtime, reverse=True)
-
     st.metric("Text voice files", len(files))
     st.metric("Package JSON files", len(packages))
-
     if packages:
-        st.markdown("### Package JSON preview")
         selected_package = st.selectbox("Select package", [path.name for path in packages])
-        package_path = VOICE_PACKAGES / selected_package
-        st.caption(str(package_path))
-        st.json(safe_read_json(package_path, {}))
-
-    if not files:
+        st.json(safe_read_json(VOICE_PACKAGES / selected_package, {}))
+    if files:
+        selected = st.selectbox("Select voice file", [path.name for path in files])
+        path = VOICE_OUTPUTS / selected
+        st.caption(str(path))
+        st.text_area("Preview", path.read_text(encoding="utf-8", errors="ignore"), height=420)
+    else:
         st.info("No voice text files saved yet.")
-        return
-    st.markdown("### Text file preview")
-    selected = st.selectbox("Select voice file", [path.name for path in files])
-    path = VOICE_OUTPUTS / selected
-    st.caption(str(path))
-    st.text_area("Preview", path.read_text(encoding="utf-8", errors="ignore"), height=420)
 
 
 def render_status() -> None:
@@ -399,57 +300,36 @@ def render_status() -> None:
     files = list(VOICE_OUTPUTS.glob("*.txt"))
     packages = list(VOICE_PACKAGES.glob("*.json"))
     audio_files = [path for path in AUDIO_OUTPUTS.glob("*") if path.is_file() and path.suffix.lower() in AUDIO_EXTENSIONS]
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Phase", PHASE)
-    c2.metric("Voice files", len(files))
-    c3.metric("Packages", len(packages))
-    c4.metric("Audio files", len(audio_files))
-
-    st.markdown("### Dashboard integration readiness")
-    st.write({
-        "voice_workstation_status": "running",
-        "phase": PHASE,
-        "text_outputs": str(VOICE_OUTPUTS),
-        "package_outputs": str(VOICE_PACKAGES),
-        "future_audio_outputs": str(AUDIO_OUTPUTS),
-    })
-
+    c2.metric("Status", PHASE_STATUS)
+    c3.metric("Voice files", len(files))
+    c4.metric("Packages", len(packages))
+    c5.metric("Audio files", len(audio_files))
+    st.success("Voice Workstation status: stable for Phase 4")
+    st.markdown("### Next phase")
+    st.write({"next_phase": "Phase 5.0", "next_workstation": "Video Workstation foundation", "video_presets": PROJECT_PRESETS, "status": "ready to start"})
     st.markdown("### Voice project defaults")
     st.json(PROJECT_DEFAULTS)
-
-    st.markdown("### Content rules")
-    st.json(CONTENT_RULES)
-
-    st.markdown("### Paths")
-    st.write({
-        "voice_outputs": str(VOICE_OUTPUTS),
-        "voice_directions": str(VOICE_DIRECTIONS),
-        "voice_packages": str(VOICE_PACKAGES),
-        "audio_outputs": str(AUDIO_OUTPUTS),
-        "workstation_links_json": str(WORKSTATION_LINKS_JSON),
-    })
+    with st.expander("Paths", expanded=False):
+        st.write({"voice_outputs": str(VOICE_OUTPUTS), "voice_directions": str(VOICE_DIRECTIONS), "voice_packages": str(VOICE_PACKAGES), "audio_outputs": str(AUDIO_OUTPUTS), "workstation_links_json": str(WORKSTATION_LINKS_JSON)})
 
 
 def render_launch() -> None:
     st.header("Launch notes")
-    st.markdown("Phase 4.2 creates narration direction, TTS direction, voice packages, and future audio path metadata. It does not run TTS yet.")
-    st.markdown("Future build: TTS backend integration and audio output library.")
+    st.markdown("Voice Workstation Phase 4.3 is stable for narration direction, TTS direction, package JSON, and future audio metadata.")
+    st.markdown("Next build: Phase 5.0 Video Workstation foundation.")
     st.code("streamlit run voice_workstation/app.py --server.port 8504 --server.address 0.0.0.0", language="bash")
 
 
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Voice Workstation", page_icon="🎙️", layout="wide")
     st.title("🎙️ Naz Lab Voice Workstation")
-    st.caption("Phase 4.2 — voice package workflow, future audio path, package JSON, dashboard readiness.")
+    st.caption("Phase 4.3 stable — narration, TTS direction, package JSON, future audio metadata.")
+    st.success("Voice Workstation status: stable for Phase 4")
     st.info("True Noir Tales and ToolFlow are English-first voice projects. Bangla and Rangpur/Nilphamari support are included.")
-
     ensure_dirs()
-    update_workstation_status(
-        WORKSTATION_LINKS_JSON,
-        "voice_workstation",
-        {"status": "running", "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")},
-    )
-
+    update_workstation_status(WORKSTATION_LINKS_JSON, "voice_workstation", {"status": PHASE_STATUS, "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")})
     tabs = st.tabs(["Status", "Builder", "Library", "Launch"])
     with tabs[0]:
         render_status()
