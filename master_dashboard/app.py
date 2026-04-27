@@ -1,4 +1,4 @@
-"""Naz Lab Master Control Dashboard Phase 2.9 stable stack refresh."""
+"""Naz Lab Master Control Dashboard Phase 2.10 package search refresh."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ from shared.drive_paths import (  # noqa: E402
 )
 from shared.json_utils import safe_read_json, update_workstation_status  # noqa: E402
 
-PHASE = "2.9"
+PHASE = "2.10"
 PHASE_STATUS = "stable"
 
 VOICE_OUTPUTS = BASE_PATH / "voice_outputs"
@@ -87,9 +87,18 @@ FOLDERS = {
     "Project workflows": PROJECT_WORKFLOWS,
 }
 
+PACKAGE_FOLDERS = {
+    "Project packages": PROJECT_PACKAGES,
+    "Image jobs": IMAGE_JOBS,
+    "Voice packages": VOICE_PACKAGES,
+    "Voice profile packages": VOICE_PROFILE_PACKAGES,
+    "Video packages": VIDEO_PACKAGES,
+    "Portrait packages": PORTRAIT_PACKAGES,
+}
+
 WORKSTATIONS = [
     {"name": "Text Workstation", "phase": "1.8 stable", "key": "text_workstation", "folder": TEXT_OUTPUTS, "port": "8501"},
-    {"name": "Master Dashboard", "phase": "2.9 stable", "key": "master_dashboard", "folder": BASE_PATH, "port": "8502"},
+    {"name": "Master Dashboard", "phase": "2.10 stable", "key": "master_dashboard", "folder": BASE_PATH, "port": "8502"},
     {"name": "Image Workstation", "phase": "3.x stable", "key": "image_workstation", "folder": IMAGE_OUTPUTS, "port": "8503"},
     {"name": "Voice Workstation", "phase": "4.x reference workflow", "key": "voice_workstation", "folder": VOICE_OUTPUTS, "port": "8504"},
     {"name": "Video Workstation", "phase": "5.3 stable", "key": "video_workstation", "folder": VIDEO_OUTPUTS, "port": "8505"},
@@ -146,6 +155,29 @@ def link_markdown(label: str, url: str) -> None:
         st.caption("No URL saved yet. Save it from the Links tab.")
 
 
+def package_summary(path: Path) -> dict[str, Any]:
+    data = read_json(path, {})
+    topic = ""
+    if isinstance(data, dict):
+        topic = str(data.get("topic", data.get("prompt", data.get("title", ""))))
+    return {
+        "File": path.name,
+        "Folder": path.parent.name,
+        "Project": data.get("project_preset", data.get("visual_preset", "")) if isinstance(data, dict) else "",
+        "Status": data.get("status", "unknown") if isinstance(data, dict) else "unknown",
+        "Platform": data.get("platform", data.get("content_type", data.get("portrait_type", ""))) if isinstance(data, dict) else "",
+        "Topic": topic[:140],
+        "Created": data.get("created_at", "") if isinstance(data, dict) else "",
+        "Modified": datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+        "Path": str(path),
+    }
+
+
+def load_package_rows(folder: Path, limit: int) -> list[dict[str, Any]]:
+    files = latest_files(folder, limit=limit, pattern="*.json")
+    return [package_summary(path) for path in files]
+
+
 def render_status(language: str) -> None:
     st.header("System status")
     links = workstation_data()
@@ -156,7 +188,7 @@ def render_status(language: str) -> None:
     c3.metric("Drive base", status_label(BASE_PATH))
     c4.metric("Active workstations", str(len(WORKSTATIONS)))
     c5.metric("Output log entries", len(logs))
-    st.success("Master Dashboard status: stable for Phase 2.9 full stack refresh")
+    st.success("Master Dashboard status: stable for Phase 2.10 package search refresh")
     st.info(LANGUAGE_REQUIREMENT_BN if language == "Bangla" else LANGUAGE_REQUIREMENT_EN)
 
     st.markdown("### Workstation matrix")
@@ -189,9 +221,10 @@ def render_status(language: str) -> None:
     st.write({
         "current_stack": "Text + Dashboard + Image + Voice + Video + Portrait + Project Workflow",
         "project_automation": "True Noir Tales + ToolFlow + General Bangla polished",
-        "recommended_next_1": "Dashboard reporting and package search/filter",
-        "recommended_next_2": "Safer reference managers where needed",
-        "recommended_next_3": "Optional backend planning",
+        "package_search": "ready",
+        "recommended_next_1": "Safer reference managers where needed",
+        "recommended_next_2": "Optional backend planning",
+        "recommended_next_3": "Bangla quality alignment maintenance",
         "status": "ready",
     })
     st.markdown("### Bangla-first quality requirements")
@@ -266,22 +299,56 @@ def render_jobs() -> None:
     }
     for label, folder in sections.items():
         st.markdown(f"### {label}")
-        files = latest_files(folder, limit=30, pattern="*.json")
-        rows = []
-        for path in files:
-            data = read_json(path, {})
-            rows.append({
-                "File": path.name,
-                "Status": data.get("status", "unknown") if isinstance(data, dict) else "unknown",
-                "Project": data.get("project_preset", data.get("visual_preset", "")) if isinstance(data, dict) else "",
-                "Content": data.get("content_type", data.get("portrait_type", data.get("platform", ""))) if isinstance(data, dict) else "",
-                "Created": data.get("created_at", "") if isinstance(data, dict) else "",
-            })
-        st.metric(f"{label} count", len(files))
+        rows = load_package_rows(folder, 30)
+        st.metric(f"{label} count", len(rows))
         if rows:
             st.dataframe(rows, use_container_width=True, hide_index=True)
         else:
             st.info(f"No {label.lower()} yet.")
+
+
+def render_package_search() -> None:
+    st.header("Package search")
+    st.caption("Search saved JSON packages across project, image, voice, video, and portrait package folders.")
+
+    c1, c2, c3, c4 = st.columns(4)
+    folder_label = c1.selectbox("Folder", ["All package folders"] + list(PACKAGE_FOLDERS.keys()))
+    project_filter = c2.text_input("Project contains", value="")
+    status_filter = c3.text_input("Status contains", value="")
+    limit = c4.number_input("Latest files per folder", min_value=5, max_value=100, value=30, step=5)
+    keyword = st.text_input("Keyword in topic/file/path", value="")
+
+    folders = PACKAGE_FOLDERS.values() if folder_label == "All package folders" else [PACKAGE_FOLDERS[folder_label]]
+    rows: list[dict[str, Any]] = []
+    for folder in folders:
+        rows.extend(load_package_rows(folder, int(limit)))
+
+    def keep(row: dict[str, Any]) -> bool:
+        if project_filter and project_filter.lower() not in str(row.get("Project", "")).lower():
+            return False
+        if status_filter and status_filter.lower() not in str(row.get("Status", "")).lower():
+            return False
+        if keyword:
+            haystack = " ".join(str(row.get(key, "")) for key in ["File", "Folder", "Project", "Status", "Platform", "Topic", "Path"])
+            if keyword.lower() not in haystack.lower():
+                return False
+        return True
+
+    rows = [row for row in rows if keep(row)]
+    rows = sorted(rows, key=lambda item: item.get("Modified", ""), reverse=True)
+
+    st.metric("Matching packages", len(rows))
+    if not rows:
+        st.info("No matching packages found.")
+        return
+
+    st.dataframe(rows, use_container_width=True, hide_index=True)
+    selected_path = st.selectbox("Open package JSON", [row["Path"] for row in rows])
+    selected = Path(selected_path)
+    data = read_json(selected, {})
+    st.markdown(f"### Preview: `{selected.name}`")
+    st.json(data)
+    st.text_area("Copy package JSON", json.dumps(data, ensure_ascii=False, indent=2), height=420)
 
 
 def render_launch() -> None:
@@ -305,7 +372,7 @@ def render_roadmap(language: str) -> None:
     st.markdown("""
 1. Phase 0 Foundation — complete  
 2. Phase 1 Text Workstation — stable  
-3. Phase 2 Master Dashboard — stable full stack refresh  
+3. Phase 2 Master Dashboard — stable with package search  
 4. Phase 3 Image Workstation — stable  
 5. Phase 4 Voice Workstation — reference workflow active  
 6. Phase 5 Video Workstation — stable  
@@ -320,31 +387,32 @@ def render_roadmap(language: str) -> None:
     if language == "Bangla":
         st.markdown("""
 পরের কাজের priority:
-- Dashboard reporting এবং package search/filter উন্নত করা
 - দরকার হলে safer reference manager যোগ করা
 - backend planning শুরু করা
 - Bangla quality engine সব জায়গায় aligned রাখা
+- package reporting আরও advanced করা
 """)
 
 
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Master Dashboard", page_icon="🧪", layout="wide")
     st.title("🧪 Naz Lab Master Control Dashboard")
-    st.caption("Phase 2.9 refresh — full stack plus polished Project Workflow automation")
+    st.caption("Phase 2.10 refresh — full stack, polished project automation, and package search")
     update_workstation_status(WORKSTATION_LINKS_JSON, "master_dashboard", {"status": PHASE_STATUS, "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")})
     with st.sidebar:
         st.header("Dashboard settings")
         language = st.radio("Dashboard language note", ["Bangla", "English"], index=0)
         st.caption("Naz Lab default: Bangla-first. Regional default: Rangpur/Nilphamari/North Bengal.")
-        st.success("Phase 2.9 stable")
-    tabs = st.tabs(["Status", "Links", "Workstations", "Outputs", "Job Queue", "Launch", "Roadmap"])
+        st.success("Phase 2.10 stable")
+    tabs = st.tabs(["Status", "Links", "Workstations", "Outputs", "Job Queue", "Package Search", "Launch", "Roadmap"])
     with tabs[0]: render_status(language)
     with tabs[1]: render_links()
     with tabs[2]: render_workstations()
     with tabs[3]: render_outputs()
     with tabs[4]: render_jobs()
-    with tabs[5]: render_launch()
-    with tabs[6]: render_roadmap(language)
+    with tabs[5]: render_package_search()
+    with tabs[6]: render_launch()
+    with tabs[7]: render_roadmap(language)
 
 
 if __name__ == "__main__":
