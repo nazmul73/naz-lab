@@ -8,6 +8,7 @@ Naz Lab is designed around this workflow:
 
 ```text
 Idea / Topic
+-> Project package
 -> Text package
 -> Image prompt package
 -> Voice package
@@ -56,11 +57,12 @@ True Noir Tales and ToolFlow can remain English-first project presets when selec
 | Workstation | Phase | Port | Path |
 |---|---:|---:|---|
 | Text Workstation | 1.8 stable | 8501 | `text_workstation/app.py` |
-| Master Dashboard | 2.7 stable | 8502 | `master_dashboard/app.py` |
+| Master Dashboard | 2.9 stable | 8502 | `master_dashboard/app.py` |
 | Image Workstation | 3.x stable | 8503 | `image_workstation/app.py` |
 | Voice Workstation | 4.x reference workflow | 8504 | `voice_workstation/app.py` |
 | Video Workstation | 5.3 stable | 8505 | `video_workstation/app.py` |
 | Portrait Workstation | 6.3 stable | 8506 | `portrait_workstation/app.py` |
+| Project Workflow Workstation | 10.2 stable | 8507 | `project_workstation/app.py` |
 
 ## Recommended launcher
 
@@ -79,12 +81,32 @@ image
 voice
 video
 portrait
+project
 ```
 
 Example:
 
 ```bash
-WORKSTATION="dashboard"
+WORKSTATION="project"
+```
+
+## Project workflow workstation
+
+Project Workflow Workstation turns one topic/story/tool idea into a full package plan:
+
+```text
+Script/Post
+Image prompt
+Voice direction
+Video direction
+Posting package
+JSON package
+```
+
+Outputs save to:
+
+```text
+/content/drive/MyDrive/NazLab/project_packages
 ```
 
 ## Project workflows
@@ -141,6 +163,8 @@ video_storyboards
 portrait_packages
 portrait_outputs
 portrait_references
+project_packages
+project_workflows
 logs
 config
 ```
@@ -174,6 +198,10 @@ Video hook, subtitles, scene sequence, timing guide, shot list, editor instructi
 Portrait prompt packages, reference image path support, output path validation, positive/negative prompt, and portrait package library.
 
 Face references must be user-provided for the workflow.
+
+### Project Workflow Workstation
+
+One-topic-to-full-package planner for True Noir Tales, ToolFlow, and General Bangla-first content.
 
 ## Visual safety defaults
 
@@ -209,7 +237,7 @@ Future backend integrations can include:
 Recommended build order:
 
 1. Keep Bangla Quality Engine aligned across all workstations.
-2. Improve project workflow automation for True Noir Tales.
-3. Improve project workflow automation for ToolFlow.
-4. Build a dedicated workflow app/tab for one-topic-to-full-package generation.
-5. Add safer reference managers where needed.
+2. Improve True Noir Tales one-topic-to-full-package automation.
+3. Improve ToolFlow one-topic-to-full-package automation.
+4. Add safer reference managers where needed.
+5. Add optional backend integrations when ready.
