@@ -1,0 +1,69 @@
+{
+  "project_preset": "True Noir Tales",
+  "workflow_phase": "8.0",
+  "language_default": "English",
+  "bangla_version_supported": true,
+  "topic": "",
+  "platform": "Facebook / Reels / Carousel",
+  "target_length": "30-60 seconds",
+  "safety_rules": {
+    "adult_subjects_only": true,
+    "no_gore": true,
+    "no_dead_body": true,
+    "no_visible_wounds": true,
+    "no_exposed_violence": true,
+    "no_child_victim_framing": true,
+    "no_sindoor_unless_requested": true
+  },
+  "script_package": {
+    "hook": "",
+    "context": "",
+    "tension": "",
+    "turn_or_reveal": "",
+    "psychology_line": "",
+    "question_cta": ""
+  },
+  "image_package": {
+    "format": "9:16 or 1:1",
+    "visual_style": "realistic cinematic true crime noir",
+    "scene_prompt": "",
+    "negative_prompt": "no gore, no blood, no dead body, no visible wounds, no watermark, no fake logo, no sindoor unless explicitly requested"
+  },
+  "voice_package": {
+    "voice_tone": "dark calm",
+    "pacing": "medium-slow",
+    "delivery": "dramatic restrained",
+    "pause_style": "short dramatic pauses",
+    "reference_voice_policy": "reference voice only if user-provided or explicitly authorized"
+  },
+  "video_package": {
+    "format": "9:16 Reel/Shorts",
+    "edit_style": "cinematic suspense",
+    "subtitle_style": "English subtitles or Bangla subtitles",
+    "scene_sequence": [
+      "Hook visual",
+      "Context visual",
+      "Critical detail",
+      "Tension/reveal",
+      "Question CTA"
+    ]
+  },
+  "posting_package": {
+    "caption": "",
+    "cta": "",
+    "hashtags": [
+      "#TrueCrime",
+      "#CrimeStory",
+      "#Mystery",
+      "#NoirStory",
+      "#CrimePsychology"
+    ]
+  },
+  "output_paths": {
+    "script_path": "",
+    "image_job_path": "",
+    "voice_package_path": "",
+    "video_package_path": "",
+    "final_posting_package_path": ""
+  }
+}
