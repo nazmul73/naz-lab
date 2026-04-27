@@ -1,4 +1,4 @@
-"""Naz Lab Master Control Dashboard Phase 2.3."""
+"""Naz Lab Master Control Dashboard Phase 2.4."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ from shared.drive_paths import (  # noqa: E402
 )
 from shared.json_utils import safe_read_json, update_workstation_status  # noqa: E402
 
-PHASE = "2.3"
+PHASE = "2.4"
 LANGUAGE_REQUIREMENT_EN = "Bangla and English output quality are primary requirements. Regional Bangla defaults to Rangpur/Nilphamari tone when requested. Other languages are optional."
 LANGUAGE_REQUIREMENT_BN = "বাংলা হবে natural, fluent, Facebook-ready, voiceover-ready, netizen-style। আঞ্চলিক বাংলা চাইলে default হবে রংপুরিয়া/নীলফামারী tone। English হবে clean, practical, ready-to-use। অন্য ভাষা optional।"
 
@@ -53,7 +53,7 @@ FOLDERS = {
 
 WORKSTATIONS = [
     {"name": "Text Workstation", "phase": "1.8 stable", "key": "text_workstation", "folder": TEXT_OUTPUTS},
-    {"name": "Master Dashboard", "phase": "2.3 current", "key": "master_dashboard", "folder": BASE_PATH},
+    {"name": "Master Dashboard", "phase": "2.4 current", "key": "master_dashboard", "folder": BASE_PATH},
     {"name": "Image Workstation", "phase": "planned next", "key": "image_workstation", "folder": IMAGE_OUTPUTS},
     {"name": "Voice Workstation", "phase": "planned", "key": "voice_workstation", "folder": BASE_PATH / "voice_outputs"},
     {"name": "Video Workstation", "phase": "planned", "key": "video_workstation", "folder": BASE_PATH / "video_outputs"},
@@ -97,11 +97,19 @@ def status_label(folder: Path) -> str:
     return "OK" if folder.exists() and folder.is_dir() else "Missing"
 
 
+def link_markdown(label: str, url: str) -> None:
+    if url:
+        st.markdown(f"[{label}]({url})")
+    else:
+        st.caption("No URL saved yet.")
+
+
 def render_status(language: str) -> None:
     st.header("System status")
     links = read_json(WORKSTATION_LINKS_JSON, {})
     logs = output_log_entries()
     text_data = links.get("text_workstation", {}) if isinstance(links, dict) else {}
+    dashboard_data = links.get("master_dashboard", {}) if isinstance(links, dict) else {}
     text_status = text_data.get("status", "unknown")
 
     c1, c2, c3, c4 = st.columns(4)
@@ -111,6 +119,15 @@ def render_status(language: str) -> None:
     c4.metric("Output log entries", len(logs))
 
     st.info(LANGUAGE_REQUIREMENT_BN if language == "Bangla" else LANGUAGE_REQUIREMENT_EN)
+
+    st.markdown("### Quick links")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Text Workstation**")
+        link_markdown("Open Text Workstation", text_data.get("public_url", ""))
+    with col2:
+        st.markdown("**Master Dashboard**")
+        link_markdown("Open Master Dashboard", dashboard_data.get("public_url", ""))
 
     st.markdown("### Bangla and English quality requirements")
     st.json(BANGLA_STYLE_REQUIREMENTS)
@@ -133,6 +150,35 @@ def render_status(language: str) -> None:
             st.info("No log events yet.")
         else:
             st.dataframe(list(reversed(logs[-20:])), use_container_width=True, hide_index=True)
+
+
+def render_links() -> None:
+    st.header("Links")
+    st.caption("Save current Cloudflare URLs so the dashboard can show quick open links.")
+    links = read_json(WORKSTATION_LINKS_JSON, {})
+    text_data = links.get("text_workstation", {}) if isinstance(links, dict) else {}
+    dashboard_data = links.get("master_dashboard", {}) if isinstance(links, dict) else {}
+
+    with st.form("save_links_form"):
+        text_url = st.text_input("Text Workstation public URL", value=text_data.get("public_url", ""))
+        dashboard_url = st.text_input("Master Dashboard public URL", value=dashboard_data.get("public_url", ""))
+        submitted = st.form_submit_button("Save URLs")
+    if submitted:
+        if text_url.strip():
+            update_workstation_status(WORKSTATION_LINKS_JSON, "text_workstation", {"public_url": text_url.strip(), "status": text_data.get("status", "stable")})
+        if dashboard_url.strip():
+            update_workstation_status(WORKSTATION_LINKS_JSON, "master_dashboard", {"public_url": dashboard_url.strip(), "status": "running", "phase": PHASE})
+        st.success("URLs saved to workstation_links.json")
+        st.rerun()
+
+    st.markdown("### Saved links")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Text Workstation**")
+        link_markdown("Open Text Workstation", text_data.get("public_url", ""))
+    with col2:
+        st.markdown("**Master Dashboard**")
+        link_markdown("Open Master Dashboard", dashboard_data.get("public_url", ""))
 
 
 def render_workstations() -> None:
@@ -208,6 +254,16 @@ def render_jobs() -> None:
         st.info("No job files yet.")
 
 
+def render_launch() -> None:
+    st.header("Launch instructions")
+    st.markdown("### Text Workstation")
+    st.code("bash text_workstation/launch_text_workstation.sh", language="bash")
+    st.markdown("### Master Dashboard")
+    st.code("streamlit run master_dashboard/app.py --server.port 8502 --server.address 0.0.0.0", language="bash")
+    st.markdown("### Notes")
+    st.markdown("- Colab runtime is temporary. Run launcher cells again after runtime reset.\n- Cloudflare quick tunnel URLs change every session. Save them in the Links tab.\n- Bangla regional default: Rangpur/Nilphamari tone when regional Bangla is requested.")
+
+
 def render_roadmap(language: str) -> None:
     st.header("Roadmap")
     if language == "Bangla":
@@ -253,7 +309,7 @@ Language priority:
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Master Dashboard", page_icon="🧪", layout="wide")
     st.title("🧪 Naz Lab Master Control Dashboard")
-    st.caption("Phase 2.3 Rangpur/Nilphamari-first Bangla dashboard")
+    st.caption("Phase 2.4 link integration dashboard")
 
     update_workstation_status(
         WORKSTATION_LINKS_JSON,
@@ -266,18 +322,20 @@ def main() -> None:
         language = st.radio("Dashboard language note", ["Bangla", "English"], index=0)
         st.caption("Primary Bangla regional default: Rangpur/Nilphamari. Secondary tones available when requested.")
 
-    tab_status, tab_workstations, tab_outputs, tab_jobs, tab_roadmap = st.tabs([
-        "Status", "Workstations", "Outputs", "Job Queue", "Roadmap"
-    ])
-    with tab_status:
+    tabs = st.tabs(["Status", "Links", "Workstations", "Outputs", "Job Queue", "Launch", "Roadmap"])
+    with tabs[0]:
         render_status(language)
-    with tab_workstations:
+    with tabs[1]:
+        render_links()
+    with tabs[2]:
         render_workstations()
-    with tab_outputs:
+    with tabs[3]:
         render_outputs()
-    with tab_jobs:
+    with tabs[4]:
         render_jobs()
-    with tab_roadmap:
+    with tabs[5]:
+        render_launch()
+    with tabs[6]:
         render_roadmap(language)
 
 
