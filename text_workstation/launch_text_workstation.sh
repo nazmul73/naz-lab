@@ -13,7 +13,8 @@ OLLAMA_LOG="${OLLAMA_LOG:-/content/ollama.log}"
 CLOUDFLARE_LOG="${CLOUDFLARE_LOG:-/content/cloudflared_text_workstation.log}"
 
 MODEL_PRIMARY="${MODEL_PRIMARY:-gemma2:2b}"
-MODEL_CPU="${MODEL_CPU:-tinyllama}"
+MODEL_CPU="${MODEL_CPU:-qwen2.5:0.5b}"
+MODEL_LEGACY="${MODEL_LEGACY:-tinyllama}"
 
 section() {
   echo ""
@@ -98,7 +99,11 @@ fi
 cat /tmp/ollama_tags.json || true
 
 section "9. Pull or verify recommended models"
+echo "Pulling CPU recommended instruction model: $MODEL_CPU"
 ollama pull "$MODEL_CPU"
+
+echo "Verifying legacy tiny model is available only if already present."
+ollama list | grep -q "^$MODEL_LEGACY" && echo "Legacy model present: $MODEL_LEGACY" || true
 
 if has_gpu; then
   echo "GPU detected:"
@@ -107,7 +112,7 @@ if has_gpu; then
   ollama pull "$MODEL_PRIMARY"
   RECOMMENDED_MODEL="$MODEL_PRIMARY"
 else
-  echo "No GPU detected. CPU fallback will be used."
+  echo "No GPU detected. CPU instruction fallback will be used."
   RECOMMENDED_MODEL="$MODEL_CPU"
 fi
 
@@ -117,7 +122,7 @@ ollama list
 section "10. Direct backend test"
 timeout 180 curl -fsS http://localhost:11434/api/generate \
   -H "Content-Type: application/json" \
-  -d "{\"model\":\"$RECOMMENDED_MODEL\",\"prompt\":\"Reply with only one word: OK\",\"stream\":false}" \
+  -d "{\"model\":\"$RECOMMENDED_MODEL\",\"prompt\":\"Write one short sentence: AI saves time.\",\"stream\":false,\"options\":{\"num_predict\":40,\"temperature\":0.2}}" \
   | head -c 1200
 echo ""
 
@@ -125,7 +130,7 @@ section "11. Validate Text Workstation app"
 python -m py_compile "$APP_PATH"
 grep -n "AVAILABLE_MODELS" "$APP_PATH" || true
 grep -n "Test Selected Model" "$APP_PATH" || true
-grep -n "Phase 1.3" "$APP_PATH" || true
+grep -n "Phase 1.6" "$APP_PATH" || true
 
 section "12. Start Streamlit"
 pkill -f streamlit >/dev/null 2>&1 || true
@@ -177,6 +182,7 @@ echo ""
 echo "Recommended model for this runtime: $RECOMMENDED_MODEL"
 echo "CPU recommendation: $MODEL_CPU"
 echo "GPU/T4 recommendation: $MODEL_PRIMARY"
+echo "Legacy model, not recommended for writing: $MODEL_LEGACY"
 echo ""
 echo "Logs:"
 echo "Ollama: $OLLAMA_LOG"
