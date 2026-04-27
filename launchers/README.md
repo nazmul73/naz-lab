@@ -39,12 +39,26 @@ Supported values:
 ## Current stack
 
 - Text Workstation — Phase 1.8 stable
-- Master Dashboard — Phase 2.7 stable
+- Master Dashboard — Phase 2.9 stable
 - Image Workstation — Phase 3.x stable
 - Voice Workstation — Phase 4.x reference workflow
 - Video Workstation — Phase 5.3 stable
 - Portrait Workstation — Phase 6.3 stable
-- Project Workflow Workstation — Phase 10.0 foundation
+- Project Workflow Workstation — Phase 10.2 stable
+
+## Most useful values
+
+Start the main dashboard:
+
+```bash
+WORKSTATION="dashboard"
+```
+
+Start one-topic-to-full-package workflow:
+
+```bash
+WORKSTATION="project"
+```
 
 ## Global content rule
 
