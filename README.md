@@ -84,7 +84,11 @@ portrait
 project
 ```
 
-Example:
+Most useful values:
+
+```bash
+WORKSTATION="dashboard"
+```
 
 ```bash
 WORKSTATION="project"
@@ -109,6 +113,82 @@ Outputs save to:
 /content/drive/MyDrive/NazLab/project_packages
 ```
 
+Current automation quality:
+
+```text
+True Noir Tales automation — polished
+ToolFlow automation — polished
+General Bangla automation — polished
+```
+
+### True Noir Tales automation
+
+Creates:
+
+```text
+script package
+image prompt
+voice direction
+video direction
+posting package
+safety notes
+```
+
+Style:
+
+- cinematic noir
+- suspenseful but restrained
+- psychology-aware
+- adult-focused
+- no gore / no dead body / no visible wounds
+
+### ToolFlow automation
+
+Creates:
+
+```text
+main post
+carousel plan
+reel package
+image prompt
+voice direction
+video direction
+posting package
+safety notes
+```
+
+Style:
+
+- modern
+- clean
+- practical
+- premium
+- trustworthy
+- useful
+- non-hype
+
+### General Bangla automation
+
+Creates:
+
+```text
+Bangla text package
+reel package
+image prompt
+voice direction
+video direction
+posting package
+regional note
+```
+
+Style:
+
+- natural spoken Bangla
+- Facebook-ready
+- netizen-friendly
+- voiceover-ready
+- light Rangpur / Nilphamari / North Bengal flavor by default
+
 ## Project workflows
 
 Workflow documentation and templates live in:
@@ -123,6 +203,7 @@ Current workflows:
 - `true_noir_tales_package_template.json`
 - `toolflow_workflow.md`
 - `toolflow_package_template.json`
+- `project_workflows/README.md`
 
 ## Bangla Quality Engine
 
@@ -237,7 +318,6 @@ Future backend integrations can include:
 Recommended build order:
 
 1. Keep Bangla Quality Engine aligned across all workstations.
-2. Improve True Noir Tales one-topic-to-full-package automation.
-3. Improve ToolFlow one-topic-to-full-package automation.
-4. Add safer reference managers where needed.
-5. Add optional backend integrations when ready.
+2. Add safer reference managers where needed.
+3. Add optional backend integrations when ready.
+4. Improve dashboard reporting and package search/filter.
