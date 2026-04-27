@@ -1,6 +1,6 @@
-"""Naz Lab Project Workflow Workstation Phase 10.1.
+"""Naz Lab Project Workflow Workstation Phase 10.2 stable.
 
-Polished app for creating project-specific end-to-end package plans
+Stable app for creating project-specific end-to-end package plans
 for True Noir Tales, ToolFlow, and General Bangla-first content.
 """
 
@@ -21,8 +21,8 @@ if str(REPO_ROOT) not in sys.path:
 from shared.drive_paths import BASE_PATH, OUTPUT_LOG_JSON, WORKSTATION_LINKS_JSON  # noqa: E402
 from shared.json_utils import append_output_log, safe_read_json, safe_write_json, update_workstation_status  # noqa: E402
 
-PHASE = "10.1"
-PHASE_STATUS = "polished"
+PHASE = "10.2"
+PHASE_STATUS = "stable"
 PROJECT_PACKAGES = BASE_PATH / "project_packages"
 PROJECT_WORKFLOWS = BASE_PATH / "project_workflows"
 
@@ -32,6 +32,7 @@ PLATFORMS = ["Facebook post", "Facebook Reel", "Carousel", "Story", "Full packag
 PACKAGE_STATUS = ["draft", "ready_for_production", "in_progress", "published", "archived"]
 
 BANGLA_RULE = "Bangla must be natural spoken Bangla, Facebook-ready, netizen-friendly, voiceover-ready, simple, human, and not stiff textbook Bangla. Default regional flavor: Rangpur/Nilphamari/North Bengal, used lightly."
+REFERENCE_POLICY = "Use face/voice references only when user-provided or explicitly authorized. Do not use misleading or unauthorized reference assets."
 
 PROJECT_DEFAULTS = {
     "True Noir Tales": {
@@ -98,7 +99,7 @@ def build_true_noir_package(topic: str, language: str, platform: str, audience: 
     return {
         "script_package": script,
         "image_package": {"prompt": image_prompt, "format": "9:16 Reel or 1:1 post", "negative": "no gore, no blood, no dead body, no visible wounds, no sensational violence"},
-        "voice_package": {"direction": voice_direction, "language": language, "reference_policy": "reference voice only if user-provided or explicitly authorized"},
+        "voice_package": {"direction": voice_direction, "language": language, "reference_policy": REFERENCE_POLICY},
         "video_package": {"direction": video_direction, "platform": platform, "scene_sequence": ["Hook visual", "Context", "Critical detail", "Tension/reveal", "Question CTA"]},
         "posting_package": {"caption": hook, "cta": cta, "hashtags": ["#TrueCrime", "#CrimeStory", "#NoirStory", "#CrimePsychology"]},
         "notes": note,
@@ -128,7 +129,7 @@ def build_toolflow_package(topic: str, language: str, platform: str, audience: s
         "carousel_package": {"slides": ["Hook / promise", "Problem", "Workflow", "Step 1", "Step 2", "Step 3", "Result", "CTA"]},
         "reel_package": {"hook": hook, "target_length": "30 seconds", "cta": cta, "scene_sequence": ["Problem", "System", "Steps", "Result", "CTA"]},
         "image_package": {"prompt": image_prompt, "format": "1:1, 4:5, or 9:16", "negative": "no fake logos, no misleading UI, no clutter, no unreadable text"},
-        "voice_package": {"direction": voice_direction, "language": language, "reference_policy": "reference voice only if user-provided or explicitly authorized"},
+        "voice_package": {"direction": voice_direction, "language": language, "reference_policy": REFERENCE_POLICY},
         "video_package": {"direction": video_direction, "platform": platform},
         "posting_package": {"caption": hook, "cta": cta, "hashtags": ["#AITools", "#Productivity", "#Automation", "#SaaS", "#Workflow", "#ToolFlow"]},
         "notes": note,
@@ -142,7 +143,7 @@ def build_general_package(topic: str, language: str, platform: str, audience: st
     return {
         "text_package": {"hook": hook, "body": topic, "cta": cta, "bangla_rule": BANGLA_RULE},
         "image_package": {"prompt": "Natural Bangladeshi social content visual, realistic, culturally grounded, urban or rural Bangladesh as appropriate, no misleading elements, no sindoor unless requested."},
-        "voice_package": {"direction": "Natural spoken Bangla, Facebook-ready, voiceover-ready, clear pauses, one idea per sentence.", "language": language},
+        "voice_package": {"direction": "Natural spoken Bangla, Facebook-ready, voiceover-ready, clear pauses, one idea per sentence.", "language": language, "reference_policy": REFERENCE_POLICY},
         "video_package": {"direction": "Hook-context-value-CTA video package, subtitle-friendly Bangla, short mobile-readable lines.", "platform": platform},
         "posting_package": {"caption": hook, "cta": cta, "hashtags": ["#BanglaContent", "#FacebookContent"]},
         "notes": note,
@@ -170,6 +171,7 @@ def build_package(project: str, topic: str, language: str, platform: str, audien
         "package": body,
         "global_rule": "Naz Lab is Bangla-first by default. English is supported for True Noir Tales and ToolFlow project presets.",
         "bangla_quality_rule": BANGLA_RULE,
+        "reference_policy": REFERENCE_POLICY,
     }
 
 
@@ -185,15 +187,23 @@ def render_status() -> None:
     st.header("Status")
     ensure_dirs()
     packages = list_json_files(PROJECT_PACKAGES)
-    c1, c2, c3 = st.columns(3)
+    ready = sum(1 for path in packages if safe_read_json(path, {}).get("status") == "ready_for_production")
+    c1, c2, c3, c4 = st.columns(4)
     c1.metric("Phase", PHASE)
     c2.metric("Status", PHASE_STATUS)
     c3.metric("Project packages", len(packages))
-    st.info("Project Workflow Workstation creates full package plans from one topic. It does not generate media directly.")
-    st.markdown("### Project defaults")
-    st.json(PROJECT_DEFAULTS)
-    st.markdown("### Bangla Quality Engine")
+    c4.metric("Ready packages", ready)
+    st.success("Project Workflow Workstation status: stable for Phase 10")
+    st.info("Creates full package plans from one topic. It does not generate media directly.")
+    st.markdown("### Stable workflow")
+    st.markdown("1. Pick project preset.  \n2. Choose language and platform.  \n3. Paste one topic/story/tool idea.  \n4. Review Script/Image/Voice/Video/Posting tabs.  \n5. Save project package JSON.")
+    st.markdown("### Safety and quality")
     st.write(BANGLA_RULE)
+    st.write(REFERENCE_POLICY)
+    with st.expander("Project defaults", expanded=False):
+        st.json(PROJECT_DEFAULTS)
+    with st.expander("Paths", expanded=False):
+        st.write({"project_packages": str(PROJECT_PACKAGES), "project_workflows": str(PROJECT_WORKFLOWS)})
 
 
 def render_package_sections(package: dict[str, Any]) -> None:
@@ -228,7 +238,7 @@ def render_builder() -> None:
     defaults = PROJECT_DEFAULTS[project]
     language = st.selectbox("Language", LANGUAGES, index=LANGUAGES.index(defaults["language"]))
     platform = st.selectbox("Platform", PLATFORMS)
-    status = st.selectbox("Package status", PACKAGE_STATUS)
+    status = st.selectbox("Package status", PACKAGE_STATUS, index=PACKAGE_STATUS.index("ready_for_production"))
     audience = st.text_input("Target audience", value="Facebook audience")
     topic = st.text_area("Topic / story / tool / idea", height=180, placeholder="Paste one topic, story idea, tool name, or workflow idea here.")
     note = st.text_area("Custom direction", height=100, placeholder="Example: more suspense, more Bangla, more practical, shorter reel, etc.")
@@ -241,7 +251,8 @@ def render_builder() -> None:
     st.markdown("### Package preview")
     render_package_sections(package)
     if st.button("Save project package JSON"):
-        st.success(f"Saved: {save_package(package)}")
+        saved = save_package(package)
+        st.success(f"Saved: {saved}")
 
 
 def render_library() -> None:
@@ -259,7 +270,7 @@ def render_library() -> None:
 
 def render_launch() -> None:
     st.header("Launch notes")
-    st.markdown("Phase 10.1 creates polished project workflow packages for True Noir Tales, ToolFlow, and General content.")
+    st.markdown("Project Workflow Workstation Phase 10.2 is stable for one-topic-to-package planning.")
     st.code("streamlit run project_workstation/app.py --server.port 8507 --server.address 0.0.0.0", language="bash")
     st.markdown("Recommended all-in-one launcher value:")
     st.code('WORKSTATION="project"', language="bash")
@@ -268,7 +279,8 @@ def render_launch() -> None:
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Project Workflow Workstation", page_icon="🧩", layout="wide")
     st.title("🧩 Naz Lab Project Workflow Workstation")
-    st.caption("Phase 10.1 polished — one topic to full project package plan.")
+    st.caption("Phase 10.2 stable — one topic to full project package plan.")
+    st.success("Project Workflow Workstation status: stable for Phase 10")
     st.info("Naz Lab is Bangla-first by default. True Noir Tales and ToolFlow can stay English-first project presets.")
     ensure_dirs()
     update_workstation_status(WORKSTATION_LINKS_JSON, "project_workstation", {"status": PHASE_STATUS, "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")})
