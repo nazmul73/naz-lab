@@ -1,7 +1,7 @@
-"""Naz Lab Video Workstation Phase 5.2.
+"""Naz Lab Video Workstation Phase 5.3 stable.
 
-Video package workflow with output path validation, improved library,
-status workflow, and stable-prep package metadata.
+Stable Video Workstation for Bangla-first video packages, hooks,
+subtitles, scene timing, editor instructions, workflow metadata, and library previews.
 """
 
 from __future__ import annotations
@@ -20,7 +20,8 @@ if str(REPO_ROOT) not in sys.path:
 from shared.drive_paths import BASE_PATH, OUTPUT_LOG_JSON, WORKSTATION_LINKS_JSON  # noqa: E402
 from shared.json_utils import append_output_log, safe_read_json, safe_write_json, update_workstation_status  # noqa: E402
 
-PHASE = "5.2"
+PHASE = "5.3"
+PHASE_STATUS = "stable"
 VIDEO_OUTPUTS = BASE_PATH / "video_outputs"
 VIDEO_PACKAGES = BASE_PATH / "video_packages"
 VIDEO_STORYBOARDS = BASE_PATH / "video_storyboards"
@@ -237,14 +238,18 @@ def render_status() -> None:
     packages = list_json_files(VIDEO_PACKAGES)
     videos = list_video_files()
     storyboards = [p for p in VIDEO_STORYBOARDS.glob("*.txt") if p.is_file()] if VIDEO_STORYBOARDS.exists() else []
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Phase", PHASE); c2.metric("Video packages", len(packages)); c3.metric("Storyboards", len(storyboards)); c4.metric("Video files", len(videos))
-    st.markdown("### Workflow")
+    c1, c2, c3, c4, c5 = st.columns(5)
+    c1.metric("Phase", PHASE); c2.metric("Status", PHASE_STATUS); c3.metric("Video packages", len(packages)); c4.metric("Storyboards", len(storyboards)); c5.metric("Video files", len(videos))
+    st.success("Video Workstation status: stable for Phase 5")
+    st.markdown("### Stable workflow")
     st.markdown("1. Build video package.  \n2. Save package JSON and storyboard.  \n3. Edit/render video manually for now.  \n4. Save rendered file to `video_outputs`.  \n5. Use video output path for future status tracking.")
-    st.info("General video workflows default to Bangla. True Noir Tales and ToolFlow remain English-first presets unless changed.")
-    st.json(PROJECT_DEFAULTS)
+    st.info("Bangla-first is the default for General video workflows. True Noir Tales and ToolFlow remain English-first presets unless changed.")
+    st.markdown("### Next phase")
+    st.write({"next_phase": "Phase 6.0", "next_workstation": "Portrait / Face workflow planning", "status": "ready after Video verification"})
+    with st.expander("Project defaults", expanded=False):
+        st.json(PROJECT_DEFAULTS)
     with st.expander("Integration placeholders", expanded=False):
-        st.write({"voice_packages": str(VOICE_PACKAGES), "image_jobs": str(IMAGE_JOBS), "image_outputs": str(IMAGE_OUTPUTS), "video_packages": str(VIDEO_PACKAGES), "video_outputs": str(VIDEO_OUTPUTS)})
+        st.write({"voice_packages": str(VOICE_PACKAGES), "image_jobs": str(IMAGE_JOBS), "image_outputs": str(IMAGE_OUTPUTS), "video_packages": str(VIDEO_PACKAGES), "video_outputs": str(VIDEO_OUTPUTS), "workstation_links_json": str(WORKSTATION_LINKS_JSON)})
 
 
 def render_builder() -> None:
@@ -341,18 +346,19 @@ def render_inputs() -> None:
 
 def render_launch() -> None:
     st.header("Launch notes")
-    st.markdown("Phase 5.2 supports video package workflow, output path validation, storyboards, and library previews. It does not generate video yet.")
-    st.markdown("Next build: Phase 5.3 Video Workstation stable polish.")
+    st.markdown("Video Workstation Phase 5.3 is stable for video packages, output path validation, storyboards, and library previews. It does not generate video yet.")
+    st.markdown("Next build: Phase 6.0 Portrait / Face workflow planning, or Master Dashboard integration refresh.")
     st.code("streamlit run video_workstation/app.py --server.port 8505 --server.address 0.0.0.0", language="bash")
 
 
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Video Workstation", page_icon="🎬", layout="wide")
     st.title("🎬 Naz Lab Video Workstation")
-    st.caption("Phase 5.2 — video workflow, output path validation, library polish, stable preparation.")
+    st.caption("Phase 5.3 stable — Bangla-first video packages, hooks, subtitles, timing, editor instructions.")
+    st.success("Video Workstation status: stable for Phase 5")
     st.info("Naz Lab is Bangla-first by default. True Noir Tales and ToolFlow can stay English-first when selected.")
     ensure_dirs()
-    update_workstation_status(WORKSTATION_LINKS_JSON, "video_workstation", {"status": "running", "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")})
+    update_workstation_status(WORKSTATION_LINKS_JSON, "video_workstation", {"status": PHASE_STATUS, "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")})
     tabs = st.tabs(["Status", "Builder", "Inputs", "Library", "Launch"])
     with tabs[0]: render_status()
     with tabs[1]: render_builder()
