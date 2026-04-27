@@ -1,4 +1,4 @@
-"""Naz Lab Master Control Dashboard Phase 2.1."""
+"""Naz Lab Master Control Dashboard Phase 2.2."""
 
 from __future__ import annotations
 
@@ -29,9 +29,17 @@ from shared.drive_paths import (  # noqa: E402
 )
 from shared.json_utils import safe_read_json, update_workstation_status  # noqa: E402
 
-PHASE = "2.1"
+PHASE = "2.2"
 LANGUAGE_REQUIREMENT_EN = "Bangla and English output quality are primary requirements. Other languages are optional."
-LANGUAGE_REQUIREMENT_BN = "বাংলা ও ইংরেজি আউটপুটের মান সবচেয়ে গুরুত্বপূর্ণ। অন্য ভাষা optional।"
+LANGUAGE_REQUIREMENT_BN = "বাংলা হবে natural, fluent, Facebook-ready, voiceover-ready, netizen-style, এবং প্রয়োজন হলে আঞ্চলিক tone সহ। English হবে clean, practical, ready-to-use। অন্য ভাষা optional।"
+
+BANGLA_STYLE_REQUIREMENTS = {
+    "Core Bangla": "স্বাভাবিক, সহজ, মুখে বলার মতো, ready-to-use বাংলা।",
+    "Netizen Bangla": "Facebook comment/post/reel audience-এর মতো natural online tone।",
+    "Voiceover Bangla": "মুখে পড়লে যেন কাঠখোট্টা না লাগে; short sentence, clear pacing।",
+    "Regional tone": "User চাইলে ঢাকাইয়া, চাটগাঁইয়া, সিলেটি, নোয়াখালী/কুমিল্লা ইত্যাদি regional flavor support।",
+    "English": "Clean, practical, direct, ready-to-use English।",
+}
 
 FOLDERS = {
     "Chat outputs": CHAT_OUTPUTS,
@@ -44,7 +52,7 @@ FOLDERS = {
 
 WORKSTATIONS = [
     {"name": "Text Workstation", "phase": "1.8 stable", "key": "text_workstation", "folder": TEXT_OUTPUTS},
-    {"name": "Master Dashboard", "phase": "2.1 current", "key": "master_dashboard", "folder": BASE_PATH},
+    {"name": "Master Dashboard", "phase": "2.2 current", "key": "master_dashboard", "folder": BASE_PATH},
     {"name": "Image Workstation", "phase": "planned next", "key": "image_workstation", "folder": IMAGE_OUTPUTS},
     {"name": "Voice Workstation", "phase": "planned", "key": "voice_workstation", "folder": BASE_PATH / "voice_outputs"},
     {"name": "Video Workstation", "phase": "planned", "key": "video_workstation", "folder": BASE_PATH / "video_outputs"},
@@ -102,6 +110,9 @@ def render_status(language: str) -> None:
     c4.metric("Output log entries", len(logs))
 
     st.info(LANGUAGE_REQUIREMENT_BN if language == "Bangla" else LANGUAGE_REQUIREMENT_EN)
+
+    st.markdown("### Bangla and English quality requirements")
+    st.json(BANGLA_STYLE_REQUIREMENTS)
 
     if text_data:
         st.markdown("### Text Workstation saved status")
@@ -210,7 +221,8 @@ def render_roadmap(language: str) -> None:
 7. Phase 6 Portrait Workstation — planned
 
 ভাষার priority:
-- বাংলা: natural, fluent, ready-to-use হতে হবে।
+- বাংলা: natural, fluent, netizen-style, voiceover-ready, ready-to-use হতে হবে।
+- আঞ্চলিক tone: user চাইলে ঢাকাইয়া, চাটগাঁইয়া, সিলেটি, নোয়াখালী/কুমিল্লা flavor support করতে হবে।
 - English: clean, practical, ready-to-use হতে হবে।
 - অন্য ভাষা: optional।
 """
@@ -227,9 +239,10 @@ def render_roadmap(language: str) -> None:
 7. Phase 6 Portrait Workstation — planned
 
 Language priority:
-- Bangla: must be strong, natural, and ready to use.
-- English: must be clean, practical, and ready to use.
-- Other languages: optional.
+- Bangla must be strong, natural, netizen-style, voiceover-ready, and ready to use.
+- Regional Bangla tone should be supported when requested.
+- English must be clean, practical, and ready to use.
+- Other languages are optional.
 """
         )
 
@@ -237,7 +250,7 @@ Language priority:
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Master Dashboard", page_icon="🧪", layout="wide")
     st.title("🧪 Naz Lab Master Control Dashboard")
-    st.caption("Phase 2.1 polished dashboard")
+    st.caption("Phase 2.2 language-aware dashboard")
 
     update_workstation_status(
         WORKSTATION_LINKS_JSON,
@@ -248,7 +261,7 @@ def main() -> None:
     with st.sidebar:
         st.header("Dashboard settings")
         language = st.radio("Dashboard language note", ["Bangla", "English"], index=0)
-        st.caption("Primary product languages: Bangla and English.")
+        st.caption("Primary product languages: Bangla and English. Bangla must support natural, netizen-style, voiceover-ready output.")
 
     tab_status, tab_workstations, tab_outputs, tab_jobs, tab_roadmap = st.tabs([
         "Status", "Workstations", "Outputs", "Job Queue", "Roadmap"
