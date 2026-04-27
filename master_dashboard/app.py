@@ -59,6 +59,12 @@ BANGLA_STYLE_REQUIREMENTS = {
     "English exceptions": "True Noir Tales and ToolFlow can stay English-first when selected.",
 }
 
+PROJECT_AUTOMATION_STATUS = {
+    "True Noir Tales": "polished one-topic-to-full-package automation",
+    "ToolFlow": "polished one-topic-to-full-package automation",
+    "General Bangla": "polished Bangla-first one-topic-to-full-package automation",
+}
+
 FOLDERS = {
     "Chat outputs": CHAT_OUTPUTS,
     "Text outputs": TEXT_OUTPUTS,
@@ -169,6 +175,9 @@ def render_status(language: str) -> None:
         })
     st.dataframe(rows, use_container_width=True, hide_index=True)
 
+    st.markdown("### Project automation status")
+    st.json(PROJECT_AUTOMATION_STATUS)
+
     st.markdown("### Quick links")
     cols = st.columns(4)
     for index, item in enumerate(WORKSTATIONS):
@@ -179,9 +188,10 @@ def render_status(language: str) -> None:
     st.markdown("### Next readiness")
     st.write({
         "current_stack": "Text + Dashboard + Image + Voice + Video + Portrait + Project Workflow",
-        "recommended_next_1": "README and launcher sync to Project Phase 10.2",
-        "recommended_next_2": "True Noir Tales one-topic-to-full-package automation polish",
-        "recommended_next_3": "ToolFlow one-topic-to-full-package automation polish",
+        "project_automation": "True Noir Tales + ToolFlow + General Bangla polished",
+        "recommended_next_1": "Dashboard reporting and package search/filter",
+        "recommended_next_2": "Safer reference managers where needed",
+        "recommended_next_3": "Optional backend planning",
         "status": "ready",
     })
     st.markdown("### Bangla-first quality requirements")
@@ -303,22 +313,24 @@ def render_roadmap(language: str) -> None:
 8. Phase 7 All-in-one Launcher — ready  
 9. Phase 8 True Noir Tales / ToolFlow workflow docs — ready  
 10. Phase 9 Bangla Quality Engine — active  
-11. Phase 10 Project Workflow Workstation — stable
+11. Phase 10 Project Workflow Workstation — stable and polished
 """)
+    st.markdown("### Project automation")
+    st.json(PROJECT_AUTOMATION_STATUS)
     if language == "Bangla":
         st.markdown("""
 পরের কাজের priority:
-- README / launcher docs current stack sync
-- True Noir Tales one-topic-to-full-package automation polish
-- ToolFlow one-topic-to-full-package automation polish
-- Bangla quality engine আরও workstations-এ apply করা
+- Dashboard reporting এবং package search/filter উন্নত করা
+- দরকার হলে safer reference manager যোগ করা
+- backend planning শুরু করা
+- Bangla quality engine সব জায়গায় aligned রাখা
 """)
 
 
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Master Dashboard", page_icon="🧪", layout="wide")
     st.title("🧪 Naz Lab Master Control Dashboard")
-    st.caption("Phase 2.9 refresh — full stack plus Project Workflow Workstation Phase 10.2")
+    st.caption("Phase 2.9 refresh — full stack plus polished Project Workflow automation")
     update_workstation_status(WORKSTATION_LINKS_JSON, "master_dashboard", {"status": PHASE_STATUS, "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")})
     with st.sidebar:
         st.header("Dashboard settings")
