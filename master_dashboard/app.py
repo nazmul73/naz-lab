@@ -1,4 +1,4 @@
-"""Naz Lab Master Control Dashboard Phase 2.7 refresh."""
+"""Naz Lab Master Control Dashboard Phase 2.8 project integration refresh."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ from shared.drive_paths import (  # noqa: E402
 )
 from shared.json_utils import safe_read_json, update_workstation_status  # noqa: E402
 
-PHASE = "2.7"
+PHASE = "2.8"
 PHASE_STATUS = "stable"
 
 VOICE_OUTPUTS = BASE_PATH / "voice_outputs"
@@ -43,6 +43,8 @@ VIDEO_STORYBOARDS = BASE_PATH / "video_storyboards"
 PORTRAIT_PACKAGES = BASE_PATH / "portrait_packages"
 PORTRAIT_OUTPUTS = BASE_PATH / "portrait_outputs"
 PORTRAIT_REFERENCES = BASE_PATH / "portrait_references"
+PROJECT_PACKAGES = BASE_PATH / "project_packages"
+PROJECT_WORKFLOWS = BASE_PATH / "project_workflows"
 
 LANGUAGE_REQUIREMENT_EN = "Naz Lab is Bangla-first by default. English is second and remains default for True Noir Tales / ToolFlow when selected. Other languages are optional."
 LANGUAGE_REQUIREMENT_BN = "Naz Lab default হবে Bangla-first। বেশির ভাগ content বাংলায় হবে। English থাকবে selected English project বা user request অনুযায়ী। আঞ্চলিক বাংলা লাগলে primary default: রংপুর/নীলফামারী/উত্তরবঙ্গ।"
@@ -75,15 +77,18 @@ FOLDERS = {
     "Portrait packages": PORTRAIT_PACKAGES,
     "Portrait outputs": PORTRAIT_OUTPUTS,
     "Portrait references": PORTRAIT_REFERENCES,
+    "Project packages": PROJECT_PACKAGES,
+    "Project workflows": PROJECT_WORKFLOWS,
 }
 
 WORKSTATIONS = [
     {"name": "Text Workstation", "phase": "1.8 stable", "key": "text_workstation", "folder": TEXT_OUTPUTS, "port": "8501"},
-    {"name": "Master Dashboard", "phase": "2.7 stable", "key": "master_dashboard", "folder": BASE_PATH, "port": "8502"},
+    {"name": "Master Dashboard", "phase": "2.8 stable", "key": "master_dashboard", "folder": BASE_PATH, "port": "8502"},
     {"name": "Image Workstation", "phase": "3.x stable", "key": "image_workstation", "folder": IMAGE_OUTPUTS, "port": "8503"},
-    {"name": "Voice Workstation", "phase": "4.5 reference-manager", "key": "voice_workstation", "folder": VOICE_OUTPUTS, "port": "8504"},
+    {"name": "Voice Workstation", "phase": "4.x reference workflow", "key": "voice_workstation", "folder": VOICE_OUTPUTS, "port": "8504"},
     {"name": "Video Workstation", "phase": "5.3 stable", "key": "video_workstation", "folder": VIDEO_OUTPUTS, "port": "8505"},
-    {"name": "Portrait Workstation", "phase": "6.0 foundation", "key": "portrait_workstation", "folder": PORTRAIT_PACKAGES, "port": "8506"},
+    {"name": "Portrait Workstation", "phase": "6.3 stable", "key": "portrait_workstation", "folder": PORTRAIT_PACKAGES, "port": "8506"},
+    {"name": "Project Workflow Workstation", "phase": "10.0 foundation", "key": "project_workstation", "folder": PROJECT_PACKAGES, "port": "8507"},
 ]
 
 
@@ -143,9 +148,9 @@ def render_status(language: str) -> None:
     c1.metric("Dashboard phase", PHASE)
     c2.metric("Dashboard status", PHASE_STATUS)
     c3.metric("Drive base", status_label(BASE_PATH))
-    c4.metric("Active workstations", "6")
+    c4.metric("Active workstations", str(len(WORKSTATIONS)))
     c5.metric("Output log entries", len(logs))
-    st.success("Master Dashboard status: stable for Phase 2.7 refresh")
+    st.success("Master Dashboard status: stable for Phase 2.8 project integration refresh")
     st.info(LANGUAGE_REQUIREMENT_BN if language == "Bangla" else LANGUAGE_REQUIREMENT_EN)
 
     st.markdown("### Workstation matrix")
@@ -165,18 +170,18 @@ def render_status(language: str) -> None:
     st.dataframe(rows, use_container_width=True, hide_index=True)
 
     st.markdown("### Quick links")
-    cols = st.columns(6)
+    cols = st.columns(4)
     for index, item in enumerate(WORKSTATIONS):
-        with cols[index]:
+        with cols[index % 4]:
             st.markdown(f"**{item['name']}**")
             link_markdown("Open", links.get(item["key"], {}).get("public_url", ""))
 
     st.markdown("### Next readiness")
     st.write({
-        "current_stack": "Text + Master Dashboard + Image + Voice + Video + Portrait foundation",
-        "recommended_next_1": "Portrait Workstation Phase 6.1 preset polish",
-        "recommended_next_2": "All-in-one launcher",
-        "recommended_next_3": "True Noir Tales end-to-end workflow",
+        "current_stack": "Text + Dashboard + Image + Voice + Video + Portrait + Project Workflow",
+        "recommended_next_1": "Project Workstation Phase 10.1 polish",
+        "recommended_next_2": "True Noir Tales one-topic-to-full-package automation",
+        "recommended_next_3": "ToolFlow one-topic-to-full-package automation",
         "status": "ready",
     })
     st.markdown("### Bangla-first quality requirements")
@@ -247,6 +252,7 @@ def render_jobs() -> None:
         "Voice profile packages": VOICE_PROFILE_PACKAGES,
         "Video packages": VIDEO_PACKAGES,
         "Portrait packages": PORTRAIT_PACKAGES,
+        "Project packages": PROJECT_PACKAGES,
     }
     for label, folder in sections.items():
         st.markdown(f"### {label}")
@@ -258,7 +264,7 @@ def render_jobs() -> None:
                 "File": path.name,
                 "Status": data.get("status", "unknown") if isinstance(data, dict) else "unknown",
                 "Project": data.get("project_preset", data.get("visual_preset", "")) if isinstance(data, dict) else "",
-                "Content": data.get("content_type", data.get("portrait_type", "")) if isinstance(data, dict) else "",
+                "Content": data.get("content_type", data.get("portrait_type", data.get("platform", ""))) if isinstance(data, dict) else "",
                 "Created": data.get("created_at", "") if isinstance(data, dict) else "",
             })
         st.metric(f"{label} count", len(files))
@@ -277,9 +283,11 @@ def render_launch() -> None:
         "Voice Workstation": "8504",
         "Video Workstation": "8505",
         "Portrait Workstation": "8506",
+        "Project Workflow Workstation": "8507",
     })
-    st.code("streamlit run master_dashboard/app.py --server.port 8502 --server.address 0.0.0.0", language="bash")
-    st.code("streamlit run portrait_workstation/app.py --server.port 8506 --server.address 0.0.0.0", language="bash")
+    st.markdown("Recommended: use `launchers/all_in_one_colab_launcher.md` and set `WORKSTATION` to the app you want.")
+    st.code('WORKSTATION="project"', language="bash")
+    st.code("streamlit run project_workstation/app.py --server.port 8507 --server.address 0.0.0.0", language="bash")
 
 
 def render_roadmap(language: str) -> None:
@@ -287,34 +295,36 @@ def render_roadmap(language: str) -> None:
     st.markdown("""
 1. Phase 0 Foundation — complete  
 2. Phase 1 Text Workstation — stable  
-3. Phase 2 Master Dashboard — refreshed  
+3. Phase 2 Master Dashboard — project integration refreshed  
 4. Phase 3 Image Workstation — stable  
-5. Phase 4 Voice Workstation — reference manager active  
+5. Phase 4 Voice Workstation — reference workflow active  
 6. Phase 5 Video Workstation — stable  
-7. Phase 6 Portrait Workstation — foundation created  
-8. Next: Portrait polish, all-in-one launcher, end-to-end project workflows
+7. Phase 6 Portrait Workstation — stable  
+8. Phase 7 All-in-one Launcher — ready  
+9. Phase 8 True Noir Tales / ToolFlow workflow docs — ready  
+10. Phase 9 Bangla Quality Engine — active  
+11. Phase 10 Project Workflow Workstation — foundation ready
 """)
     if language == "Bangla":
         st.markdown("""
 পরের কাজের priority:
-- Portrait Workstation Phase 6.1 polish
-- All-in-one launcher
-- True Noir Tales end-to-end workflow
-- ToolFlow end-to-end workflow
-- Bangla quality engine আরও শক্ত করা
+- Project Workstation Phase 10.1 polish
+- True Noir Tales one-topic-to-full-package automation
+- ToolFlow one-topic-to-full-package automation
+- Bangla quality engine আরও workstations-এ apply করা
 """)
 
 
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Master Dashboard", page_icon="🧪", layout="wide")
     st.title("🧪 Naz Lab Master Control Dashboard")
-    st.caption("Phase 2.7 refresh — Text, Image, Voice, Video, Portrait status and Bangla-first roadmap")
+    st.caption("Phase 2.8 refresh — full stack plus Project Workflow Workstation")
     update_workstation_status(WORKSTATION_LINKS_JSON, "master_dashboard", {"status": PHASE_STATUS, "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")})
     with st.sidebar:
         st.header("Dashboard settings")
         language = st.radio("Dashboard language note", ["Bangla", "English"], index=0)
         st.caption("Naz Lab default: Bangla-first. Regional default: Rangpur/Nilphamari/North Bengal.")
-        st.success("Phase 2.7 stable")
+        st.success("Phase 2.8 stable")
     tabs = st.tabs(["Status", "Links", "Workstations", "Outputs", "Job Queue", "Launch", "Roadmap"])
     with tabs[0]: render_status(language)
     with tabs[1]: render_links()
