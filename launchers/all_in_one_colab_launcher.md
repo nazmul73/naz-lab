@@ -19,6 +19,7 @@ Change `WORKSTATION="dashboard"` to any supported value:
 - `voice`
 - `video`
 - `portrait`
+- `project`
 
 ```bash
 %%bash
@@ -71,9 +72,15 @@ case "$WORKSTATION" in
     PORT="8506"
     NAME="PORTRAIT WORKSTATION"
     ;;
+  project)
+    APP_REL="project_workstation/app.py"
+    REQ_REL="project_workstation/requirements.txt"
+    PORT="8507"
+    NAME="PROJECT WORKFLOW WORKSTATION"
+    ;;
   *)
     echo "ERROR: Unknown WORKSTATION value: $WORKSTATION"
-    echo "Use one of: text, dashboard, image, voice, video, portrait"
+    echo "Use one of: text, dashboard, image, voice, video, portrait, project"
     exit 1
     ;;
 esac
@@ -166,4 +173,5 @@ echo "============================================================"
 
 - Cloudflare URLs change every runtime/session.
 - Use Dashboard Links tab to save the current public URLs.
+- `project` starts the Project Workflow Workstation on port 8507.
 - For Voice Workstation reference audio manager, keep using the latest launcher/patch flow until it is made permanent in repo.
