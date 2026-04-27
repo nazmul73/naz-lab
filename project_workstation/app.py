@@ -1,11 +1,12 @@
-"""Naz Lab Project Workflow Workstation Phase 10.0.
+"""Naz Lab Project Workflow Workstation Phase 10.1.
 
-Foundation app for creating project-specific end-to-end package plans
-for True Noir Tales and ToolFlow.
+Polished app for creating project-specific end-to-end package plans
+for True Noir Tales, ToolFlow, and General Bangla-first content.
 """
 
 from __future__ import annotations
 
+import json
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -20,8 +21,8 @@ if str(REPO_ROOT) not in sys.path:
 from shared.drive_paths import BASE_PATH, OUTPUT_LOG_JSON, WORKSTATION_LINKS_JSON  # noqa: E402
 from shared.json_utils import append_output_log, safe_read_json, safe_write_json, update_workstation_status  # noqa: E402
 
-PHASE = "10.0"
-PHASE_STATUS = "foundation"
+PHASE = "10.1"
+PHASE_STATUS = "polished"
 PROJECT_PACKAGES = BASE_PATH / "project_packages"
 PROJECT_WORKFLOWS = BASE_PATH / "project_workflows"
 
@@ -30,21 +31,26 @@ LANGUAGES = ["Bangla", "English", "Mixed Bangla-English"]
 PLATFORMS = ["Facebook post", "Facebook Reel", "Carousel", "Story", "Full package"]
 PACKAGE_STATUS = ["draft", "ready_for_production", "in_progress", "published", "archived"]
 
+BANGLA_RULE = "Bangla must be natural spoken Bangla, Facebook-ready, netizen-friendly, voiceover-ready, simple, human, and not stiff textbook Bangla. Default regional flavor: Rangpur/Nilphamari/North Bengal, used lightly."
+
 PROJECT_DEFAULTS = {
     "True Noir Tales": {
         "language": "English",
         "tone": "cinematic noir, suspenseful but restrained, adult-focused, psychology-aware",
         "safety": "adult-only, no gore, no dead body, no visible wounds, no sensational violence",
+        "best_for": "true crime, mystery, noir story, psychology-driven storytelling",
     },
     "ToolFlow": {
         "language": "English",
         "tone": "modern, clean, practical, premium, trustworthy, useful, non-hype",
         "safety": "no fake income claims, no spammy tone, no unverified AI news, no misleading UI",
+        "best_for": "AI tools, SaaS, automation, productivity workflows",
     },
     "General": {
         "language": "Bangla",
         "tone": "natural spoken Bangla, Facebook-ready, netizen-friendly, voiceover-ready",
         "safety": "Bangla-first, practical, culturally grounded, no misleading claims",
+        "best_for": "Bangla Facebook posts, reels, captions, social content packages",
     },
 }
 
@@ -68,27 +74,32 @@ def list_json_files(folder: Path) -> list[Path]:
     return sorted([p for p in folder.glob("*.json") if p.is_file()], key=lambda p: p.stat().st_mtime, reverse=True)
 
 
+def to_pretty_json(data: dict[str, Any]) -> str:
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
 def build_true_noir_package(topic: str, language: str, platform: str, audience: str, note: str) -> dict[str, Any]:
     bangla = language in {"Bangla", "Mixed Bangla-English"}
     hook = "ঘটনাটা বাইরে থেকে সাধারণ মনে হলেও, একটা ছোট detail পুরো গল্প বদলে দেয়।" if bangla else "What looked normal at first was hiding one detail that changed everything."
     cta = "তুমি হলে প্রথমে কোন জিনিসটা খেয়াল করতে?" if bangla else "What would you have noticed first?"
     script = {
+        "title": "The detail everyone missed" if not bangla else "যে detailটা সবাই মিস করেছিল",
         "hook": hook,
         "context": topic,
         "tension": "The most important clue is usually not the loudest one." if not bangla else "সবচেয়ে গুরুত্বপূর্ণ clue অনেক সময় সবচেয়ে চোখে পড়ার মতো হয় না।",
         "psychology_line": "People often miss warning signs when the situation looks familiar." if not bangla else "পরিচিত পরিস্থিতিতে মানুষ warning sign অনেক সময় মিস করে।",
         "cta": cta,
     }
-    image_prompt = (
-        "Realistic cinematic true crime noir scene, adult Bangladeshi subject, emotional tension, dramatic shadows, no gore, no blood, no dead body, no visible wounds, no sindoor unless requested."
-    )
-    voice_direction = "Suspenseful but restrained documentary narration, calm, clear, short dramatic pauses."
-    video_direction = "5-scene reel: hook visual, context, critical detail, tension/reveal, question CTA. Cinematic suspense, readable subtitles."
+    image_prompt = "Realistic cinematic true crime noir scene, adult Bangladeshi subject, emotional tension, dramatic shadows, moody lighting, grounded environment, no gore, no blood, no dead body, no visible wounds, no sindoor unless requested."
+    voice_direction = "Suspenseful but restrained documentary narration, calm, clear, short dramatic pauses, no overacting."
+    if bangla:
+        voice_direction += " Use natural spoken Bangla, voiceover-ready, simple and emotional, not stiff textbook Bangla."
+    video_direction = "5-scene reel: hook visual, context, critical detail, tension/reveal, question CTA. Cinematic suspense, readable subtitles, subtle zooms."
     return {
         "script_package": script,
-        "image_package": {"prompt": image_prompt, "format": "9:16 or 1:1", "negative": "no gore, no blood, no dead body, no visible wounds"},
-        "voice_package": {"direction": voice_direction, "language": language},
-        "video_package": {"direction": video_direction, "platform": platform},
+        "image_package": {"prompt": image_prompt, "format": "9:16 Reel or 1:1 post", "negative": "no gore, no blood, no dead body, no visible wounds, no sensational violence"},
+        "voice_package": {"direction": voice_direction, "language": language, "reference_policy": "reference voice only if user-provided or explicitly authorized"},
+        "video_package": {"direction": video_direction, "platform": platform, "scene_sequence": ["Hook visual", "Context", "Critical detail", "Tension/reveal", "Question CTA"]},
         "posting_package": {"caption": hook, "cta": cta, "hashtags": ["#TrueCrime", "#CrimeStory", "#NoirStory", "#CrimePsychology"]},
         "notes": note,
         "audience": audience,
@@ -103,18 +114,21 @@ def build_toolflow_package(topic: str, language: str, platform: str, audience: s
         "hook": hook,
         "problem": "Most people use tools without a repeatable workflow." if not bangla else "অনেকে tool ব্যবহার করে, কিন্তু repeatable workflow বানায় না।",
         "solution": topic,
-        "steps": ["Define the goal", "Pick the tool", "Use a repeatable prompt/workflow", "Save the result"],
+        "steps": ["Define the goal", "Pick the tool", "Use a repeatable prompt/workflow", "Save and reuse the result"],
+        "verdict": "Use tools as a system, not as random shortcuts." if not bangla else "Tool random ভাবে না, system হিসেবে ব্যবহার করলেই ফল ভালো হয়।",
         "cta": cta,
     }
-    image_prompt = "Clean modern SaaS/productivity visual, workspace or dashboard context, premium minimal composition, no fake logos, no misleading UI."
-    voice_direction = "Practical creator explainer voice, clear pacing, confident but non-hype."
-    video_direction = "5-scene explainer: messy workflow, tool/system intro, steps, result, CTA. Clean cuts and readable subtitles."
+    image_prompt = "Clean modern SaaS/productivity visual, workspace or dashboard context, premium minimal composition, practical creator feel, no fake logos, no misleading UI, no clutter."
+    voice_direction = "Practical creator explainer voice, clear pacing, confident but non-hype, clean sentence breaks."
+    if bangla:
+        voice_direction += " Use natural spoken Bangla, simple, practical, and beginner-friendly."
+    video_direction = "5-scene explainer: messy workflow/problem, tool/system intro, 2-3 practical steps, result/benefit, CTA. Clean cuts and readable subtitles."
     return {
         "main_post_package": post,
-        "carousel_package": {"slides": ["Hook", "Problem", "Workflow", "Step 1", "Step 2", "Step 3", "Result", "CTA"]},
-        "reel_package": {"hook": hook, "target_length": "30 seconds", "cta": cta},
-        "image_package": {"prompt": image_prompt, "format": "1:1, 4:5, or 9:16"},
-        "voice_package": {"direction": voice_direction, "language": language},
+        "carousel_package": {"slides": ["Hook / promise", "Problem", "Workflow", "Step 1", "Step 2", "Step 3", "Result", "CTA"]},
+        "reel_package": {"hook": hook, "target_length": "30 seconds", "cta": cta, "scene_sequence": ["Problem", "System", "Steps", "Result", "CTA"]},
+        "image_package": {"prompt": image_prompt, "format": "1:1, 4:5, or 9:16", "negative": "no fake logos, no misleading UI, no clutter, no unreadable text"},
+        "voice_package": {"direction": voice_direction, "language": language, "reference_policy": "reference voice only if user-provided or explicitly authorized"},
         "video_package": {"direction": video_direction, "platform": platform},
         "posting_package": {"caption": hook, "cta": cta, "hashtags": ["#AITools", "#Productivity", "#Automation", "#SaaS", "#Workflow", "#ToolFlow"]},
         "notes": note,
@@ -126,10 +140,10 @@ def build_general_package(topic: str, language: str, platform: str, audience: st
     hook = "এই কথাটা অনেকেই খেয়াল করে না।"
     cta = "তোমার কী মনে হয়?"
     return {
-        "text_package": {"hook": hook, "body": topic, "cta": cta},
-        "image_package": {"prompt": "Natural Bangladeshi social content visual, realistic, culturally grounded, no misleading elements."},
-        "voice_package": {"direction": "Natural spoken Bangla, Facebook-ready, voiceover-ready, clear pauses.", "language": language},
-        "video_package": {"direction": "Hook-context-value-CTA video package, subtitle-friendly Bangla.", "platform": platform},
+        "text_package": {"hook": hook, "body": topic, "cta": cta, "bangla_rule": BANGLA_RULE},
+        "image_package": {"prompt": "Natural Bangladeshi social content visual, realistic, culturally grounded, urban or rural Bangladesh as appropriate, no misleading elements, no sindoor unless requested."},
+        "voice_package": {"direction": "Natural spoken Bangla, Facebook-ready, voiceover-ready, clear pauses, one idea per sentence.", "language": language},
+        "video_package": {"direction": "Hook-context-value-CTA video package, subtitle-friendly Bangla, short mobile-readable lines.", "platform": platform},
         "posting_package": {"caption": hook, "cta": cta, "hashtags": ["#BanglaContent", "#FacebookContent"]},
         "notes": note,
         "audience": audience,
@@ -155,6 +169,7 @@ def build_package(project: str, topic: str, language: str, platform: str, audien
         "project_defaults": PROJECT_DEFAULTS[project],
         "package": body,
         "global_rule": "Naz Lab is Bangla-first by default. English is supported for True Noir Tales and ToolFlow project presets.",
+        "bangla_quality_rule": BANGLA_RULE,
     }
 
 
@@ -175,7 +190,36 @@ def render_status() -> None:
     c2.metric("Status", PHASE_STATUS)
     c3.metric("Project packages", len(packages))
     st.info("Project Workflow Workstation creates full package plans from one topic. It does not generate media directly.")
+    st.markdown("### Project defaults")
     st.json(PROJECT_DEFAULTS)
+    st.markdown("### Bangla Quality Engine")
+    st.write(BANGLA_RULE)
+
+
+def render_package_sections(package: dict[str, Any]) -> None:
+    body = package.get("package", {})
+    tabs = st.tabs(["Script/Post", "Image", "Voice", "Video", "Posting", "JSON"])
+    with tabs[0]:
+        st.json(body.get("script_package", body.get("main_post_package", body.get("text_package", {}))))
+    with tabs[1]:
+        st.json(body.get("image_package", {}))
+        prompt = body.get("image_package", {}).get("prompt", "")
+        if prompt:
+            st.text_area("Copy image prompt", prompt, height=160)
+    with tabs[2]:
+        st.json(body.get("voice_package", {}))
+        direction = body.get("voice_package", {}).get("direction", "")
+        if direction:
+            st.text_area("Copy voice direction", direction, height=160)
+    with tabs[3]:
+        st.json(body.get("video_package", {}))
+        direction = body.get("video_package", {}).get("direction", "")
+        if direction:
+            st.text_area("Copy video direction", direction, height=160)
+    with tabs[4]:
+        st.json(body.get("posting_package", {}))
+    with tabs[5]:
+        st.text_area("Copy-ready package JSON", to_pretty_json(package), height=420)
 
 
 def render_builder() -> None:
@@ -195,8 +239,7 @@ def render_builder() -> None:
 
     package = build_package(project, topic, language, platform, audience, status, note)
     st.markdown("### Package preview")
-    st.json(package)
-    st.text_area("Copy-ready package JSON", str(package), height=360)
+    render_package_sections(package)
     if st.button("Save project package JSON"):
         st.success(f"Saved: {save_package(package)}")
 
@@ -208,21 +251,24 @@ def render_library() -> None:
     st.metric("Saved packages", len(packages))
     if packages:
         selected = st.selectbox("Select package", [p.name for p in packages])
-        st.json(safe_read_json(PROJECT_PACKAGES / selected, {}))
+        data = safe_read_json(PROJECT_PACKAGES / selected, {})
+        render_package_sections(data)
     else:
         st.info("No project packages saved yet.")
 
 
 def render_launch() -> None:
     st.header("Launch notes")
-    st.markdown("Phase 10.0 creates project workflow packages for True Noir Tales, ToolFlow, and General content.")
+    st.markdown("Phase 10.1 creates polished project workflow packages for True Noir Tales, ToolFlow, and General content.")
     st.code("streamlit run project_workstation/app.py --server.port 8507 --server.address 0.0.0.0", language="bash")
+    st.markdown("Recommended all-in-one launcher value:")
+    st.code('WORKSTATION="project"', language="bash")
 
 
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Project Workflow Workstation", page_icon="🧩", layout="wide")
     st.title("🧩 Naz Lab Project Workflow Workstation")
-    st.caption("Phase 10.0 foundation — one topic to full project package plan.")
+    st.caption("Phase 10.1 polished — one topic to full project package plan.")
     st.info("Naz Lab is Bangla-first by default. True Noir Tales and ToolFlow can stay English-first project presets.")
     ensure_dirs()
     update_workstation_status(WORKSTATION_LINKS_JSON, "project_workstation", {"status": PHASE_STATUS, "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")})
