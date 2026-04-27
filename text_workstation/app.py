@@ -1,4 +1,4 @@
-"""Naz Lab Phase 1.4 Text Workstation.
+"""Naz Lab Phase 1.5 Text Workstation.
 
 A lightweight Streamlit workstation for general chat and flexible text-generation modes.
 It uses Ollama as the local LLM backend and writes outputs, logs, status, and
@@ -47,7 +47,7 @@ AVAILABLE_MODELS = [DEFAULT_MODEL, CPU_FALLBACK_MODEL, OPTIONAL_MODEL]
 
 DEFAULT_NUM_PREDICT = 220
 CPU_NUM_PREDICT = 120
-TEST_NUM_PREDICT = 12
+TEST_NUM_PREDICT = 20
 REQUEST_TIMEOUT_SECONDS = 180
 
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
@@ -97,7 +97,7 @@ def ensure_phase_0_ready() -> list[str]:
 def read_prompt(prompt_file: str) -> str:
     path = PROMPTS_DIR / prompt_file
     if not path.exists():
-        return "You are a helpful Naz Lab assistant. Accept any topic from the user. Keep the answer concise."
+        return "Answer the user's request directly. Keep the answer concise."
     return path.read_text(encoding="utf-8").strip()
 
 
@@ -109,6 +109,29 @@ def model_num_predict(model: str, requested: int | None = None) -> int:
     return DEFAULT_NUM_PREDICT
 
 
+def build_prompt(user_prompt: str, system_prompt: str | None = None) -> str:
+    if not system_prompt:
+        return f"USER: {user_prompt}\nASSISTANT:"
+    return (
+        "INSTRUCTION:\n"
+        f"{system_prompt}\n\n"
+        "TASK:\n"
+        f"{user_prompt}\n\n"
+        "Write only the final answer. Do not repeat the instruction.\n"
+        "ANSWER:"
+    )
+
+
+def clean_model_output(text: str) -> str:
+    cleaned = text.strip()
+    leak_markers = ["INSTRUCTION:", "TASK:", "ANSWER:", "Rules:", "Your job:"]
+    for marker in leak_markers:
+        if cleaned.startswith(marker):
+            parts = cleaned.split("ANSWER:")
+            cleaned = parts[-1].strip() if len(parts) > 1 else cleaned
+    return cleaned.strip()
+
+
 def call_ollama(
     prompt: str,
     model: str,
@@ -116,22 +139,22 @@ def call_ollama(
     timeout: int = REQUEST_TIMEOUT_SECONDS,
     num_predict: int | None = None,
 ) -> str:
-    final_prompt = prompt if not system_prompt else f"{system_prompt}\n\nUser:\n{prompt}\n\nAssistant:"
     payload = {
         "model": model,
-        "prompt": final_prompt,
+        "prompt": build_prompt(prompt, system_prompt),
         "stream": False,
         "options": {
             "num_predict": model_num_predict(model, num_predict),
-            "temperature": 0.4,
-            "top_p": 0.9,
-            "repeat_penalty": 1.12,
+            "temperature": 0.25,
+            "top_p": 0.85,
+            "repeat_penalty": 1.2,
+            "stop": ["USER:", "INSTRUCTION:", "TASK:"],
         },
     }
     response = requests.post(OLLAMA_GENERATE_ENDPOINT, json=payload, timeout=timeout)
     response.raise_for_status()
     data = response.json()
-    return data.get("response", "").strip()
+    return clean_model_output(data.get("response", ""))
 
 
 def get_ollama_tags() -> dict:
@@ -413,7 +436,7 @@ def render_settings(model: str) -> None:
         if st.button("Test Selected Model", use_container_width=True):
             try:
                 start = time.time()
-                answer = call_ollama("Reply OK.", model=model, timeout=120, num_predict=TEST_NUM_PREDICT)
+                answer = call_ollama("Say OK.", model=model, timeout=120, num_predict=TEST_NUM_PREDICT)
                 elapsed = round(time.time() - start, 2)
                 st.success(f"Model replied in {elapsed}s")
                 st.code(answer or "[empty response]")
@@ -456,7 +479,7 @@ def render_settings(model: str) -> None:
 def render_direct_test(model: str) -> None:
     st.subheader("Direct Test")
     st.caption("Use this to isolate Ollama/model response without writer prompt files.")
-    prompt = st.text_input("Test prompt", value="Reply with only OK.")
+    prompt = st.text_input("Test prompt", value="Say OK.")
     if st.button("Run Direct Test"):
         try:
             start = time.time()
@@ -471,7 +494,7 @@ def render_direct_test(model: str) -> None:
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Text Workstation", page_icon="✍️", layout="wide")
     st.title("✍️ Naz Lab Text Workstation")
-    st.caption("Phase 1.4: CPU-safe generation limits, Quick Test, Direct Test, and stronger generation recovery.")
+    st.caption("Phase 1.5: prompt-leak fix, safer TinyLlama prompt wrapper, and cleaner direct answers.")
 
     missing = ensure_phase_0_ready()
     if missing:
@@ -501,7 +524,7 @@ def main() -> None:
             key="selected_page",
         )
         if model == CPU_FALLBACK_MODEL:
-            st.info("CPU fallback selected. Quick Test uses a very small token limit.")
+            st.info("CPU fallback selected. Quick Test uses a small token limit.")
         elif model == DEFAULT_MODEL:
             st.info("Best default for T4/GPU runtime.")
         st.caption("Cloudflare Tunnel is primary. Localtunnel is fallback only.")
