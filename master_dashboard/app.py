@@ -1,4 +1,4 @@
-"""Naz Lab Master Control Dashboard Phase 2.5 stable."""
+"""Naz Lab Master Control Dashboard Phase 2.6 integration refresh."""
 
 from __future__ import annotations
 
@@ -29,18 +29,26 @@ from shared.drive_paths import (  # noqa: E402
 )
 from shared.json_utils import safe_read_json, update_workstation_status  # noqa: E402
 
-PHASE = "2.5"
+PHASE = "2.6"
 PHASE_STATUS = "stable"
-LANGUAGE_REQUIREMENT_EN = "Bangla and English output quality are primary requirements. Regional Bangla defaults to Rangpur/Nilphamari tone when requested. Other languages are optional."
-LANGUAGE_REQUIREMENT_BN = "বাংলা হবে natural, fluent, Facebook-ready, voiceover-ready, netizen-style। আঞ্চলিক বাংলা চাইলে default হবে রংপুরিয়া/নীলফামারী tone। English হবে clean, practical, ready-to-use। অন্য ভাষা optional।"
+VOICE_OUTPUTS = BASE_PATH / "voice_outputs"
+VOICE_PACKAGES = BASE_PATH / "voice_packages"
+AUDIO_OUTPUTS = BASE_PATH / "audio_outputs"
+VIDEO_OUTPUTS = BASE_PATH / "video_outputs"
+VIDEO_PACKAGES = BASE_PATH / "video_packages"
+VIDEO_STORYBOARDS = BASE_PATH / "video_storyboards"
+
+LANGUAGE_REQUIREMENT_EN = "Naz Lab is Bangla-first by default. English is second and remains default for True Noir Tales / ToolFlow when selected. Other languages are optional."
+LANGUAGE_REQUIREMENT_BN = "Naz Lab default হবে Bangla-first। বেশির ভাগ content বাংলায় হবে। English থাকবে selected English project বা user request অনুযায়ী। আঞ্চলিক বাংলা লাগলে primary default: রংপুর/নীলফামারী/উত্তরবঙ্গ।"
 
 BANGLA_STYLE_REQUIREMENTS = {
-    "Primary regional Bangla": "রংপুরিয়া / উত্তরবঙ্গ / নীলফামারী tone হবে default regional flavor।",
+    "Global priority": "Bangla first, English second, other languages optional.",
     "Core Bangla": "স্বাভাবিক, সহজ, মুখে বলার মতো, ready-to-use বাংলা।",
     "Netizen Bangla": "Facebook comment/post/reel audience-এর মতো natural online tone।",
     "Voiceover Bangla": "মুখে পড়লে যেন কাঠখোট্টা না লাগে; short sentence, clear pacing।",
+    "Primary regional Bangla": "রংপুরিয়া / উত্তরবঙ্গ / নীলফামারী tone হবে default regional flavor।",
     "Secondary regional tones": "ঢাকাইয়া, চাটগাঁইয়া, সিলেটি, নোয়াখালী/কুমিল্লা tone থাকবে, কিন্তু user চাইলে ব্যবহার হবে।",
-    "English": "Clean, practical, direct, ready-to-use English।",
+    "English exceptions": "True Noir Tales and ToolFlow can stay English-first when selected.",
 }
 
 FOLDERS = {
@@ -50,15 +58,21 @@ FOLDERS = {
     "Image prompts": IMAGE_PROMPTS,
     "Image outputs": IMAGE_OUTPUTS,
     "Image jobs": IMAGE_JOBS,
+    "Voice outputs": VOICE_OUTPUTS,
+    "Voice packages": VOICE_PACKAGES,
+    "Audio outputs": AUDIO_OUTPUTS,
+    "Video outputs": VIDEO_OUTPUTS,
+    "Video packages": VIDEO_PACKAGES,
+    "Video storyboards": VIDEO_STORYBOARDS,
 }
 
 WORKSTATIONS = [
-    {"name": "Text Workstation", "phase": "1.8 stable", "key": "text_workstation", "folder": TEXT_OUTPUTS},
-    {"name": "Master Dashboard", "phase": "2.5 stable", "key": "master_dashboard", "folder": BASE_PATH},
-    {"name": "Image Workstation", "phase": "Phase 3 next", "key": "image_workstation", "folder": IMAGE_OUTPUTS},
-    {"name": "Voice Workstation", "phase": "planned", "key": "voice_workstation", "folder": BASE_PATH / "voice_outputs"},
-    {"name": "Video Workstation", "phase": "planned", "key": "video_workstation", "folder": BASE_PATH / "video_outputs"},
-    {"name": "Portrait Workstation", "phase": "planned", "key": "portrait_workstation", "folder": BASE_PATH / "facefusion_outputs"},
+    {"name": "Text Workstation", "phase": "1.8 stable", "key": "text_workstation", "folder": TEXT_OUTPUTS, "port": "8501"},
+    {"name": "Master Dashboard", "phase": "2.6 stable", "key": "master_dashboard", "folder": BASE_PATH, "port": "8502"},
+    {"name": "Image Workstation", "phase": "3.5 stable", "key": "image_workstation", "folder": IMAGE_OUTPUTS, "port": "8503"},
+    {"name": "Voice Workstation", "phase": "4.3 stable", "key": "voice_workstation", "folder": VOICE_OUTPUTS, "port": "8504"},
+    {"name": "Video Workstation", "phase": "5.3 stable", "key": "video_workstation", "folder": VIDEO_OUTPUTS, "port": "8505"},
+    {"name": "Portrait Workstation", "phase": "planned", "key": "portrait_workstation", "folder": BASE_PATH / "facefusion_outputs", "port": "future"},
 ]
 
 
@@ -105,49 +119,59 @@ def link_markdown(label: str, url: str) -> None:
         st.caption("No URL saved yet. Save it from the Links tab.")
 
 
+def workstation_data() -> dict[str, Any]:
+    data = read_json(WORKSTATION_LINKS_JSON, {})
+    return data if isinstance(data, dict) else {}
+
+
 def render_status(language: str) -> None:
     st.header("System status")
-    links = read_json(WORKSTATION_LINKS_JSON, {})
+    links = workstation_data()
     logs = output_log_entries()
-    text_data = links.get("text_workstation", {}) if isinstance(links, dict) else {}
-    dashboard_data = links.get("master_dashboard", {}) if isinstance(links, dict) else {}
-    text_status = text_data.get("status", "unknown")
 
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Dashboard phase", PHASE)
     c2.metric("Dashboard status", PHASE_STATUS)
     c3.metric("Drive base", status_label(BASE_PATH))
-    c4.metric("Text status", text_status)
+    c4.metric("Stable workstations", "5")
     c5.metric("Output log entries", len(logs))
 
-    st.success("Master Dashboard status: stable for Phase 2")
+    st.success("Master Dashboard status: stable for Phase 2.6 integration refresh")
     st.info(LANGUAGE_REQUIREMENT_BN if language == "Bangla" else LANGUAGE_REQUIREMENT_EN)
 
-    st.markdown("### Quick links")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("**Text Workstation**")
-        link_markdown("Open Text Workstation", text_data.get("public_url", ""))
-    with col2:
-        st.markdown("**Master Dashboard**")
-        link_markdown("Open Master Dashboard", dashboard_data.get("public_url", ""))
+    st.markdown("### Stable workstation matrix")
+    rows = []
+    for item in WORKSTATIONS:
+        data = links.get(item["key"], {})
+        rows.append({
+            "Workstation": item["name"],
+            "Phase": item["phase"],
+            "Saved status": data.get("status", "planned"),
+            "Folder": status_label(item["folder"]),
+            "Files": count_files(item["folder"]),
+            "Port": item["port"],
+            "URL saved": "yes" if data.get("public_url") else "no",
+            "Last seen": data.get("last_seen", ""),
+        })
+    st.dataframe(rows, use_container_width=True, hide_index=True)
 
-    st.markdown("### Next workstation readiness")
+    st.markdown("### Quick links")
+    cols = st.columns(5)
+    for index, item in enumerate(WORKSTATIONS[:5]):
+        with cols[index]:
+            st.markdown(f"**{item['name']}**")
+            link_markdown("Open", links.get(item["key"], {}).get("public_url", ""))
+
+    st.markdown("### Next readiness")
     st.write({
-        "next_phase": "Phase 3",
-        "next_workstation": "Image Workstation",
-        "input_source": str(IMAGE_JOBS),
-        "prompt_source": str(IMAGE_PROMPTS),
-        "output_target": str(IMAGE_OUTPUTS),
-        "status": "ready for foundation build",
+        "current_stable_stack": "Text + Master Dashboard + Image + Voice + Video",
+        "recommended_next": "Phase 6.0 Portrait / Face workflow planning",
+        "alternative_next": "Master launcher / all-workstation control cell",
+        "status": "ready",
     })
 
-    st.markdown("### Bangla and English quality requirements")
+    st.markdown("### Bangla-first quality requirements")
     st.json(BANGLA_STYLE_REQUIREMENTS)
-
-    if text_data:
-        st.markdown("### Text Workstation saved status")
-        st.json(text_data)
 
     with st.expander("Important paths", expanded=False):
         st.write({
@@ -162,44 +186,42 @@ def render_status(language: str) -> None:
         if not logs:
             st.info("No log events yet.")
         else:
-            st.dataframe(list(reversed(logs[-20:])), use_container_width=True, hide_index=True)
+            st.dataframe(list(reversed(logs[-30:])), use_container_width=True, hide_index=True)
 
 
 def render_links() -> None:
     st.header("Links")
     st.caption("Save current Cloudflare URLs so the dashboard can show quick open links.")
-    links = read_json(WORKSTATION_LINKS_JSON, {})
-    text_data = links.get("text_workstation", {}) if isinstance(links, dict) else {}
-    dashboard_data = links.get("master_dashboard", {}) if isinstance(links, dict) else {}
+    links = workstation_data()
 
     with st.form("save_links_form"):
-        text_url = st.text_input("Text Workstation public URL", value=text_data.get("public_url", ""))
-        dashboard_url = st.text_input("Master Dashboard public URL", value=dashboard_data.get("public_url", ""))
+        values = {}
+        for item in WORKSTATIONS[:5]:
+            data = links.get(item["key"], {})
+            values[item["key"]] = st.text_input(f"{item['name']} public URL", value=data.get("public_url", ""))
         submitted = st.form_submit_button("Save URLs")
     if submitted:
-        if text_url.strip():
-            update_workstation_status(WORKSTATION_LINKS_JSON, "text_workstation", {"public_url": text_url.strip(), "status": text_data.get("status", "stable")})
-        if dashboard_url.strip():
-            update_workstation_status(WORKSTATION_LINKS_JSON, "master_dashboard", {"public_url": dashboard_url.strip(), "status": PHASE_STATUS, "phase": PHASE})
+        for item in WORKSTATIONS[:5]:
+            url = values[item["key"]].strip()
+            if url:
+                update_workstation_status(WORKSTATION_LINKS_JSON, item["key"], {"public_url": url, "status": "stable", "phase": item["phase"]})
         st.success("URLs saved to workstation_links.json")
         st.rerun()
 
     st.markdown("### Saved links")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("**Text Workstation**")
-        link_markdown("Open Text Workstation", text_data.get("public_url", ""))
-    with col2:
-        st.markdown("**Master Dashboard**")
-        link_markdown("Open Master Dashboard", dashboard_data.get("public_url", ""))
+    cols = st.columns(3)
+    for index, item in enumerate(WORKSTATIONS[:5]):
+        with cols[index % 3]:
+            st.markdown(f"**{item['name']}**")
+            link_markdown("Open", links.get(item["key"], {}).get("public_url", ""))
 
 
 def render_workstations() -> None:
     st.header("Workstations")
-    links = read_json(WORKSTATION_LINKS_JSON, {})
+    links = workstation_data()
     rows = []
     for item in WORKSTATIONS:
-        data = links.get(item["key"], {}) if isinstance(links, dict) else {}
+        data = links.get(item["key"], {})
         rows.append({
             "Workstation": item["name"],
             "Phase": item["phase"],
@@ -207,16 +229,16 @@ def render_workstations() -> None:
             "Folder status": status_label(item["folder"]),
             "Files": count_files(item["folder"]),
             "Public URL": data.get("public_url", ""),
-            "Last updated": data.get("last_updated", ""),
+            "Last updated": data.get("last_updated", data.get("last_seen", "")),
         })
     st.dataframe(rows, use_container_width=True, hide_index=True)
 
 
 def render_outputs() -> None:
     st.header("Output folders")
-    cols = st.columns(3)
+    cols = st.columns(4)
     for index, (label, folder) in enumerate(FOLDERS.items()):
-        with cols[index % 3]:
+        with cols[index % 4]:
             st.metric(label, count_files(folder))
             st.caption(str(folder))
 
@@ -237,121 +259,97 @@ def render_outputs() -> None:
 
 def render_jobs() -> None:
     st.header("Job queue")
-    jobs = latest_files(IMAGE_JOBS, limit=30, pattern="*.json")
-    rows = []
-    pending = 0
-    completed = 0
-    for path in jobs:
-        data = read_json(path, {})
-        status = data.get("status", "unknown") if isinstance(data, dict) else "unknown"
-        pending += 1 if status == "pending" else 0
-        completed += 1 if status == "completed" else 0
-        rows.append({
-            "File": path.name,
-            "Status": status,
-            "Created": data.get("created_at", "") if isinstance(data, dict) else "",
-            "Source": data.get("source_workstation", "") if isinstance(data, dict) else "",
-            "Mode": data.get("source_mode", "") if isinstance(data, dict) else "",
-        })
-
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Image job files", len(jobs))
-    c2.metric("Pending", pending)
-    c3.metric("Completed", completed)
-
-    if rows:
-        st.dataframe(rows, use_container_width=True, hide_index=True)
-        selected = st.selectbox("Preview job", [row["File"] for row in rows])
-        if selected:
-            st.json(read_json(IMAGE_JOBS / selected, {}))
-    else:
-        st.info("No job files yet.")
+    sections = {
+        "Image jobs": IMAGE_JOBS,
+        "Voice packages": VOICE_PACKAGES,
+        "Video packages": VIDEO_PACKAGES,
+    }
+    for label, folder in sections.items():
+        st.markdown(f"### {label}")
+        files = latest_files(folder, limit=30, pattern="*.json")
+        rows = []
+        for path in files:
+            data = read_json(path, {})
+            rows.append({
+                "File": path.name,
+                "Status": data.get("status", "unknown") if isinstance(data, dict) else "unknown",
+                "Project": data.get("project_preset", data.get("visual_preset", "")) if isinstance(data, dict) else "",
+                "Content": data.get("content_type", "") if isinstance(data, dict) else "",
+                "Created": data.get("created_at", "") if isinstance(data, dict) else "",
+            })
+        st.metric(f"{label} count", len(files))
+        if rows:
+            st.dataframe(rows, use_container_width=True, hide_index=True)
+        else:
+            st.info(f"No {label.lower()} yet.")
 
 
 def render_launch() -> None:
     st.header("Launch instructions")
-    st.markdown("### Text Workstation")
-    st.code("bash text_workstation/launch_text_workstation.sh", language="bash")
-    st.markdown("### Master Dashboard")
+    st.markdown("### Workstation ports")
+    st.write({
+        "Text Workstation": "8501",
+        "Master Dashboard": "8502",
+        "Image Workstation": "8503",
+        "Voice Workstation": "8504",
+        "Video Workstation": "8505",
+    })
+    st.markdown("### Individual launch commands")
     st.code("streamlit run master_dashboard/app.py --server.port 8502 --server.address 0.0.0.0", language="bash")
-    st.markdown("### Colab notes")
-    st.markdown("- Colab runtime is temporary. Run launcher cells again after runtime reset.\n- Cloudflare quick tunnel URLs change every session. Save them in the Links tab.\n- Bangla regional default: Rangpur/Nilphamari tone when regional Bangla is requested.")
+    st.code("streamlit run image_workstation/app.py --server.port 8503 --server.address 0.0.0.0", language="bash")
+    st.code("streamlit run voice_workstation/app.py --server.port 8504 --server.address 0.0.0.0", language="bash")
+    st.code("streamlit run video_workstation/app.py --server.port 8505 --server.address 0.0.0.0", language="bash")
+    st.markdown("Cloudflare quick tunnel URLs change every session. Save active links in the Links tab.")
 
 
 def render_roadmap(language: str) -> None:
     st.header("Roadmap")
+    st.markdown(
+        """
+1. Phase 0 Foundation — complete  
+2. Phase 1 Text Workstation — stable  
+3. Phase 2 Master Control Dashboard — stable/integration refresh  
+4. Phase 3 Image Workstation — stable  
+5. Phase 4 Voice Workstation — stable  
+6. Phase 5 Video Workstation — stable  
+7. Phase 6 Portrait / Face workflow — next/planned
+"""
+    )
     if language == "Bangla":
         st.markdown(
             """
-1. Phase 0 Foundation — complete  
-2. Phase 1 Text Workstation — stable  
-3. Phase 2 Master Control Dashboard — stable  
-4. Phase 3 Image Workstation — next  
-5. Phase 4 Voice Workstation — planned  
-6. Phase 5 Video Workstation — planned  
-7. Phase 6 Portrait Workstation — planned
-
 ভাষার priority:
 - বাংলা: natural, fluent, netizen-style, voiceover-ready, ready-to-use হতে হবে।
 - Primary আঞ্চলিক tone: রংপুরিয়া / উত্তরবঙ্গ / নীলফামারী flavor।
-- Secondary regional support: ঢাকাইয়া, চাটগাঁইয়া, সিলেটি, নোয়াখালী/কুমিল্লা tone থাকবে, কিন্তু user চাইলে।
-- English: clean, practical, ready-to-use হতে হবে।
+- English: True Noir Tales / ToolFlow বা user request অনুযায়ী।
 - অন্য ভাষা: optional।
 """
         )
     else:
-        st.markdown(
-            """
-1. Phase 0 Foundation — complete  
-2. Phase 1 Text Workstation — stable  
-3. Phase 2 Master Control Dashboard — stable  
-4. Phase 3 Image Workstation — next  
-5. Phase 4 Voice Workstation — planned  
-6. Phase 5 Video Workstation — planned  
-7. Phase 6 Portrait Workstation — planned
-
-Language priority:
-- Bangla must be strong, natural, netizen-style, voiceover-ready, and ready to use.
-- Primary regional Bangla tone: Rangpur / North Bengal / Nilphamari flavor.
-- Secondary regional support: Dhakaiya, Chittagonian, Sylheti, Noakhali/Comilla tone when requested.
-- English must be clean, practical, and ready to use.
-- Other languages are optional.
-"""
-        )
+        st.markdown("Bangla is the global default. English remains available for selected projects and explicit requests.")
 
 
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Master Dashboard", page_icon="🧪", layout="wide")
     st.title("🧪 Naz Lab Master Control Dashboard")
-    st.caption("Phase 2.5 stable dashboard — links, outputs, roadmap, and Image Workstation readiness")
+    st.caption("Phase 2.6 integration refresh — Text, Image, Voice, Video stable status and Bangla-first roadmap")
 
-    update_workstation_status(
-        WORKSTATION_LINKS_JSON,
-        "master_dashboard",
-        {"status": PHASE_STATUS, "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")},
-    )
+    update_workstation_status(WORKSTATION_LINKS_JSON, "master_dashboard", {"status": PHASE_STATUS, "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")})
 
     with st.sidebar:
         st.header("Dashboard settings")
         language = st.radio("Dashboard language note", ["Bangla", "English"], index=0)
-        st.caption("Primary Bangla regional default: Rangpur/Nilphamari. Secondary tones available when requested.")
-        st.success("Phase 2 stable")
+        st.caption("Naz Lab default: Bangla-first. Regional default: Rangpur/Nilphamari/North Bengal.")
+        st.success("Phase 2.6 stable")
 
     tabs = st.tabs(["Status", "Links", "Workstations", "Outputs", "Job Queue", "Launch", "Roadmap"])
-    with tabs[0]:
-        render_status(language)
-    with tabs[1]:
-        render_links()
-    with tabs[2]:
-        render_workstations()
-    with tabs[3]:
-        render_outputs()
-    with tabs[4]:
-        render_jobs()
-    with tabs[5]:
-        render_launch()
-    with tabs[6]:
-        render_roadmap(language)
+    with tabs[0]: render_status(language)
+    with tabs[1]: render_links()
+    with tabs[2]: render_workstations()
+    with tabs[3]: render_outputs()
+    with tabs[4]: render_jobs()
+    with tabs[5]: render_launch()
+    with tabs[6]: render_roadmap(language)
 
 
 if __name__ == "__main__":
