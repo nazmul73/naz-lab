@@ -1,7 +1,7 @@
-"""Naz Lab Voice Workstation Phase 4.3 stable.
+"""Naz Lab Voice Workstation Phase 4.4 clone-ready.
 
-Stable Voice Workstation for narration direction, TTS direction,
-voice packages, future audio metadata, and output library workflow.
+Stable Voice Workstation with narration direction, TTS direction,
+voice packages, future audio metadata, and authorized voice clone workflow planning.
 """
 
 from __future__ import annotations
@@ -20,17 +20,20 @@ if str(REPO_ROOT) not in sys.path:
 from shared.drive_paths import BASE_PATH, OUTPUT_LOG_JSON, WORKSTATION_LINKS_JSON  # noqa: E402
 from shared.json_utils import append_output_log, safe_read_json, safe_write_json, update_workstation_status  # noqa: E402
 
-PHASE = "4.3"
-PHASE_STATUS = "stable"
+PHASE = "4.4"
+PHASE_STATUS = "clone-ready"
 VOICE_OUTPUTS = BASE_PATH / "voice_outputs"
 VOICE_DIRECTIONS = BASE_PATH / "voice_directions"
 AUDIO_OUTPUTS = BASE_PATH / "audio_outputs"
 VOICE_PACKAGES = BASE_PATH / "voice_packages"
+VOICE_REFERENCES = BASE_PATH / "voice_references"
+VOICE_CLONE_PACKAGES = BASE_PATH / "voice_clone_packages"
 
 PROJECT_PRESETS = ["True Noir Tales", "ToolFlow", "General"]
 CONTENT_TYPES = ["Reel voiceover", "Story narration", "General Facebook narration", "Carousel voice script", "Short ad/explainer"]
 LANGUAGE_OPTIONS = ["English", "Bangla", "Mixed English-Bangla"]
 REGIONAL_TONES = ["Neutral", "Rangpur/Nilphamari", "Dhaka", "Chattogram", "Sylhet", "Noakhali/Comilla"]
+VOICE_MODES = ["Original / generic voice direction", "Authorized reference voice clone planning", "Brand voice profile"]
 VOICE_TONES = ["dark calm", "suspenseful", "investigative", "serious", "reflective", "practical", "modern", "clean", "confident", "friendly professional", "natural conversational"]
 PACING_OPTIONS = ["slow", "medium-slow", "medium", "medium-fast", "fast but clear"]
 ENERGY_OPTIONS = ["low controlled", "balanced", "medium dramatic", "lightly upbeat", "high but not hype"]
@@ -39,8 +42,16 @@ SCRIPT_LENGTHS = ["15 seconds", "30 seconds", "45 seconds", "60 seconds", "Custo
 SCRIPT_STRUCTURES = ["Hook-Body-CTA", "Hook-Problem-Solution-CTA", "Story-Context-Tension-Question", "Listicle", "Tutorial steps", "Narration only"]
 DELIVERY_STYLES = ["clean spoken", "documentary", "dramatic restrained", "creator explainer", "conversational", "premium ad voice"]
 PAUSE_STYLES = ["minimal pauses", "short dramatic pauses", "clear sentence breaks", "fast flow", "slow tension"]
-PACKAGE_STATUS = ["draft", "ready_for_tts", "audio_generated", "blocked", "archived"]
+PACKAGE_STATUS = ["draft", "ready_for_tts", "ready_for_voice_clone", "audio_generated", "blocked", "archived"]
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".ogg", ".flac"}
+
+CLONE_SAFETY_RULES = {
+    "Authorization": "Only use voice cloning with a user-provided or explicitly authorized reference voice.",
+    "No impersonation": "Do not clone celebrities, public figures, or another person's voice without permission.",
+    "No deception": "Do not use cloned voice for deceptive, fraudulent, or misleading content.",
+    "Reference quality": "Use clean reference audio with minimal noise, natural speech, and enough duration for a future backend.",
+    "Labeling": "Keep metadata that this is a reference-voice workflow.",
+}
 
 PROJECT_DEFAULTS = {
     "True Noir Tales": {
@@ -92,6 +103,8 @@ def ensure_dirs() -> None:
     VOICE_DIRECTIONS.mkdir(parents=True, exist_ok=True)
     AUDIO_OUTPUTS.mkdir(parents=True, exist_ok=True)
     VOICE_PACKAGES.mkdir(parents=True, exist_ok=True)
+    VOICE_REFERENCES.mkdir(parents=True, exist_ok=True)
+    VOICE_CLONE_PACKAGES.mkdir(parents=True, exist_ok=True)
 
 
 def now_stamp() -> str:
@@ -117,13 +130,49 @@ def validate_audio_path(path_text: str) -> tuple[bool, str]:
     return True, "Audio path exists and looks valid."
 
 
-def build_voice_direction(project: str, content_type: str, language: str, regional_tone: str, voice_tone: str, pacing: str, energy: str, accent: str, length: str, structure: str, delivery_style: str, pause_style: str, input_text: str, custom_note: str) -> str:
+def validate_reference_path(path_text: str) -> tuple[bool, str]:
+    if not path_text.strip():
+        return False, "No reference voice path provided yet."
+    path = Path(path_text.strip())
+    if not path.exists():
+        return False, "Reference voice file does not exist yet. Save authorized reference audio first."
+    if path.suffix.lower() not in AUDIO_EXTENSIONS:
+        return False, "Reference path exists but file extension is not supported."
+    return True, "Reference voice file exists and looks valid."
+
+
+def list_files(folder: Path, suffixes: set[str] | None = None) -> list[Path]:
+    if not folder.exists():
+        return []
+    files = [path for path in folder.glob("*") if path.is_file()]
+    if suffixes:
+        files = [path for path in files if path.suffix.lower() in suffixes]
+    return sorted(files, key=lambda item: item.stat().st_mtime, reverse=True)
+
+
+def build_clone_direction(voice_mode: str, reference_voice_path: str, clone_authorized: bool, clone_notes: str) -> str:
+    if voice_mode != "Authorized reference voice clone planning":
+        return "Voice cloning: not selected. Use original/generic or brand voice direction."
+    parts = [
+        "Voice cloning mode: authorized reference voice clone planning.",
+        f"Reference voice path: {reference_voice_path or '[not provided]'}",
+        f"Authorization confirmed: {clone_authorized}",
+        "Clone safety: use only user-provided or explicitly authorized voice references; no celebrity/public figure impersonation; no deceptive use.",
+        "Future backend note: this package only prepares metadata and direction. It does not clone or generate a voice yet.",
+    ]
+    if clone_notes.strip():
+        parts.append(f"Clone notes: {clone_notes.strip()}")
+    return "\n".join(parts)
+
+
+def build_voice_direction(project: str, content_type: str, language: str, regional_tone: str, voice_mode: str, voice_tone: str, pacing: str, energy: str, accent: str, length: str, structure: str, delivery_style: str, pause_style: str, input_text: str, custom_note: str, clone_direction: str) -> str:
     project_style = PROJECT_DEFAULTS.get(project, PROJECT_DEFAULTS["General"])["style"]
     parts = [
         f"Project preset: {project}",
         f"Content type: {content_type}",
         f"Language: {language}",
         f"Regional tone: {regional_tone}",
+        f"Voice mode: {voice_mode}",
         f"Voice tone: {voice_tone}",
         f"Pacing: {pacing}",
         f"Energy: {energy}",
@@ -134,6 +183,7 @@ def build_voice_direction(project: str, content_type: str, language: str, region
         f"Pause style: {pause_style}",
         f"Project style: {project_style}",
         f"Content rule: {CONTENT_RULES.get(content_type, '')}",
+        clone_direction,
         "Delivery rules: sound natural, clear, and human; avoid robotic phrasing; use short spoken sentences; add pauses only where useful.",
     ]
     if project == "True Noir Tales":
@@ -151,10 +201,11 @@ def build_voice_direction(project: str, content_type: str, language: str, region
     return "\n\n".join(parts)
 
 
-def build_tts_direction(project: str, language: str, voice_tone: str, pacing: str, energy: str, accent: str, delivery_style: str, pause_style: str) -> str:
+def build_tts_direction(project: str, language: str, voice_mode: str, voice_tone: str, pacing: str, energy: str, accent: str, delivery_style: str, pause_style: str) -> str:
     return "\n".join([
         f"TTS project: {project}",
         f"Voice language: {language}",
+        f"Voice mode: {voice_mode}",
         f"Tone: {voice_tone}",
         f"Pacing: {pacing}",
         f"Energy: {energy}",
@@ -182,13 +233,18 @@ def build_voice_script(project: str, content_type: str, language: str, structure
     return "Hook:\nHere is the simple version.\n\nVoiceover:\n" + source + "\n\nCTA:\nWhat do you think?"
 
 
-def build_package_json(project: str, content_type: str, language: str, regional_tone: str, status: str, suggested_audio_path: str, audio_output_path: str, direction: str, tts_direction: str, script: str, combined: str) -> dict[str, Any]:
+def build_package_json(project: str, content_type: str, language: str, regional_tone: str, status: str, suggested_audio_path: str, audio_output_path: str, direction: str, tts_direction: str, script: str, combined: str, voice_mode: str, reference_voice_path: str, clone_authorized: bool, clone_direction: str) -> dict[str, Any]:
     return {
         "created_at": datetime.now().isoformat(timespec="seconds"),
+        "phase": PHASE,
         "project_preset": project,
         "content_type": content_type,
         "language": language,
         "regional_tone": regional_tone,
+        "voice_mode": voice_mode,
+        "reference_voice_path": reference_voice_path,
+        "clone_authorized": clone_authorized,
+        "clone_direction": clone_direction,
         "status": status,
         "suggested_audio_path": suggested_audio_path,
         "audio_output_path": audio_output_path,
@@ -196,6 +252,7 @@ def build_package_json(project: str, content_type: str, language: str, regional_
         "tts_direction": tts_direction,
         "script_draft": script,
         "combined_package": combined,
+        "future_clone_backend": "placeholder",
     }
 
 
@@ -209,9 +266,10 @@ def save_text_file(project: str, content: str, prefix: str) -> Path:
 
 def save_package_json(package: dict[str, Any]) -> Path:
     ensure_dirs()
-    path = VOICE_PACKAGES / f"voice_package_{safe_name(package['project_preset'])}_{now_stamp()}.json"
+    folder = VOICE_CLONE_PACKAGES if package.get("voice_mode") == "Authorized reference voice clone planning" else VOICE_PACKAGES
+    path = folder / f"voice_package_{safe_name(package['project_preset'])}_{now_stamp()}.json"
     safe_write_json(path, package)
-    append_output_log(OUTPUT_LOG_JSON, workstation="voice_workstation", event="voice_package_saved", details={"path": str(path), "project": package["project_preset"], "status": package["status"]})
+    append_output_log(OUTPUT_LOG_JSON, workstation="voice_workstation", event="voice_package_saved", details={"path": str(path), "project": package["project_preset"], "status": package["status"], "voice_mode": package.get("voice_mode", "")})
     return path
 
 
@@ -222,6 +280,7 @@ def render_builder() -> None:
     content_type = st.selectbox("Content type", CONTENT_TYPES)
     language = st.selectbox("Language", LANGUAGE_OPTIONS, index=LANGUAGE_OPTIONS.index(defaults["language"]))
     regional_tone = st.selectbox("Regional tone", REGIONAL_TONES)
+    voice_mode = st.selectbox("Voice mode", VOICE_MODES)
     voice_tone = st.selectbox("Voice tone", VOICE_TONES, index=VOICE_TONES.index(defaults["tone"]))
     pacing = st.selectbox("Pacing", PACING_OPTIONS, index=PACING_OPTIONS.index(defaults["pacing"]))
     energy = st.selectbox("Energy", ENERGY_OPTIONS, index=ENERGY_OPTIONS.index(defaults["energy"]))
@@ -240,22 +299,36 @@ def render_builder() -> None:
     else:
         st.warning(audio_message)
 
+    st.markdown("### Voice clone capacity")
+    st.info("Voice cloning is planning-only in this phase. Use only user-provided or explicitly authorized reference audio.")
+    reference_voice_path = st.text_input("Authorized reference voice path", value="")
+    if voice_mode == "Authorized reference voice clone planning":
+        ref_ok, ref_message = validate_reference_path(reference_voice_path)
+        if ref_ok:
+            st.success(ref_message)
+        else:
+            st.warning(ref_message)
+    clone_authorized = st.checkbox("I confirm this reference voice is user-provided or explicitly authorized for this workflow.", value=False)
+    clone_notes = st.text_area("Voice clone notes", height=80, placeholder="Example: Keep my natural Bangla tone, reduce noise, preserve pacing, avoid robotic delivery.")
+
     input_text = st.text_area("Source topic/script", height=180, placeholder="Paste a topic, draft script, or narration idea here.")
     custom_note = st.text_area("Custom voice direction", height=100, placeholder="Example: Make it more suspenseful, softer, faster, more conversational, etc.")
 
-    direction = build_voice_direction(project, content_type, language, regional_tone, voice_tone, pacing, energy, accent, length, structure, delivery_style, pause_style, input_text, custom_note)
-    tts_direction = build_tts_direction(project, language, voice_tone, pacing, energy, accent, delivery_style, pause_style)
+    clone_direction = build_clone_direction(voice_mode, reference_voice_path, clone_authorized, clone_notes)
+    direction = build_voice_direction(project, content_type, language, regional_tone, voice_mode, voice_tone, pacing, energy, accent, length, structure, delivery_style, pause_style, input_text, custom_note, clone_direction)
+    tts_direction = build_tts_direction(project, language, voice_mode, voice_tone, pacing, energy, accent, delivery_style, pause_style)
     script = build_voice_script(project, content_type, language, structure, input_text)
     combined = f"VOICE DIRECTION:\n{direction}\n\nTTS DIRECTION:\n{tts_direction}\n\nSCRIPT DRAFT:\n{script}" if script else f"VOICE DIRECTION:\n{direction}\n\nTTS DIRECTION:\n{tts_direction}"
-    package_json = build_package_json(project, content_type, language, regional_tone, package_status, str(suggested_audio), audio_output_path, direction, tts_direction, script, combined)
+    package_json = build_package_json(project, content_type, language, regional_tone, package_status, str(suggested_audio), audio_output_path, direction, tts_direction, script, combined, voice_mode, reference_voice_path, clone_authorized, clone_direction)
 
     st.markdown("### Stable workflow")
-    st.markdown("1. Pick project and content type.  \n2. Paste topic or draft script.  \n3. Copy narration/TTS direction.  \n4. Save package JSON.  \n5. Later, generate audio and save it to the suggested audio path.")
+    st.markdown("1. Pick project and content type.  \n2. Choose original, brand voice, or authorized reference clone planning.  \n3. Paste topic/script.  \n4. Save package JSON.  \n5. Later, connect a TTS or authorized voice-clone backend.")
 
-    st.text_area("Copy-ready narration direction", direction, height=230)
+    st.text_area("Copy-ready clone direction", clone_direction, height=140)
+    st.text_area("Copy-ready narration direction", direction, height=260)
     st.text_area("Copy-ready TTS direction", tts_direction, height=150)
     st.text_area("Script draft", script, height=200)
-    st.text_area("Copy-ready combined package", combined, height=300)
+    st.text_area("Copy-ready combined package", combined, height=320)
 
     with st.expander("Voice package JSON preview", expanded=False):
         st.json(package_json)
@@ -272,7 +345,10 @@ def render_builder() -> None:
             st.success(f"Saved: {save_text_file(project, combined, 'voice_package')}")
     with col4:
         if st.button("Save package JSON"):
-            st.success(f"Saved: {save_package_json(package_json)}")
+            if voice_mode == "Authorized reference voice clone planning" and not clone_authorized:
+                st.error("Cannot save clone package without authorization confirmation.")
+            else:
+                st.success(f"Saved: {save_package_json(package_json)}")
 
 
 def render_library() -> None:
@@ -280,9 +356,18 @@ def render_library() -> None:
     ensure_dirs()
     files = sorted([path for path in VOICE_OUTPUTS.glob("*.txt") if path.is_file()], key=lambda item: item.stat().st_mtime, reverse=True)
     packages = sorted([path for path in VOICE_PACKAGES.glob("*.json") if path.is_file()], key=lambda item: item.stat().st_mtime, reverse=True)
+    clone_packages = sorted([path for path in VOICE_CLONE_PACKAGES.glob("*.json") if path.is_file()], key=lambda item: item.stat().st_mtime, reverse=True)
+    references = list_files(VOICE_REFERENCES, AUDIO_EXTENSIONS)
     st.metric("Text voice files", len(files))
     st.metric("Package JSON files", len(packages))
+    st.metric("Clone package JSON files", len(clone_packages))
+    st.metric("Reference voice files", len(references))
+    if clone_packages:
+        st.markdown("### Clone package preview")
+        selected_clone = st.selectbox("Select clone package", [path.name for path in clone_packages])
+        st.json(safe_read_json(VOICE_CLONE_PACKAGES / selected_clone, {}))
     if packages:
+        st.markdown("### Standard package preview")
         selected_package = st.selectbox("Select package", [path.name for path in packages])
         st.json(safe_read_json(VOICE_PACKAGES / selected_package, {}))
     if files:
@@ -299,46 +384,44 @@ def render_status() -> None:
     ensure_dirs()
     files = list(VOICE_OUTPUTS.glob("*.txt"))
     packages = list(VOICE_PACKAGES.glob("*.json"))
+    clone_packages = list(VOICE_CLONE_PACKAGES.glob("*.json"))
     audio_files = [path for path in AUDIO_OUTPUTS.glob("*") if path.is_file() and path.suffix.lower() in AUDIO_EXTENSIONS]
+    reference_files = list_files(VOICE_REFERENCES, AUDIO_EXTENSIONS)
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Phase", PHASE)
     c2.metric("Status", PHASE_STATUS)
     c3.metric("Voice files", len(files))
-    c4.metric("Packages", len(packages))
+    c4.metric("Packages", len(packages) + len(clone_packages))
     c5.metric("Audio files", len(audio_files))
-    st.success("Voice Workstation status: stable for Phase 4")
-    st.markdown("### Next phase")
-    st.write({"next_phase": "Phase 5.0", "next_workstation": "Video Workstation foundation", "video_presets": PROJECT_PRESETS, "status": "ready to start"})
+    st.success("Voice Workstation status: clone-ready for Phase 4")
+    st.markdown("### Voice clone safety rules")
+    st.json(CLONE_SAFETY_RULES)
     st.markdown("### Voice project defaults")
     st.json(PROJECT_DEFAULTS)
     with st.expander("Paths", expanded=False):
-        st.write({"voice_outputs": str(VOICE_OUTPUTS), "voice_directions": str(VOICE_DIRECTIONS), "voice_packages": str(VOICE_PACKAGES), "audio_outputs": str(AUDIO_OUTPUTS), "workstation_links_json": str(WORKSTATION_LINKS_JSON)})
+        st.write({"voice_outputs": str(VOICE_OUTPUTS), "voice_directions": str(VOICE_DIRECTIONS), "voice_packages": str(VOICE_PACKAGES), "voice_clone_packages": str(VOICE_CLONE_PACKAGES), "voice_references": str(VOICE_REFERENCES), "audio_outputs": str(AUDIO_OUTPUTS), "workstation_links_json": str(WORKSTATION_LINKS_JSON)})
 
 
 def render_launch() -> None:
     st.header("Launch notes")
-    st.markdown("Voice Workstation Phase 4.3 is stable for narration direction, TTS direction, package JSON, and future audio metadata.")
-    st.markdown("Next build: Phase 5.0 Video Workstation foundation.")
+    st.markdown("Voice Workstation Phase 4.4 is clone-ready for authorized reference voice planning, narration direction, TTS direction, package JSON, and future audio metadata.")
+    st.markdown("This phase does not clone or generate voice yet. It prepares safe metadata for a future backend.")
     st.code("streamlit run voice_workstation/app.py --server.port 8504 --server.address 0.0.0.0", language="bash")
 
 
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Voice Workstation", page_icon="🎙️", layout="wide")
     st.title("🎙️ Naz Lab Voice Workstation")
-    st.caption("Phase 4.3 stable — narration, TTS direction, package JSON, future audio metadata.")
-    st.success("Voice Workstation status: stable for Phase 4")
-    st.info("True Noir Tales and ToolFlow are English-first voice projects. Bangla and Rangpur/Nilphamari support are included.")
+    st.caption("Phase 4.4 clone-ready — authorized voice clone planning, narration, TTS direction, package JSON.")
+    st.success("Voice Workstation status: clone-ready for Phase 4")
+    st.info("Bangla-first voice workflow. Voice cloning requires user-provided or explicitly authorized reference audio.")
     ensure_dirs()
     update_workstation_status(WORKSTATION_LINKS_JSON, "voice_workstation", {"status": PHASE_STATUS, "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")})
     tabs = st.tabs(["Status", "Builder", "Library", "Launch"])
-    with tabs[0]:
-        render_status()
-    with tabs[1]:
-        render_builder()
-    with tabs[2]:
-        render_library()
-    with tabs[3]:
-        render_launch()
+    with tabs[0]: render_status()
+    with tabs[1]: render_builder()
+    with tabs[2]: render_library()
+    with tabs[3]: render_launch()
 
 
 if __name__ == "__main__":
