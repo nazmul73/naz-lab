@@ -1,4 +1,4 @@
-"""Naz Lab Master Control Dashboard Phase 2.8 project integration refresh."""
+"""Naz Lab Master Control Dashboard Phase 2.9 stable stack refresh."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ from shared.drive_paths import (  # noqa: E402
 )
 from shared.json_utils import safe_read_json, update_workstation_status  # noqa: E402
 
-PHASE = "2.8"
+PHASE = "2.9"
 PHASE_STATUS = "stable"
 
 VOICE_OUTPUTS = BASE_PATH / "voice_outputs"
@@ -83,12 +83,12 @@ FOLDERS = {
 
 WORKSTATIONS = [
     {"name": "Text Workstation", "phase": "1.8 stable", "key": "text_workstation", "folder": TEXT_OUTPUTS, "port": "8501"},
-    {"name": "Master Dashboard", "phase": "2.8 stable", "key": "master_dashboard", "folder": BASE_PATH, "port": "8502"},
+    {"name": "Master Dashboard", "phase": "2.9 stable", "key": "master_dashboard", "folder": BASE_PATH, "port": "8502"},
     {"name": "Image Workstation", "phase": "3.x stable", "key": "image_workstation", "folder": IMAGE_OUTPUTS, "port": "8503"},
     {"name": "Voice Workstation", "phase": "4.x reference workflow", "key": "voice_workstation", "folder": VOICE_OUTPUTS, "port": "8504"},
     {"name": "Video Workstation", "phase": "5.3 stable", "key": "video_workstation", "folder": VIDEO_OUTPUTS, "port": "8505"},
     {"name": "Portrait Workstation", "phase": "6.3 stable", "key": "portrait_workstation", "folder": PORTRAIT_PACKAGES, "port": "8506"},
-    {"name": "Project Workflow Workstation", "phase": "10.0 foundation", "key": "project_workstation", "folder": PROJECT_PACKAGES, "port": "8507"},
+    {"name": "Project Workflow Workstation", "phase": "10.2 stable", "key": "project_workstation", "folder": PROJECT_PACKAGES, "port": "8507"},
 ]
 
 
@@ -150,7 +150,7 @@ def render_status(language: str) -> None:
     c3.metric("Drive base", status_label(BASE_PATH))
     c4.metric("Active workstations", str(len(WORKSTATIONS)))
     c5.metric("Output log entries", len(logs))
-    st.success("Master Dashboard status: stable for Phase 2.8 project integration refresh")
+    st.success("Master Dashboard status: stable for Phase 2.9 full stack refresh")
     st.info(LANGUAGE_REQUIREMENT_BN if language == "Bangla" else LANGUAGE_REQUIREMENT_EN)
 
     st.markdown("### Workstation matrix")
@@ -179,9 +179,9 @@ def render_status(language: str) -> None:
     st.markdown("### Next readiness")
     st.write({
         "current_stack": "Text + Dashboard + Image + Voice + Video + Portrait + Project Workflow",
-        "recommended_next_1": "Project Workstation Phase 10.1 polish",
-        "recommended_next_2": "True Noir Tales one-topic-to-full-package automation",
-        "recommended_next_3": "ToolFlow one-topic-to-full-package automation",
+        "recommended_next_1": "README and launcher sync to Project Phase 10.2",
+        "recommended_next_2": "True Noir Tales one-topic-to-full-package automation polish",
+        "recommended_next_3": "ToolFlow one-topic-to-full-package automation polish",
         "status": "ready",
     })
     st.markdown("### Bangla-first quality requirements")
@@ -295,7 +295,7 @@ def render_roadmap(language: str) -> None:
     st.markdown("""
 1. Phase 0 Foundation — complete  
 2. Phase 1 Text Workstation — stable  
-3. Phase 2 Master Dashboard — project integration refreshed  
+3. Phase 2 Master Dashboard — stable full stack refresh  
 4. Phase 3 Image Workstation — stable  
 5. Phase 4 Voice Workstation — reference workflow active  
 6. Phase 5 Video Workstation — stable  
@@ -303,14 +303,14 @@ def render_roadmap(language: str) -> None:
 8. Phase 7 All-in-one Launcher — ready  
 9. Phase 8 True Noir Tales / ToolFlow workflow docs — ready  
 10. Phase 9 Bangla Quality Engine — active  
-11. Phase 10 Project Workflow Workstation — foundation ready
+11. Phase 10 Project Workflow Workstation — stable
 """)
     if language == "Bangla":
         st.markdown("""
 পরের কাজের priority:
-- Project Workstation Phase 10.1 polish
-- True Noir Tales one-topic-to-full-package automation
-- ToolFlow one-topic-to-full-package automation
+- README / launcher docs current stack sync
+- True Noir Tales one-topic-to-full-package automation polish
+- ToolFlow one-topic-to-full-package automation polish
 - Bangla quality engine আরও workstations-এ apply করা
 """)
 
@@ -318,13 +318,13 @@ def render_roadmap(language: str) -> None:
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Master Dashboard", page_icon="🧪", layout="wide")
     st.title("🧪 Naz Lab Master Control Dashboard")
-    st.caption("Phase 2.8 refresh — full stack plus Project Workflow Workstation")
+    st.caption("Phase 2.9 refresh — full stack plus Project Workflow Workstation Phase 10.2")
     update_workstation_status(WORKSTATION_LINKS_JSON, "master_dashboard", {"status": PHASE_STATUS, "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")})
     with st.sidebar:
         st.header("Dashboard settings")
         language = st.radio("Dashboard language note", ["Bangla", "English"], index=0)
         st.caption("Naz Lab default: Bangla-first. Regional default: Rangpur/Nilphamari/North Bengal.")
-        st.success("Phase 2.8 stable")
+        st.success("Phase 2.9 stable")
     tabs = st.tabs(["Status", "Links", "Workstations", "Outputs", "Job Queue", "Launch", "Roadmap"])
     with tabs[0]: render_status(language)
     with tabs[1]: render_links()
