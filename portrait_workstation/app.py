@@ -1,8 +1,7 @@
-"""Naz Lab Portrait Workstation Phase 6.1.
+"""Naz Lab Portrait Workstation Phase 6.2.
 
-Polished portrait package builder for Bangla-first social portraits,
-True Noir Tales characters, ToolFlow creator portraits, personal portraits,
-reference policy, style guidance, and future backend placeholders.
+Portrait workflow with polished presets, reference image path support,
+output validation, package metadata, and library previews.
 """
 
 from __future__ import annotations
@@ -21,12 +20,13 @@ if str(REPO_ROOT) not in sys.path:
 from shared.drive_paths import BASE_PATH, OUTPUT_LOG_JSON, WORKSTATION_LINKS_JSON  # noqa: E402
 from shared.json_utils import append_output_log, safe_read_json, safe_write_json, update_workstation_status  # noqa: E402
 
-PHASE = "6.1"
+PHASE = "6.2"
 PORTRAIT_PACKAGES = BASE_PATH / "portrait_packages"
 PORTRAIT_OUTPUTS = BASE_PATH / "portrait_outputs"
 PORTRAIT_REFERENCES = BASE_PATH / "portrait_references"
 IMAGE_JOBS = BASE_PATH / "image_jobs"
 IMAGE_OUTPUTS = BASE_PATH / "image_outputs"
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 
 PROJECT_PRESETS = ["General", "True Noir Tales", "ToolFlow", "Personal portrait"]
 LANGUAGE_OPTIONS = ["Bangla", "English", "Mixed Bangla-English"]
@@ -50,37 +50,16 @@ SAFETY_RULES = {
 }
 
 PROJECT_DEFAULTS = {
-    "General": {
-        "language": "Bangla",
-        "style": "Bangla-first social portrait planning. Natural, culturally Bangladeshi, Facebook-ready, clean and realistic.",
-        "default_scenario": "Rangpur/Nilphamari/North Bengal",
-        "default_mood": "natural confident",
-    },
-    "True Noir Tales": {
-        "language": "English",
-        "style": "English true crime/noir adult character portrait. Moody, cinematic, tense, no gore, no dead body, no visible wounds.",
-        "default_scenario": "Urban Bangladesh",
-        "default_mood": "cinematic tense",
-    },
-    "ToolFlow": {
-        "language": "English",
-        "style": "English clean creator/productivity portrait. Professional, modern, premium, practical, non-hype.",
-        "default_scenario": "Office/workstation",
-        "default_mood": "friendly professional",
-    },
-    "Personal portrait": {
-        "language": "Bangla",
-        "style": "Reference-aware personal portrait planning. Use only user-provided reference, keep natural and respectful.",
-        "default_scenario": "Studio portrait",
-        "default_mood": "natural confident",
-    },
+    "General": {"language": "Bangla", "style": "Bangla-first social portrait planning. Natural, culturally Bangladeshi, Facebook-ready, clean and realistic.", "default_scenario": "Rangpur/Nilphamari/North Bengal", "default_mood": "natural confident"},
+    "True Noir Tales": {"language": "English", "style": "English true crime/noir adult character portrait. Moody, cinematic, tense, no gore, no dead body, no visible wounds.", "default_scenario": "Urban Bangladesh", "default_mood": "cinematic tense"},
+    "ToolFlow": {"language": "English", "style": "English clean creator/productivity portrait. Professional, modern, premium, practical, non-hype.", "default_scenario": "Office/workstation", "default_mood": "friendly professional"},
+    "Personal portrait": {"language": "Bangla", "style": "Reference-aware personal portrait planning. Use only user-provided reference, keep natural and respectful.", "default_scenario": "Studio portrait", "default_mood": "natural confident"},
 }
 
 
 def ensure_dirs() -> None:
-    PORTRAIT_PACKAGES.mkdir(parents=True, exist_ok=True)
-    PORTRAIT_OUTPUTS.mkdir(parents=True, exist_ok=True)
-    PORTRAIT_REFERENCES.mkdir(parents=True, exist_ok=True)
+    for folder in [PORTRAIT_PACKAGES, PORTRAIT_OUTPUTS, PORTRAIT_REFERENCES]:
+        folder.mkdir(parents=True, exist_ok=True)
 
 
 def now_stamp() -> str:
@@ -100,21 +79,29 @@ def list_json_files(folder: Path) -> list[Path]:
 def list_image_files(folder: Path) -> list[Path]:
     if not folder.exists():
         return []
-    extensions = {".png", ".jpg", ".jpeg", ".webp"}
-    return sorted([p for p in folder.glob("*") if p.is_file() and p.suffix.lower() in extensions], key=lambda p: p.stat().st_mtime, reverse=True)
+    return sorted([p for p in folder.glob("*") if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS], key=lambda p: p.stat().st_mtime, reverse=True)
 
 
 def suggested_output_filename(project: str, portrait_type: str) -> str:
     return f"{safe_name(project)}_{safe_name(portrait_type)}_{now_stamp()}.png"
 
 
-def build_style_notes(project: str, language: str, mood: str, camera_style: str) -> str:
-    notes = [
-        f"Mood: {mood}",
-        f"Camera style: {camera_style}",
-        "Skin texture should look natural, not plastic or over-smoothed.",
-        "Expression should feel human and believable.",
-    ]
+def validate_image_path(path_text: str, label: str) -> tuple[bool, str]:
+    if not path_text.strip():
+        return False, f"No {label} path provided yet."
+    path = Path(path_text.strip())
+    if not path.exists():
+        return False, f"{label.title()} file does not exist yet."
+    if path.suffix.lower() not in IMAGE_EXTENSIONS:
+        return False, f"{label.title()} file exists but extension is not supported."
+    return True, f"{label.title()} file exists and looks valid."
+
+
+def build_style_notes(project: str, language: str, mood: str, camera_style: str, reference_path: str) -> str:
+    notes = [f"Mood: {mood}", f"Camera style: {camera_style}", "Skin texture should look natural, not plastic or over-smoothed.", "Expression should feel human and believable."]
+    if reference_path.strip():
+        notes.append(f"Reference image path: {reference_path}")
+        notes.append("Use reference only as user-provided guidance for this workflow.")
     if language in {"Bangla", "Mixed Bangla-English"}:
         notes.append("Planning language should support natural Bangla caption/story usage.")
     if project == "True Noir Tales":
@@ -126,19 +113,10 @@ def build_style_notes(project: str, language: str, mood: str, camera_style: str)
     return "\n".join(notes)
 
 
-def build_positive_prompt(project: str, language: str, portrait_type: str, style: str, scenario: str, face_policy: str, output_format: str, mood: str, camera_style: str, topic: str, custom_note: str) -> str:
-    style_notes = build_style_notes(project, language, mood, camera_style)
+def build_positive_prompt(project: str, language: str, portrait_type: str, style: str, scenario: str, face_policy: str, output_format: str, mood: str, camera_style: str, reference_path: str, topic: str, custom_note: str) -> str:
+    style_notes = build_style_notes(project, language, mood, camera_style, reference_path)
     parts = [
-        f"Project preset: {project}",
-        f"Language/planning: {language}",
-        f"Portrait type: {portrait_type}",
-        f"Visual style: {style}",
-        f"Scenario: {scenario}",
-        f"Mood: {mood}",
-        f"Camera style: {camera_style}",
-        f"Face/reference policy: {face_policy}",
-        f"Output format: {output_format}",
-        f"Project style: {PROJECT_DEFAULTS[project]['style']}",
+        f"Project preset: {project}", f"Language/planning: {language}", f"Portrait type: {portrait_type}", f"Visual style: {style}", f"Scenario: {scenario}", f"Mood: {mood}", f"Camera style: {camera_style}", f"Face/reference policy: {face_policy}", f"Reference image path: {reference_path or '[not selected]'}", f"Output format: {output_format}", f"Project style: {PROJECT_DEFAULTS[project]['style']}",
         "Bangla-first rule: General Naz Lab planning defaults to Bangla; English is used for selected English projects or when requested.",
         "Create a realistic, natural, culturally grounded portrait plan with adult subjects only.",
         "Bangladeshi people and Bangladeshi scenario by default for General Naz Lab content.",
@@ -158,47 +136,14 @@ def build_positive_prompt(project: str, language: str, portrait_type: str, style
 
 
 def build_negative_prompt(project: str) -> str:
-    base = [
-        "no gore",
-        "no dead body",
-        "no visible wounds",
-        "no exposed violence",
-        "no distorted face",
-        "no extra fingers",
-        "no fake logo",
-        "no watermark",
-        "no unreadable text",
-        "no sindoor unless explicitly requested",
-        "no vermilion unless explicitly requested",
-        "no misleading official uniform or document",
-        "no plastic skin",
-        "no over-smoothed face",
-    ]
+    base = ["no gore", "no dead body", "no visible wounds", "no exposed violence", "no distorted face", "no extra fingers", "no fake logo", "no watermark", "no unreadable text", "no sindoor unless explicitly requested", "no vermilion unless explicitly requested", "no misleading official uniform or document", "no plastic skin", "no over-smoothed face"]
     if project == "True Noir Tales":
         base.extend(["no blood", "no weapon focus", "no sensational violence"])
     return ", ".join(base)
 
 
-def build_package(project: str, language: str, portrait_type: str, style: str, scenario: str, face_policy: str, output_format: str, mood: str, camera_style: str, status: str, output_path: str, positive: str, negative: str) -> dict[str, Any]:
-    return {
-        "created_at": datetime.now().isoformat(timespec="seconds"),
-        "phase": PHASE,
-        "project_preset": project,
-        "language": language,
-        "portrait_type": portrait_type,
-        "visual_style": style,
-        "scenario": scenario,
-        "mood": mood,
-        "camera_style": camera_style,
-        "face_policy": face_policy,
-        "output_format": output_format,
-        "status": status,
-        "suggested_output_path": output_path,
-        "positive_prompt": positive,
-        "negative_prompt": negative,
-        "combined_prompt": f"POSITIVE PROMPT:\n{positive}\n\nNEGATIVE PROMPT:\n{negative}",
-        "future_backend": "placeholder",
-    }
+def build_package(project: str, language: str, portrait_type: str, style: str, scenario: str, face_policy: str, reference_path: str, output_format: str, mood: str, camera_style: str, status: str, output_path: str, positive: str, negative: str) -> dict[str, Any]:
+    return {"created_at": datetime.now().isoformat(timespec="seconds"), "phase": PHASE, "project_preset": project, "language": language, "portrait_type": portrait_type, "visual_style": style, "scenario": scenario, "mood": mood, "camera_style": camera_style, "face_policy": face_policy, "reference_image_path": reference_path, "output_format": output_format, "status": status, "suggested_output_path": output_path, "positive_prompt": positive, "negative_prompt": negative, "combined_prompt": f"POSITIVE PROMPT:\n{positive}\n\nNEGATIVE PROMPT:\n{negative}", "future_backend": "placeholder"}
 
 
 def save_package(package: dict[str, Any]) -> Path:
@@ -209,6 +154,15 @@ def save_package(package: dict[str, Any]) -> Path:
     return path
 
 
+def render_reference_selector() -> str:
+    st.markdown("### Reference image selector")
+    st.caption(f"Reference folder: {PORTRAIT_REFERENCES}")
+    references = list_image_files(PORTRAIT_REFERENCES)
+    options = ["No reference selected"] + [str(path) for path in references]
+    selected = st.selectbox("Saved portrait reference images", options)
+    return "" if selected == "No reference selected" else selected
+
+
 def render_status() -> None:
     st.header("Status")
     ensure_dirs()
@@ -216,15 +170,10 @@ def render_status() -> None:
     outputs = list_image_files(PORTRAIT_OUTPUTS)
     references = list_image_files(PORTRAIT_REFERENCES)
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Phase", PHASE)
-    c2.metric("Packages", len(packages))
-    c3.metric("Portrait outputs", len(outputs))
-    c4.metric("Reference images", len(references))
-    st.info("Phase 6.1 polishes portrait presets and prompt packages. It does not run a portrait backend yet.")
-    st.markdown("### Safety rules")
-    st.json(SAFETY_RULES)
-    st.markdown("### Project defaults")
-    st.json(PROJECT_DEFAULTS)
+    c1.metric("Phase", PHASE); c2.metric("Packages", len(packages)); c3.metric("Portrait outputs", len(outputs)); c4.metric("Reference images", len(references))
+    st.info("Phase 6.2 adds reference path support, output validation, and package workflow polish. It does not run a portrait backend yet.")
+    st.markdown("### Safety rules"); st.json(SAFETY_RULES)
+    st.markdown("### Project defaults"); st.json(PROJECT_DEFAULTS)
     with st.expander("Paths", expanded=False):
         st.write({"portrait_packages": str(PORTRAIT_PACKAGES), "portrait_outputs": str(PORTRAIT_OUTPUTS), "portrait_references": str(PORTRAIT_REFERENCES), "image_jobs": str(IMAGE_JOBS), "image_outputs": str(IMAGE_OUTPUTS)})
 
@@ -241,15 +190,22 @@ def render_builder() -> None:
     mood = st.selectbox("Mood", MOOD_OPTIONS, index=MOOD_OPTIONS.index(defaults["default_mood"]))
     camera_style = st.selectbox("Camera style", CAMERA_STYLES)
     face_policy = st.selectbox("Face/reference policy", FACE_POLICIES)
+    selected_reference = render_reference_selector()
+    reference_path = st.text_input("Reference image path", value=selected_reference)
+    if reference_path.strip():
+        ok, message = validate_image_path(reference_path, "reference image")
+        st.success(message) if ok else st.warning(message)
     output_format = st.selectbox("Output format", OUTPUT_FORMATS)
     status = st.selectbox("Package status", PACKAGE_STATUS)
     suggested_output = PORTRAIT_OUTPUTS / suggested_output_filename(project, portrait_type)
     output_path = st.text_input("Suggested portrait output path", value=str(suggested_output))
+    out_ok, out_message = validate_image_path(output_path, "portrait output")
+    st.success(out_message) if out_ok else st.warning(out_message)
     topic = st.text_area("Source topic / character description", height=150, placeholder="Describe the person/character/brand portrait need here.")
     custom_note = st.text_area("Custom portrait direction", height=100, placeholder="Example: more professional, more emotional, more North Bengal realism, etc.")
-    positive = build_positive_prompt(project, language, portrait_type, style, scenario, face_policy, output_format, mood, camera_style, topic, custom_note)
+    positive = build_positive_prompt(project, language, portrait_type, style, scenario, face_policy, output_format, mood, camera_style, reference_path, topic, custom_note)
     negative = build_negative_prompt(project)
-    package = build_package(project, language, portrait_type, style, scenario, face_policy, output_format, mood, camera_style, status, output_path, positive, negative)
+    package = build_package(project, language, portrait_type, style, scenario, face_policy, reference_path, output_format, mood, camera_style, status, output_path, positive, negative)
     st.markdown("### Reference workflow note")
     st.warning("Use a face reference only when the user provides one for this workflow. Do not assume or invent a specific real person's face.")
     st.text_area("Positive prompt", positive, height=300)
@@ -264,32 +220,24 @@ def render_builder() -> None:
 def render_library() -> None:
     st.header("Portrait package library")
     ensure_dirs()
-    packages = list_json_files(PORTRAIT_PACKAGES)
-    outputs = list_image_files(PORTRAIT_OUTPUTS)
-    references = list_image_files(PORTRAIT_REFERENCES)
-    st.metric("Packages", len(packages))
-    st.metric("Outputs", len(outputs))
-    st.metric("References", len(references))
+    packages = list_json_files(PORTRAIT_PACKAGES); outputs = list_image_files(PORTRAIT_OUTPUTS); references = list_image_files(PORTRAIT_REFERENCES)
+    st.metric("Packages", len(packages)); st.metric("Outputs", len(outputs)); st.metric("References", len(references))
     if packages:
         selected = st.selectbox("Select package", [p.name for p in packages])
         st.json(safe_read_json(PORTRAIT_PACKAGES / selected, {}))
     if outputs:
         st.markdown("### Output files")
-        for item in outputs[:10]:
-            st.write(str(item))
+        for item in outputs[:10]: st.write(str(item))
     if references:
         st.markdown("### Reference files")
-        for item in references[:10]:
-            st.write(str(item))
-    if not packages:
-        st.info("No portrait packages saved yet.")
+        for item in references[:10]: st.write(str(item))
+    if not packages: st.info("No portrait packages saved yet.")
 
 
 def render_inputs() -> None:
     st.header("Input placeholders")
     st.markdown("Future versions may connect image jobs, portrait references, and generated outputs directly.")
-    image_jobs = list_json_files(IMAGE_JOBS)
-    image_outputs = list_image_files(IMAGE_OUTPUTS)
+    image_jobs = list_json_files(IMAGE_JOBS); image_outputs = list_image_files(IMAGE_OUTPUTS)
     st.write({"image_job_count": len(image_jobs), "image_output_count": len(image_outputs)})
     if image_jobs:
         selected_job = st.selectbox("Preview image job", [p.name for p in image_jobs])
@@ -298,15 +246,15 @@ def render_inputs() -> None:
 
 def render_launch() -> None:
     st.header("Launch notes")
-    st.markdown("Phase 6.1 creates polished portrait planning packages. It does not generate or swap faces.")
-    st.markdown("Future build: reference image manager, output path validation, and optional backend planning.")
+    st.markdown("Phase 6.2 creates polished portrait planning packages with reference path support. It does not generate or swap faces.")
+    st.markdown("Future build: reference upload manager, stable marker, and optional backend planning.")
     st.code("streamlit run portrait_workstation/app.py --server.port 8506 --server.address 0.0.0.0", language="bash")
 
 
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Portrait Workstation", page_icon="🧑", layout="wide")
     st.title("🧑 Naz Lab Portrait Workstation")
-    st.caption("Phase 6.1 — polished portrait presets, safety rules, prompt packages, future backend placeholder.")
+    st.caption("Phase 6.2 — reference workflow, output validation, portrait presets, package workflow.")
     st.info("Bangla-first planning. Use face references only when the user provides them for this workflow.")
     ensure_dirs()
     update_workstation_status(WORKSTATION_LINKS_JSON, "portrait_workstation", {"status": "running", "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")})
