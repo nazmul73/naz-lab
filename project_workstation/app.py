@@ -192,14 +192,58 @@ def build_toolflow_package(topic: str, language: str, platform: str, audience: s
 
 
 def build_general_package(topic: str, language: str, platform: str, audience: str, note: str) -> dict[str, Any]:
-    hook = "এই কথাটা অনেকেই খেয়াল করে না।"
-    cta = "তোমার কী মনে হয়?"
+    bangla = language in {"Bangla", "Mixed Bangla-English"}
+    if bangla:
+        title = "একটা সহজ কথা, কিন্তু কাজে লাগে"
+        hook = "এই কথাটা অনেকেই খেয়াল করে না।"
+        body = f"{topic}\n\nব্যাপারটা বাইরে থেকে ছোট মনে হলেও, ঠিকভাবে ব্যবহার করলে এটা content, কাজ, বা daily decision—সব জায়গায় কাজে লাগতে পারে।"
+        value_line = "সবচেয়ে ভালো ফল আসে যখন কথাটা সহজ রাখা হয়, কিন্তু কাজে লাগার মতো করে সাজানো হয়।"
+        cta = "তোমার কী মনে হয়?"
+        caption = "সহজ জিনিস ঠিকভাবে ব্যবহার করলেই অনেক সময় সবচেয়ে ভালো result আসে। তোমার কী মনে হয়?"
+        reel_script = {
+            "hook": hook,
+            "voiceover": [
+                hook,
+                "আমরা অনেক সময় বড় solution খুঁজি।",
+                "কিন্তু ছোট একটা idea ঠিকভাবে সাজাতে পারলেই কাজ অনেক সহজ হয়।",
+                value_line,
+                cta,
+            ],
+            "on_screen_text": ["ছোট idea", "সঠিকভাবে সাজাও", "কাজে লাগাও", "তোমার কী মনে হয়?"],
+        }
+        regional_note = "Default light regional flavor: Rangpur/Nilphamari/North Bengal. Keep it natural, not exaggerated."
+    else:
+        title = "A simple idea that actually helps"
+        hook = "Most people miss this simple point."
+        body = f"{topic}\n\nIt may look small from the outside, but when you structure it clearly, it can help with content, work, or daily decisions."
+        value_line = "The best results usually come from keeping the idea simple and making it useful."
+        cta = "What do you think?"
+        caption = "Simple ideas often work best when they are structured clearly. What do you think?"
+        reel_script = {
+            "hook": hook,
+            "voiceover": [hook, "We often look for big solutions.", "But a small idea can become useful when it is structured clearly.", value_line, cta],
+            "on_screen_text": ["Small idea", "Structure it", "Use it", "What do you think?"],
+        }
+        regional_note = "English mode selected. Bangla-first remains the global default for Naz Lab."
+
+    image_prompt = (
+        "Natural Bangladeshi social content visual, realistic human-centered scene, culturally grounded, "
+        "urban or rural Bangladesh as appropriate, everyday believable environment, warm natural expression, "
+        "premium Facebook-ready composition, no misleading elements, no fake logos, no sindoor unless explicitly requested."
+    )
+    voice_direction = "Natural spoken Bangla, Facebook-ready, voiceover-ready, clear pauses, one idea per sentence, simple and human delivery."
+    if not bangla:
+        voice_direction = "Natural clear social-media voice, simple phrasing, useful tone, no hype."
+    video_direction = "Hook-context-value-CTA video package, subtitle-friendly lines, short mobile-readable captions, simple cuts, clean final CTA frame."
+
     return {
-        "text_package": {"hook": hook, "body": topic, "cta": cta, "bangla_rule": BANGLA_RULE},
-        "image_package": {"prompt": "Natural Bangladeshi social content visual, realistic, culturally grounded, urban or rural Bangladesh as appropriate, no misleading elements, no sindoor unless requested."},
-        "voice_package": {"direction": "Natural spoken Bangla, Facebook-ready, voiceover-ready, clear pauses, one idea per sentence.", "language": language, "reference_policy": REFERENCE_POLICY},
-        "video_package": {"direction": "Hook-context-value-CTA video package, subtitle-friendly Bangla, short mobile-readable lines.", "platform": platform},
-        "posting_package": {"caption": hook, "cta": cta, "hashtags": ["#BanglaContent", "#FacebookContent"]},
+        "text_package": {"title": title, "hook": hook, "body": body, "value_line": value_line, "cta": cta, "bangla_rule": BANGLA_RULE},
+        "reel_package": {"target_length": "30-45 seconds", "script": reel_script, "scene_sequence": ["Hook", "Problem/context", "Simple idea", "Value", "CTA"]},
+        "image_package": {"prompt": image_prompt, "format": "1:1, 4:5, or 9:16", "negative": "no fake logo, no misleading elements, no clutter, no sindoor unless requested"},
+        "voice_package": {"direction": voice_direction, "language": language, "reference_policy": REFERENCE_POLICY},
+        "video_package": {"direction": video_direction, "platform": platform, "subtitle_note": "Keep Bangla subtitles short, mobile-readable, and matched to voice pauses."},
+        "posting_package": {"caption": caption, "cta": cta, "hashtags": ["#BanglaContent", "#FacebookContent", "#SocialMediaContent"]},
+        "regional_note": regional_note,
         "notes": note,
         "audience": audience,
     }
