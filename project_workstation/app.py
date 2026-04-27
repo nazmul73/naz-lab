@@ -137,29 +137,55 @@ def build_true_noir_package(topic: str, language: str, platform: str, audience: 
 
 def build_toolflow_package(topic: str, language: str, platform: str, audience: str, note: str) -> dict[str, Any]:
     bangla = language in {"Bangla", "Mixed Bangla-English"}
-    hook = "AI tool আলাদা আলাদা ব্যবহার করলে ফল random হয়। system বানালে output পরিষ্কার হয়।" if bangla else "Random tools create random results. A simple system makes the output cleaner."
-    cta = "তুমি কি এই workflowটা ব্যবহার করবে?" if bangla else "Would you use this workflow?"
+    if bangla:
+        hook = "AI tool দিয়ে কাজ দ্রুত হয়, কিন্তু system ছাড়া output এলোমেলো হয়ে যায়।"
+        problem = "অনেকে নতুন tool খোঁজে, কিন্তু একই কাজ repeat করার মতো workflow বানায় না।"
+        solution_intro = "এই workflow-টা সেই জায়গাটাই ঠিক করে।"
+        verdict = "Tool একা magic না। আসল লাভ আসে যখন tool, prompt আর process একসাথে কাজ করে।"
+        cta = "তুমি কি এই workflowটা নিজের কাজে ব্যবহার করবে?"
+        caption = "AI tool random ভাবে ব্যবহার না করে system বানালে কাজ অনেক পরিষ্কার হয়। তুমি কি এই setupটা try করবে?"
+        steps = ["কাজের goal ঠিক করো", "একটা main tool বেছে নাও", "একই prompt/process repeat করো", "ভালো output save করে আবার ব্যবহার করো"]
+        carousel_slides = ["AI tool নয়, system দরকার", "Problem: random tool use", "Solution: repeatable workflow", "Step 1: goal", "Step 2: tool", "Step 3: prompt/process", "Result: cleaner output", "CTA"]
+    else:
+        hook = "AI tools save time, but only when you use them as a system."
+        problem = "Most people keep trying new tools without building a repeatable workflow."
+        solution_intro = "This workflow turns the tool into a repeatable process."
+        verdict = "The tool is not the advantage. The system you build around it is."
+        cta = "Would you use this workflow?"
+        caption = "AI tools work better when you stop using them randomly and start using them as a system. Would you try this setup?"
+        steps = ["Define the goal", "Pick the main tool", "Use a repeatable prompt/process", "Save and reuse the best result"]
+        carousel_slides = ["Stop using AI tools randomly", "The real problem", "The simple system", "Step 1: goal", "Step 2: tool", "Step 3: repeatable prompt", "Result: cleaner output", "CTA"]
+
     post = {
         "hook": hook,
-        "problem": "Most people use tools without a repeatable workflow." if not bangla else "অনেকে tool ব্যবহার করে, কিন্তু repeatable workflow বানায় না।",
-        "solution": topic,
-        "steps": ["Define the goal", "Pick the tool", "Use a repeatable prompt/workflow", "Save and reuse the result"],
-        "verdict": "Use tools as a system, not as random shortcuts." if not bangla else "Tool random ভাবে না, system হিসেবে ব্যবহার করলেই ফল ভালো হয়।",
+        "problem": problem,
+        "solution_intro": solution_intro,
+        "topic_or_tool": topic,
+        "steps": steps,
+        "verdict": verdict,
         "cta": cta,
     }
-    image_prompt = "Clean modern SaaS/productivity visual, workspace or dashboard context, premium minimal composition, practical creator feel, no fake logos, no misleading UI, no clutter."
-    voice_direction = "Practical creator explainer voice, clear pacing, confident but non-hype, clean sentence breaks."
+    image_prompt = (
+        "Clean modern SaaS/productivity visual, creator workstation or dashboard context, premium minimal composition, "
+        "clear workflow feeling, practical and trustworthy mood, subtle AI/tool elements, no fake logos, no misleading UI, "
+        "no clutter, no unreadable text, social-media-ready cover composition."
+    )
+    voice_direction = "Practical creator explainer voice, clear pacing, confident but non-hype, clean sentence breaks, useful and trustworthy delivery."
     if bangla:
-        voice_direction += " Use natural spoken Bangla, simple, practical, and beginner-friendly."
-    video_direction = "5-scene explainer: messy workflow/problem, tool/system intro, 2-3 practical steps, result/benefit, CTA. Clean cuts and readable subtitles."
+        voice_direction += " Use natural spoken Bangla, simple, practical, beginner-friendly, and not stiff textbook Bangla."
+    video_direction = (
+        "5-scene explainer: Scene 1 messy/random workflow problem; Scene 2 simple system introduction; "
+        "Scene 3 step-by-step workflow; Scene 4 result/benefit; Scene 5 CTA. Clean cuts, readable subtitles, minimal effects, no hype."
+    )
     return {
         "main_post_package": post,
-        "carousel_package": {"slides": ["Hook / promise", "Problem", "Workflow", "Step 1", "Step 2", "Step 3", "Result", "CTA"]},
-        "reel_package": {"hook": hook, "target_length": "30 seconds", "cta": cta, "scene_sequence": ["Problem", "System", "Steps", "Result", "CTA"]},
-        "image_package": {"prompt": image_prompt, "format": "1:1, 4:5, or 9:16", "negative": "no fake logos, no misleading UI, no clutter, no unreadable text"},
+        "carousel_package": {"slides": carousel_slides, "note": "Each slide should use one clear idea and minimal text."},
+        "reel_package": {"hook": hook, "target_length": "30 seconds", "cta": cta, "scene_sequence": ["Problem", "System", "Steps", "Result", "CTA"], "subtitle_note": "Use short mobile-readable subtitles."},
+        "image_package": {"prompt": image_prompt, "format": "1:1, 4:5, or 9:16", "negative": "no fake logos, no misleading UI, no clutter, no unreadable text, no fake income claim"},
         "voice_package": {"direction": voice_direction, "language": language, "reference_policy": REFERENCE_POLICY},
         "video_package": {"direction": video_direction, "platform": platform},
-        "posting_package": {"caption": hook, "cta": cta, "hashtags": ["#AITools", "#Productivity", "#Automation", "#SaaS", "#Workflow", "#ToolFlow"]},
+        "posting_package": {"caption": caption, "cta": cta, "hashtags": ["#AITools", "#Productivity", "#Automation", "#SaaS", "#Workflow", "#ToolFlow", "#NoCode"]},
+        "safety_notes": ["no fake income claims", "no spammy marketer tone", "no misleading product UI", "no unverified AI news"],
         "notes": note,
         "audience": audience,
     }
