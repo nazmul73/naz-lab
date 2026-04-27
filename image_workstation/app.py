@@ -1,12 +1,13 @@
-"""Naz Lab Image Workstation Phase 3.3.
+"""Naz Lab Image Workstation Phase 3.4.
 
-Unified preset image prompt builder for project presets, content types,
-naturalness controls, scene realism, and positive/negative prompt output.
+Manual generator bridge with quick status buttons, filename suggestion,
+output path validation, and completion workflow.
 """
 
 from __future__ import annotations
 
 import json
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -29,7 +30,7 @@ from shared.drive_paths import (  # noqa: E402
 )
 from shared.json_utils import append_output_log, safe_read_json, safe_write_json, update_workstation_status  # noqa: E402
 
-PHASE = "3.3"
+PHASE = "3.4"
 STATUS_OPTIONS = ["pending", "in_progress", "completed", "blocked", "archived"]
 PROJECT_PRESETS = ["True Noir Tales", "ToolFlow", "General"]
 CONTENT_TYPES = ["General Facebook post", "Reel thumbnail", "Carousel cover", "Story scene"]
@@ -140,21 +141,46 @@ def job_counts(jobs: list[Path]) -> dict[str, int]:
     return counts
 
 
-def write_job(path: Path, data: dict[str, Any]) -> None:
+def write_job(path: Path, data: dict[str, Any], event: str = "job_updated") -> None:
     data["last_updated"] = datetime.now().isoformat(timespec="seconds")
     safe_write_json(path, data)
     append_output_log(
         OUTPUT_LOG_JSON,
         workstation="image_workstation",
-        event="job_updated",
+        event=event,
         details={
             "job_file": str(path),
             "status": data.get("status", "unknown"),
             "project_preset": data.get("project_preset", ""),
             "content_type": data.get("content_type", ""),
             "region_style": data.get("region_style", ""),
+            "output_path": data.get("output_path", ""),
         },
     )
+
+
+def slugify(text: str) -> str:
+    text = text.lower().strip()
+    text = re.sub(r"[^a-z0-9]+", "_", text)
+    return re.sub(r"_+", "_", text).strip("_") or "image"
+
+
+def suggested_filename(data: dict[str, Any], job_path: Path) -> str:
+    project = slugify(data.get("project_preset", "general"))
+    content = slugify(data.get("content_type", "image"))
+    stem = job_path.stem.replace("image_job_", "")
+    return f"{project}_{content}_{stem}.png"
+
+
+def validate_output_path(path_text: str) -> tuple[bool, str]:
+    if not path_text.strip():
+        return False, "No output path provided yet."
+    path = Path(path_text.strip())
+    if not path.exists():
+        return False, "Output path does not exist yet. Save the generated image to this path first."
+    if path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"}:
+        return False, "Output path exists but is not a supported image file."
+    return True, "Output image path exists and looks valid."
 
 
 def build_positive_prompt(data: dict[str, Any], base_prompt: str) -> str:
@@ -209,7 +235,7 @@ def build_combined_prompt(positive: str, negative: str) -> str:
 def render_header() -> None:
     st.set_page_config(page_title="Naz Lab Image Workstation", page_icon="🎨", layout="wide")
     st.title("🎨 Naz Lab Image Workstation")
-    st.caption("Phase 3.3 — project presets, content types, natural image controls, positive/negative prompt builder.")
+    st.caption("Phase 3.4 — manual generator bridge, quick completion workflow, output path validation.")
     st.info("True Noir Tales and ToolFlow are English projects. Bangladesh visuals by default. Women: no sindoor unless explicitly requested.")
 
 
@@ -231,23 +257,20 @@ def render_status() -> None:
     c7.metric("Blocked", counts.get("blocked", 0))
     c8.metric("Archived", counts.get("archived", 0))
 
+    st.markdown("### Manual generator bridge checklist")
+    st.markdown(
+        """
+1. Open Queue tab and select a job.  
+2. Tune project/content/naturalness/location controls.  
+3. Copy the combined prompt into your image generator.  
+4. Save generated image into `image_outputs`.  
+5. Paste the saved output path into the job.  
+6. Click Mark completed.
+"""
+    )
+
     st.markdown("### Visual requirements")
     st.json(VISUAL_REQUIREMENTS)
-
-    st.markdown("### Unified preset layers")
-    st.write({
-        "project_presets": PROJECT_PRESETS,
-        "content_types": CONTENT_TYPES,
-        "naturalness_levels": NATURALNESS_LEVELS,
-        "scenario_options": SCENARIO_OPTIONS,
-        "location_types": LOCATION_TYPES,
-        "region_options": REGION_OPTIONS,
-    })
-
-    with st.expander("Preset text details", expanded=False):
-        st.json(PROJECT_TEXT)
-        st.json(CONTENT_TYPE_TEXT)
-        st.json(NATURALNESS_TEXT)
 
     with st.expander("Paths", expanded=False):
         st.write({
@@ -261,6 +284,11 @@ def render_status() -> None:
 
 def select_index(options: list[str], value: str, fallback: int = 0) -> int:
     return options.index(value) if value in options else fallback
+
+
+def quick_update_status(path: Path, data: dict[str, Any], status: str, event: str) -> None:
+    data["status"] = status
+    write_job(path, data, event=event)
 
 
 def render_queue() -> None:
@@ -278,7 +306,7 @@ def render_queue() -> None:
             "Status": data.get("status", "unknown") if isinstance(data, dict) else "unknown",
             "Project": data.get("project_preset", data.get("visual_preset", "")) if isinstance(data, dict) else "",
             "Content type": data.get("content_type", "") if isinstance(data, dict) else "",
-            "Region": data.get("region_style", "") if isinstance(data, dict) else "",
+            "Output path": data.get("output_path", "") if isinstance(data, dict) else "",
             "Created": data.get("created_at", "") if isinstance(data, dict) else "",
         })
     st.dataframe(rows, use_container_width=True, hide_index=True)
@@ -298,8 +326,38 @@ def render_queue() -> None:
     c3.metric("Content", data.get("content_type", "General Facebook post"))
     c4.metric("Region", data.get("region_style", "Rangpur/Nilphamari/North Bengal"))
 
+    st.markdown("### Quick status actions")
+    q1, q2, q3, q4 = st.columns(4)
+    if q1.button("Mark in_progress"):
+        quick_update_status(selected_path, data, "in_progress", "job_marked_in_progress")
+        st.rerun()
+    if q2.button("Mark completed"):
+        ok, message = validate_output_path(data.get("output_path", ""))
+        if ok:
+            quick_update_status(selected_path, data, "completed", "job_marked_completed")
+            st.rerun()
+        else:
+            st.error(message)
+    if q3.button("Mark blocked"):
+        quick_update_status(selected_path, data, "blocked", "job_marked_blocked")
+        st.rerun()
+    if q4.button("Archive"):
+        quick_update_status(selected_path, data, "archived", "job_archived")
+        st.rerun()
+
+    suggested = suggested_filename(data, selected_path)
+    suggested_path = str(IMAGE_OUTPUTS / suggested)
+    st.markdown("### Manual generator bridge")
+    st.write({"suggested_filename": suggested, "suggested_output_path": suggested_path})
+
+    output_ok, output_message = validate_output_path(data.get("output_path", ""))
+    if output_ok:
+        st.success(output_message)
+    else:
+        st.warning(output_message)
+
     st.markdown("### Copy-ready base prompt")
-    st.text_area("Base prompt", prompt, height=140, help="Original prompt from Text Workstation or prompt library.")
+    st.text_area("Base prompt", prompt, height=120, help="Original prompt from Text Workstation or prompt library.")
 
     with st.form("update_job_form"):
         status = st.selectbox("Job status", STATUS_OPTIONS, index=select_index(STATUS_OPTIONS, data.get("status", "pending")))
@@ -341,11 +399,11 @@ def render_queue() -> None:
         negative_prompt = build_negative_prompt(temp_data)
         combined_prompt = build_combined_prompt(positive_prompt, negative_prompt)
 
-        st.text_area("Final positive prompt", positive_prompt, height=220)
-        st.text_area("Final negative prompt", negative_prompt, height=120)
-        st.text_area("Copy-ready combined prompt", combined_prompt, height=260)
+        st.text_area("Final positive prompt", positive_prompt, height=200)
+        st.text_area("Final negative prompt", negative_prompt, height=110)
+        st.text_area("Copy-ready combined prompt", combined_prompt, height=240)
 
-        output_path = st.text_input("Output image path", value=data.get("output_path", ""))
+        output_path = st.text_input("Output image path", value=data.get("output_path", "") or suggested_path)
         notes = st.text_area("Notes", value=data.get("notes", ""), height=90)
         submitted = st.form_submit_button("Save job update")
 
@@ -354,6 +412,7 @@ def render_queue() -> None:
         data["status"] = status
         data["visual_preset"] = project_preset
         data["bangladesh_default"] = True
+        data["suggested_filename"] = suggested
         data["final_positive_prompt"] = positive_prompt
         data["final_negative_prompt"] = negative_prompt
         data["combined_prompt"] = combined_prompt
@@ -362,7 +421,7 @@ def render_queue() -> None:
         data["output_path"] = output_path.strip()
         data["notes"] = notes.strip()
         write_job(selected_path, data)
-        st.success("Job updated with unified preset prompts.")
+        st.success("Job updated with manual generator bridge fields.")
         st.rerun()
 
     with st.expander("Raw job JSON", expanded=False):
@@ -404,8 +463,8 @@ def render_prompt_library() -> None:
 
 def render_launch() -> None:
     st.header("Launch notes")
-    st.markdown("This Phase 3.3 version creates positive/negative generator-ready prompts. It does not generate images yet.")
-    st.markdown("Next build: manual generator bridge with completion helpers, then backend integration.")
+    st.markdown("This Phase 3.4 version supports manual generator bridge and completion workflow. It does not directly generate images yet.")
+    st.markdown("Next build: backend integration planning or Voice Workstation foundation.")
     st.code("streamlit run image_workstation/app.py --server.port 8503 --server.address 0.0.0.0", language="bash")
 
 
