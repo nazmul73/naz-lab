@@ -1,4 +1,4 @@
-"""Naz Lab Master Control Dashboard Phase 2.0."""
+"""Naz Lab Master Control Dashboard Phase 2.1."""
 
 from __future__ import annotations
 
@@ -29,8 +29,9 @@ from shared.drive_paths import (  # noqa: E402
 )
 from shared.json_utils import safe_read_json, update_workstation_status  # noqa: E402
 
-PHASE = "2.0"
-LANGUAGE_REQUIREMENT = "Bangla and English output quality are primary requirements. Other languages are optional."
+PHASE = "2.1"
+LANGUAGE_REQUIREMENT_EN = "Bangla and English output quality are primary requirements. Other languages are optional."
+LANGUAGE_REQUIREMENT_BN = "বাংলা ও ইংরেজি আউটপুটের মান সবচেয়ে গুরুত্বপূর্ণ। অন্য ভাষা optional।"
 
 FOLDERS = {
     "Chat outputs": CHAT_OUTPUTS,
@@ -43,6 +44,7 @@ FOLDERS = {
 
 WORKSTATIONS = [
     {"name": "Text Workstation", "phase": "1.8 stable", "key": "text_workstation", "folder": TEXT_OUTPUTS},
+    {"name": "Master Dashboard", "phase": "2.1 current", "key": "master_dashboard", "folder": BASE_PATH},
     {"name": "Image Workstation", "phase": "planned next", "key": "image_workstation", "folder": IMAGE_OUTPUTS},
     {"name": "Voice Workstation", "phase": "planned", "key": "voice_workstation", "folder": BASE_PATH / "voice_outputs"},
     {"name": "Video Workstation", "phase": "planned", "key": "video_workstation", "folder": BASE_PATH / "video_outputs"},
@@ -58,6 +60,15 @@ def read_json(path: Path, default: Any) -> Any:
             return json.loads(path.read_text(encoding="utf-8"))
         except Exception:
             return default
+
+
+def output_log_entries() -> list[dict[str, Any]]:
+    data = read_json(OUTPUT_LOG_JSON, {"logs": []})
+    if isinstance(data, dict) and isinstance(data.get("logs"), list):
+        return data["logs"]
+    if isinstance(data, list):
+        return data
+    return []
 
 
 def count_files(folder: Path, pattern: str = "*") -> int:
@@ -77,19 +88,26 @@ def status_label(folder: Path) -> str:
     return "OK" if folder.exists() and folder.is_dir() else "Missing"
 
 
-def render_status() -> None:
+def render_status(language: str) -> None:
     st.header("System status")
     links = read_json(WORKSTATION_LINKS_JSON, {})
-    output_log = read_json(OUTPUT_LOG_JSON, [])
-    text_status = links.get("text_workstation", {}).get("status", "unknown") if isinstance(links, dict) else "unknown"
+    logs = output_log_entries()
+    text_data = links.get("text_workstation", {}) if isinstance(links, dict) else {}
+    text_status = text_data.get("status", "unknown")
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Dashboard phase", PHASE)
     c2.metric("Drive base", status_label(BASE_PATH))
     c3.metric("Text status", text_status)
-    c4.metric("Output log entries", len(output_log) if isinstance(output_log, list) else 0)
+    c4.metric("Output log entries", len(logs))
 
-    st.info(LANGUAGE_REQUIREMENT)
+    st.info(LANGUAGE_REQUIREMENT_BN if language == "Bangla" else LANGUAGE_REQUIREMENT_EN)
+
+    if text_data:
+        st.markdown("### Text Workstation saved status")
+        st.json(text_data)
+
+    st.markdown("### Important paths")
     st.write({
         "base_path": str(BASE_PATH),
         "config_dir": str(CONFIG_DIR),
@@ -97,6 +115,12 @@ def render_status() -> None:
         "workstation_links_json": str(WORKSTATION_LINKS_JSON),
         "output_log_json": str(OUTPUT_LOG_JSON),
     })
+
+    with st.expander("Latest output log events", expanded=False):
+        if not logs:
+            st.info("No log events yet.")
+        else:
+            st.dataframe(list(reversed(logs[-20:])), use_container_width=True, hide_index=True)
 
 
 def render_workstations() -> None:
@@ -112,6 +136,7 @@ def render_workstations() -> None:
             "Folder status": status_label(item["folder"]),
             "Files": count_files(item["folder"]),
             "Public URL": data.get("public_url", ""),
+            "Last updated": data.get("last_updated", ""),
         })
     st.dataframe(rows, use_container_width=True, hide_index=True)
 
@@ -135,23 +160,33 @@ def render_outputs() -> None:
                 modified = datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
                 st.markdown(f"**{path.name}** — {modified}")
                 if path.suffix.lower() in {".txt", ".md", ".json"}:
-                    st.code(path.read_text(encoding="utf-8", errors="ignore")[:700])
+                    st.code(path.read_text(encoding="utf-8", errors="ignore")[:900])
 
 
 def render_jobs() -> None:
     st.header("Job queue")
     jobs = latest_files(IMAGE_JOBS, limit=30, pattern="*.json")
     rows = []
+    pending = 0
+    completed = 0
     for path in jobs:
         data = read_json(path, {})
+        status = data.get("status", "unknown") if isinstance(data, dict) else "unknown"
+        pending += 1 if status == "pending" else 0
+        completed += 1 if status == "completed" else 0
         rows.append({
             "File": path.name,
-            "Status": data.get("status", "unknown") if isinstance(data, dict) else "unknown",
+            "Status": status,
             "Created": data.get("created_at", "") if isinstance(data, dict) else "",
             "Source": data.get("source_workstation", "") if isinstance(data, dict) else "",
             "Mode": data.get("source_mode", "") if isinstance(data, dict) else "",
         })
-    st.metric("Image job files", len(jobs))
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Image job files", len(jobs))
+    c2.metric("Pending", pending)
+    c3.metric("Completed", completed)
+
     if rows:
         st.dataframe(rows, use_container_width=True, hide_index=True)
         selected = st.selectbox("Preview job", [row["File"] for row in rows])
@@ -161,10 +196,28 @@ def render_jobs() -> None:
         st.info("No job files yet.")
 
 
-def render_roadmap() -> None:
+def render_roadmap(language: str) -> None:
     st.header("Roadmap")
-    st.markdown(
-        """
+    if language == "Bangla":
+        st.markdown(
+            """
+1. Phase 0 Foundation — complete  
+2. Phase 1 Text Workstation — stable  
+3. Phase 2 Master Control Dashboard — current  
+4. Phase 3 Image Workstation — next  
+5. Phase 4 Voice Workstation — planned  
+6. Phase 5 Video Workstation — planned  
+7. Phase 6 Portrait Workstation — planned
+
+ভাষার priority:
+- বাংলা: natural, fluent, ready-to-use হতে হবে।
+- English: clean, practical, ready-to-use হতে হবে।
+- অন্য ভাষা: optional।
+"""
+        )
+    else:
+        st.markdown(
+            """
 1. Phase 0 Foundation — complete  
 2. Phase 1 Text Workstation — stable  
 3. Phase 2 Master Control Dashboard — current  
@@ -178,13 +231,13 @@ Language priority:
 - English: must be clean, practical, and ready to use.
 - Other languages: optional.
 """
-    )
+        )
 
 
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Master Dashboard", page_icon="🧪", layout="wide")
     st.title("🧪 Naz Lab Master Control Dashboard")
-    st.caption("Phase 2.0 foundation dashboard")
+    st.caption("Phase 2.1 polished dashboard")
 
     update_workstation_status(
         WORKSTATION_LINKS_JSON,
@@ -192,11 +245,16 @@ def main() -> None:
         {"status": "running", "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")},
     )
 
+    with st.sidebar:
+        st.header("Dashboard settings")
+        language = st.radio("Dashboard language note", ["Bangla", "English"], index=0)
+        st.caption("Primary product languages: Bangla and English.")
+
     tab_status, tab_workstations, tab_outputs, tab_jobs, tab_roadmap = st.tabs([
         "Status", "Workstations", "Outputs", "Job Queue", "Roadmap"
     ])
     with tab_status:
-        render_status()
+        render_status(language)
     with tab_workstations:
         render_workstations()
     with tab_outputs:
@@ -204,7 +262,7 @@ def main() -> None:
     with tab_jobs:
         render_jobs()
     with tab_roadmap:
-        render_roadmap()
+        render_roadmap(language)
 
 
 if __name__ == "__main__":
