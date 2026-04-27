@@ -22,6 +22,7 @@ Supported values:
 - `voice`
 - `video`
 - `portrait`
+- `project`
 
 ## Workstation ports
 
@@ -33,6 +34,7 @@ Supported values:
 | Voice Workstation | 8504 |
 | Video Workstation | 8505 |
 | Portrait Workstation | 8506 |
+| Project Workflow Workstation | 8507 |
 
 ## Current stack
 
@@ -42,6 +44,7 @@ Supported values:
 - Voice Workstation — Phase 4.x reference workflow
 - Video Workstation — Phase 5.3 stable
 - Portrait Workstation — Phase 6.3 stable
+- Project Workflow Workstation — Phase 10.0 foundation
 
 ## Global content rule
 
