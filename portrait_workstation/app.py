@@ -1,7 +1,8 @@
-"""Naz Lab Portrait Workstation Phase 6.2.
+"""Naz Lab Portrait Workstation Phase 6.3 stable.
 
-Portrait workflow with polished presets, reference image path support,
-output validation, package metadata, and library previews.
+Stable portrait package builder for Bangla-first social portraits,
+project presets, reference image path support, output validation,
+package metadata, and library previews.
 """
 
 from __future__ import annotations
@@ -20,7 +21,8 @@ if str(REPO_ROOT) not in sys.path:
 from shared.drive_paths import BASE_PATH, OUTPUT_LOG_JSON, WORKSTATION_LINKS_JSON  # noqa: E402
 from shared.json_utils import append_output_log, safe_read_json, safe_write_json, update_workstation_status  # noqa: E402
 
-PHASE = "6.2"
+PHASE = "6.3"
+PHASE_STATUS = "stable"
 PORTRAIT_PACKAGES = BASE_PATH / "portrait_packages"
 PORTRAIT_OUTPUTS = BASE_PATH / "portrait_outputs"
 PORTRAIT_REFERENCES = BASE_PATH / "portrait_references"
@@ -169,13 +171,14 @@ def render_status() -> None:
     packages = list_json_files(PORTRAIT_PACKAGES)
     outputs = list_image_files(PORTRAIT_OUTPUTS)
     references = list_image_files(PORTRAIT_REFERENCES)
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Phase", PHASE); c2.metric("Packages", len(packages)); c3.metric("Portrait outputs", len(outputs)); c4.metric("Reference images", len(references))
-    st.info("Phase 6.2 adds reference path support, output validation, and package workflow polish. It does not run a portrait backend yet.")
+    c1, c2, c3, c4, c5 = st.columns(5)
+    c1.metric("Phase", PHASE); c2.metric("Status", PHASE_STATUS); c3.metric("Packages", len(packages)); c4.metric("Outputs", len(outputs)); c5.metric("References", len(references))
+    st.success("Portrait Workstation status: stable for Phase 6")
+    st.markdown("### Stable workflow")
+    st.markdown("1. Pick project preset and portrait type.  \n2. Select language, visual style, mood, camera, and scenario.  \n3. Add reference image path only when user provided the reference.  \n4. Copy prompt or save package JSON.  \n5. Save generated output later into portrait_outputs.")
     st.markdown("### Safety rules"); st.json(SAFETY_RULES)
-    st.markdown("### Project defaults"); st.json(PROJECT_DEFAULTS)
-    with st.expander("Paths", expanded=False):
-        st.write({"portrait_packages": str(PORTRAIT_PACKAGES), "portrait_outputs": str(PORTRAIT_OUTPUTS), "portrait_references": str(PORTRAIT_REFERENCES), "image_jobs": str(IMAGE_JOBS), "image_outputs": str(IMAGE_OUTPUTS)})
+    with st.expander("Project defaults", expanded=False): st.json(PROJECT_DEFAULTS)
+    with st.expander("Paths", expanded=False): st.write({"portrait_packages": str(PORTRAIT_PACKAGES), "portrait_outputs": str(PORTRAIT_OUTPUTS), "portrait_references": str(PORTRAIT_REFERENCES), "image_jobs": str(IMAGE_JOBS), "image_outputs": str(IMAGE_OUTPUTS)})
 
 
 def render_builder() -> None:
@@ -211,8 +214,7 @@ def render_builder() -> None:
     st.text_area("Positive prompt", positive, height=300)
     st.text_area("Negative prompt", negative, height=130)
     st.text_area("Combined prompt", package["combined_prompt"], height=380)
-    with st.expander("Portrait package JSON preview", expanded=False):
-        st.json(package)
+    with st.expander("Portrait package JSON preview", expanded=False): st.json(package)
     if st.button("Save portrait package JSON"):
         st.success(f"Saved: {save_package(package)}")
 
@@ -246,18 +248,19 @@ def render_inputs() -> None:
 
 def render_launch() -> None:
     st.header("Launch notes")
-    st.markdown("Phase 6.2 creates polished portrait planning packages with reference path support. It does not generate or swap faces.")
-    st.markdown("Future build: reference upload manager, stable marker, and optional backend planning.")
+    st.markdown("Portrait Workstation Phase 6.3 is stable for portrait prompt packages, reference path support, and output metadata. It does not generate or swap faces.")
+    st.markdown("Next recommended build: all-in-one launcher or end-to-end True Noir Tales workflow.")
     st.code("streamlit run portrait_workstation/app.py --server.port 8506 --server.address 0.0.0.0", language="bash")
 
 
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Portrait Workstation", page_icon="🧑", layout="wide")
     st.title("🧑 Naz Lab Portrait Workstation")
-    st.caption("Phase 6.2 — reference workflow, output validation, portrait presets, package workflow.")
+    st.caption("Phase 6.3 stable — portrait prompts, reference workflow, output metadata, package library.")
+    st.success("Portrait Workstation status: stable for Phase 6")
     st.info("Bangla-first planning. Use face references only when the user provides them for this workflow.")
     ensure_dirs()
-    update_workstation_status(WORKSTATION_LINKS_JSON, "portrait_workstation", {"status": "running", "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")})
+    update_workstation_status(WORKSTATION_LINKS_JSON, "portrait_workstation", {"status": PHASE_STATUS, "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")})
     tabs = st.tabs(["Status", "Builder", "Inputs", "Library", "Launch"])
     with tabs[0]: render_status()
     with tabs[1]: render_builder()
