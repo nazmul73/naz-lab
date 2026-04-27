@@ -81,27 +81,55 @@ def to_pretty_json(data: dict[str, Any]) -> str:
 
 def build_true_noir_package(topic: str, language: str, platform: str, audience: str, note: str) -> dict[str, Any]:
     bangla = language in {"Bangla", "Mixed Bangla-English"}
-    hook = "ঘটনাটা বাইরে থেকে সাধারণ মনে হলেও, একটা ছোট detail পুরো গল্প বদলে দেয়।" if bangla else "What looked normal at first was hiding one detail that changed everything."
-    cta = "তুমি হলে প্রথমে কোন জিনিসটা খেয়াল করতে?" if bangla else "What would you have noticed first?"
-    script = {
-        "title": "The detail everyone missed" if not bangla else "যে detailটা সবাই মিস করেছিল",
-        "hook": hook,
-        "context": topic,
-        "tension": "The most important clue is usually not the loudest one." if not bangla else "সবচেয়ে গুরুত্বপূর্ণ clue অনেক সময় সবচেয়ে চোখে পড়ার মতো হয় না।",
-        "psychology_line": "People often miss warning signs when the situation looks familiar." if not bangla else "পরিচিত পরিস্থিতিতে মানুষ warning sign অনেক সময় মিস করে।",
-        "cta": cta,
-    }
-    image_prompt = "Realistic cinematic true crime noir scene, adult Bangladeshi subject, emotional tension, dramatic shadows, moody lighting, grounded environment, no gore, no blood, no dead body, no visible wounds, no sindoor unless requested."
-    voice_direction = "Suspenseful but restrained documentary narration, calm, clear, short dramatic pauses, no overacting."
     if bangla:
-        voice_direction += " Use natural spoken Bangla, voiceover-ready, simple and emotional, not stiff textbook Bangla."
-    video_direction = "5-scene reel: hook visual, context, critical detail, tension/reveal, question CTA. Cinematic suspense, readable subtitles, subtle zooms."
+        title = "যে detailটা সবাই মিস করেছিল"
+        hook = "সবাই ঘটনাটাকে সাধারণ ভেবেছিল। কিন্তু একটা ছোট detail পুরো গল্পটার মানে বদলে দেয়।"
+        context_line = topic
+        tension = "সবচেয়ে গুরুত্বপূর্ণ clue অনেক সময় সবচেয়ে চোখে পড়ার মতো হয় না।"
+        reveal = "এই জায়গাতেই গল্পটা শুধু ঘটনা থাকে না, মানুষের মনস্তত্ত্বের প্রশ্ন হয়ে দাঁড়ায়।"
+        psychology_line = "পরিচিত পরিস্থিতিতে মানুষ warning sign অনেক সময় মিস করে, কারণ মস্তিষ্ক আগে থেকেই ধরে নেয় সবকিছু স্বাভাবিক।"
+        cta = "তুমি হলে প্রথমে কোন detailটা খেয়াল করতে?"
+        caption = "একটা ছোট detail কখনো কখনো পুরো গল্প বদলে দিতে পারে। তুমি হলে কোন জিনিসটা আগে ধরতে?"
+    else:
+        title = "The Detail Everyone Missed"
+        hook = "Everyone thought it was ordinary. But one small detail changed the meaning of the entire story."
+        context_line = topic
+        tension = "The most important clue is usually not the loudest one. It is the one people explain away too quickly."
+        reveal = "That is where the story stops being just an incident and becomes a question about human behavior."
+        psychology_line = "People often miss warning signs when a situation feels familiar, because the brain tries to protect the version of reality it already believes."
+        cta = "What would you have noticed first?"
+        caption = "One small detail can change the entire story. What would you have noticed first?"
+
+    script = {
+        "title": title,
+        "hook": hook,
+        "context": context_line,
+        "tension": tension,
+        "turn_or_reveal": reveal,
+        "psychology_line": psychology_line,
+        "cta": cta,
+        "voiceover_structure": ["0-3s hook", "3-12s context", "12-25s tension", "25-40s psychology/reveal", "40-45s question CTA"],
+    }
+    image_prompt = (
+        "Realistic cinematic true crime noir scene, adult Bangladeshi subject, emotionally tense human-centered composition, "
+        "urban or semi-urban Bangladesh setting, moody lighting, dramatic shadows, shallow depth of field, grounded environment, "
+        "subtle storytelling detail in the scene, premium social media aesthetic, no gore, no blood, no dead body, no visible wounds, "
+        "no exposed violence, no police logo, no watermark, no fake official marks, no sindoor unless explicitly requested."
+    )
+    voice_direction = "Suspenseful but restrained documentary narration, calm, clear, short dramatic pauses, controlled emotion, no overacting."
+    if bangla:
+        voice_direction += " Use natural spoken Bangla, voiceover-ready, simple and emotional, not stiff textbook Bangla; light Rangpur/Nilphamari flavor only if it fits naturally."
+    video_direction = (
+        "5-scene reel: Scene 1 hook visual with tense close-up; Scene 2 context visual; Scene 3 small critical detail; "
+        "Scene 4 psychology/reveal; Scene 5 question CTA. Cinematic suspense, subtle zooms, readable subtitles, dark restrained music, no graphic visuals."
+    )
     return {
         "script_package": script,
-        "image_package": {"prompt": image_prompt, "format": "9:16 Reel or 1:1 post", "negative": "no gore, no blood, no dead body, no visible wounds, no sensational violence"},
+        "image_package": {"prompt": image_prompt, "format": "9:16 Reel, 1:1 post, or 4:5 Facebook/Instagram", "negative": "no gore, no blood, no dead body, no visible wounds, no sensational violence, no fake logo, no sindoor unless requested"},
         "voice_package": {"direction": voice_direction, "language": language, "reference_policy": REFERENCE_POLICY},
-        "video_package": {"direction": video_direction, "platform": platform, "scene_sequence": ["Hook visual", "Context", "Critical detail", "Tension/reveal", "Question CTA"]},
-        "posting_package": {"caption": hook, "cta": cta, "hashtags": ["#TrueCrime", "#CrimeStory", "#NoirStory", "#CrimePsychology"]},
+        "video_package": {"direction": video_direction, "platform": platform, "scene_sequence": ["Hook visual", "Context", "Critical detail", "Psychology/reveal", "Question CTA"], "subtitle_note": "Keep subtitles short, mobile-readable, and matched to pauses."},
+        "posting_package": {"caption": caption, "cta": cta, "hashtags": ["#TrueCrime", "#CrimeStory", "#NoirStory", "#CrimePsychology", "#MysteryStory"]},
+        "safety_notes": ["adult-focused", "no gore", "no dead body", "no visible wounds", "no sensational violence"],
         "notes": note,
         "audience": audience,
     }
