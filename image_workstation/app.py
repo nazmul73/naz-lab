@@ -1,7 +1,7 @@
-"""Naz Lab Image Workstation Phase 3.4.
+"""Naz Lab Image Workstation Phase 3.5 stable.
 
-Manual generator bridge with quick status buttons, filename suggestion,
-output path validation, and completion workflow.
+Stable Image Workstation for queue management, policy-aware image prompts,
+manual generator bridge, output validation, and completion workflow.
 """
 
 from __future__ import annotations
@@ -30,7 +30,8 @@ from shared.drive_paths import (  # noqa: E402
 )
 from shared.json_utils import append_output_log, safe_read_json, safe_write_json, update_workstation_status  # noqa: E402
 
-PHASE = "3.4"
+PHASE = "3.5"
+PHASE_STATUS = "stable"
 STATUS_OPTIONS = ["pending", "in_progress", "completed", "blocked", "archived"]
 PROJECT_PRESETS = ["True Noir Tales", "ToolFlow", "General"]
 CONTENT_TYPES = ["General Facebook post", "Reel thumbnail", "Carousel cover", "Story scene"]
@@ -235,7 +236,8 @@ def build_combined_prompt(positive: str, negative: str) -> str:
 def render_header() -> None:
     st.set_page_config(page_title="Naz Lab Image Workstation", page_icon="🎨", layout="wide")
     st.title("🎨 Naz Lab Image Workstation")
-    st.caption("Phase 3.4 — manual generator bridge, quick completion workflow, output path validation.")
+    st.caption("Phase 3.5 stable — policy-aware prompts, manual generator bridge, completion workflow.")
+    st.success("Image Workstation status: stable for Phase 3")
     st.info("True Noir Tales and ToolFlow are English projects. Bangladesh visuals by default. Women: no sindoor unless explicitly requested.")
 
 
@@ -247,27 +249,36 @@ def render_status() -> None:
 
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Phase", PHASE)
-    c2.metric("Job files", len(jobs))
-    c3.metric("Pending", counts.get("pending", 0))
-    c4.metric("In progress", counts.get("in_progress", 0))
+    c2.metric("Status", PHASE_STATUS)
+    c3.metric("Job files", len(jobs))
+    c4.metric("Pending", counts.get("pending", 0))
     c5.metric("Image outputs", len(images))
 
-    c6, c7, c8 = st.columns(3)
-    c6.metric("Completed", counts.get("completed", 0))
-    c7.metric("Blocked", counts.get("blocked", 0))
-    c8.metric("Archived", counts.get("archived", 0))
+    c6, c7, c8, c9 = st.columns(4)
+    c6.metric("In progress", counts.get("in_progress", 0))
+    c7.metric("Completed", counts.get("completed", 0))
+    c8.metric("Blocked", counts.get("blocked", 0))
+    c9.metric("Archived", counts.get("archived", 0))
 
-    st.markdown("### Manual generator bridge checklist")
+    st.markdown("### Stable workflow")
     st.markdown(
         """
-1. Open Queue tab and select a job.  
+1. Create or select an image job.  
 2. Tune project/content/naturalness/location controls.  
 3. Copy the combined prompt into your image generator.  
-4. Save generated image into `image_outputs`.  
-5. Paste the saved output path into the job.  
-6. Click Mark completed.
+4. Save the generated image into `image_outputs`.  
+5. Paste or keep the suggested output path.  
+6. Click **Mark completed** after the image file exists.
 """
     )
+
+    st.markdown("### Next phase")
+    st.write({
+        "next_phase": "Phase 4.0",
+        "next_workstation": "Voice Workstation foundation",
+        "voice_project_presets": PROJECT_PRESETS,
+        "priority": "English presets for True Noir Tales and ToolFlow, Bangla/Rangpur support for future workflows",
+    })
 
     st.markdown("### Visual requirements")
     st.json(VISUAL_REQUIREMENTS)
@@ -421,7 +432,7 @@ def render_queue() -> None:
         data["output_path"] = output_path.strip()
         data["notes"] = notes.strip()
         write_job(selected_path, data)
-        st.success("Job updated with manual generator bridge fields.")
+        st.success("Job updated with stable Image Workstation fields.")
         st.rerun()
 
     with st.expander("Raw job JSON", expanded=False):
@@ -463,8 +474,8 @@ def render_prompt_library() -> None:
 
 def render_launch() -> None:
     st.header("Launch notes")
-    st.markdown("This Phase 3.4 version supports manual generator bridge and completion workflow. It does not directly generate images yet.")
-    st.markdown("Next build: backend integration planning or Voice Workstation foundation.")
+    st.markdown("Image Workstation Phase 3.5 is stable for queue, prompt building, and manual generator bridge.")
+    st.markdown("Next build: Phase 4.0 Voice Workstation foundation.")
     st.code("streamlit run image_workstation/app.py --server.port 8503 --server.address 0.0.0.0", language="bash")
 
 
@@ -473,7 +484,7 @@ def main() -> None:
     update_workstation_status(
         WORKSTATION_LINKS_JSON,
         "image_workstation",
-        {"status": "running", "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")},
+        {"status": PHASE_STATUS, "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")},
     )
     tabs = st.tabs(["Status", "Queue", "Outputs", "Prompt Library", "Launch"])
     with tabs[0]:
