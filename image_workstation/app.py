@@ -1,8 +1,7 @@
-"""Naz Lab Image Workstation Phase 3.1.
+"""Naz Lab Image Workstation Phase 3.2.
 
-Polished queue app for reading image job queue items from Drive,
-previewing prompts, applying visual presets, updating job status,
-and viewing image outputs.
+Policy-aware image queue app with Bangladesh defaults, no-sindoor safeguard,
+scenario and region selectors, final prompt builder, and manual generator bridge.
 """
 
 from __future__ import annotations
@@ -30,24 +29,55 @@ from shared.drive_paths import (  # noqa: E402
 )
 from shared.json_utils import append_output_log, safe_read_json, safe_write_json, update_workstation_status  # noqa: E402
 
-PHASE = "3.1"
+PHASE = "3.2"
 STATUS_OPTIONS = ["pending", "in_progress", "completed", "blocked", "archived"]
 PRESET_OPTIONS = ["General Bangladeshi", "True Noir", "ToolFlow", "Rangpur/Nilphamari", "Custom"]
+SCENARIO_OPTIONS = ["Auto by context", "Urban Bangladesh", "Rural Bangladesh", "Mixed urban-rural Bangladesh", "Indoor home/office", "Custom"]
+REGION_OPTIONS = ["Rangpur/Nilphamari/North Bengal", "Dhaka urban", "Chattogram", "Sylhet", "Noakhali/Comilla", "General Bangladesh", "Custom"]
+SINDOOR_OPTIONS = ["No sindoor unless explicitly requested", "Sindoor explicitly requested", "Not applicable"]
+GENERATOR_MODES = ["manual_bridge", "future_backend"]
 
 VISUAL_REQUIREMENTS = {
-    "Primary culture": "Bangladeshi visual context by default.",
-    "Regional flavor": "Rangpur/Nilphamari/North Bengal visual details when regional context is useful.",
+    "Primary culture": "Bangladeshi people and Bangladeshi scenario by default.",
+    "Scenario balance": "Use urban, semi-urban, or rural Bangladesh based on context; not only village scenes.",
+    "Women sindoor policy": "For women, do not show sindoor unless the prompt explicitly asks for sindoor.",
+    "Primary regional flavor": "Rangpur/Nilphamari/North Bengal when regional context is useful.",
     "True Noir style": "Adult-only, cinematic, moody, realistic, no gore, no dead body, no visible wounds.",
     "ToolFlow style": "Clean SaaS/productivity visuals, premium, minimal, practical, non-hype.",
     "Text safety": "Avoid logos, fake official marks, unreadable text clutter, and unnecessary captions inside images.",
 }
 
 PRESET_TEXT = {
-    "General Bangladeshi": "Bangladeshi people, local environment, realistic cinematic composition, culturally grounded details, natural clothing and setting.",
+    "General Bangladeshi": "Bangladeshi people, Bangladeshi environment, realistic cinematic composition, culturally grounded details, natural clothing and setting.",
     "True Noir": "true crime noir cinematic, adult subjects only, Bangladeshi setting, moody light, dramatic shadows, realistic emotional tension, no blood, no gore, no dead body, no visible wounds.",
     "ToolFlow": "clean SaaS productivity visual, premium minimal dashboard feel, modern workspace, practical technology theme, no hype, no clutter.",
-    "Rangpur/Nilphamari": "North Bengal / Rangpur / Nilphamari regional atmosphere, grounded Bangladeshi people, rural or small-town texture when relevant, natural light, authentic local context.",
-    "Custom": "Write custom visual direction in the notes field.",
+    "Rangpur/Nilphamari": "North Bengal / Rangpur / Nilphamari regional atmosphere, grounded Bangladeshi people, rural, small-town, or northern city texture when relevant, natural light, authentic local context.",
+    "Custom": "Use the custom direction field as the main visual style instruction.",
+}
+
+SCENARIO_TEXT = {
+    "Auto by context": "Choose urban, semi-urban, rural, indoor, or outdoor Bangladesh based on the subject and story context.",
+    "Urban Bangladesh": "Bangladeshi city setting such as Dhaka/Rangpur/Nilphamari town street, apartment, office, rooftop, cafe, market, bus stop, or modern indoor space.",
+    "Rural Bangladesh": "Bangladeshi rural setting with natural local details, but avoid making every image village-only unless context fits.",
+    "Mixed urban-rural Bangladesh": "Blend city and regional Bangladesh: small-town street, market, home interior, road, shopfront, or semi-urban neighborhood.",
+    "Indoor home/office": "Bangladeshi indoor setting such as apartment, family room, office desk, creator studio, shop, or workstation.",
+    "Custom": "Use the custom direction field for scenario details.",
+}
+
+REGION_TEXT = {
+    "Rangpur/Nilphamari/North Bengal": "Rangpur/Nilphamari/North Bengal flavor where useful; authentic northern Bangladeshi people, small-town or regional urban/rural context.",
+    "Dhaka urban": "Dhaka urban context with city streets, apartments, traffic, office, cafe, marketplace, or modern workspace.",
+    "Chattogram": "Chattogram context when relevant, port city or hilly/coastal urban feel without stereotypes.",
+    "Sylhet": "Sylhet regional context when relevant, green landscape or city/home setting without stereotypes.",
+    "Noakhali/Comilla": "Noakhali/Comilla regional context when explicitly useful.",
+    "General Bangladesh": "General Bangladeshi cultural and visual context without strong regional markers.",
+    "Custom": "Use the custom direction field for region details.",
+}
+
+SINDOOR_TEXT = {
+    "No sindoor unless explicitly requested": "For women, do not show sindoor. Include sindoor only if the user's prompt explicitly asks for sindoor.",
+    "Sindoor explicitly requested": "Sindoor is allowed because the job explicitly requests it.",
+    "Not applicable": "No specific sindoor instruction needed for this job.",
 }
 
 
@@ -94,26 +124,41 @@ def write_job(path: Path, data: dict[str, Any]) -> None:
         OUTPUT_LOG_JSON,
         workstation="image_workstation",
         event="job_updated",
-        details={"job_file": str(path), "status": data.get("status", "unknown"), "preset": data.get("visual_preset", "")},
+        details={
+            "job_file": str(path),
+            "status": data.get("status", "unknown"),
+            "preset": data.get("visual_preset", ""),
+            "scenario_type": data.get("scenario_type", ""),
+            "region_style": data.get("region_style", ""),
+        },
     )
 
 
-def build_enhanced_prompt(base_prompt: str, preset: str, custom_note: str = "") -> str:
-    preset_note = PRESET_TEXT.get(preset, "")
+def build_final_prompt(
+    base_prompt: str,
+    preset: str,
+    scenario_type: str,
+    region_style: str,
+    sindoor_policy: str,
+    custom_note: str = "",
+) -> str:
     parts = [base_prompt.strip()]
-    if preset_note:
-        parts.append(f"Visual preset: {preset_note}")
+    parts.append("Default Bangladesh policy: use Bangladeshi people and a believable Bangladeshi scenario.")
+    parts.append(PRESET_TEXT.get(preset, ""))
+    parts.append(SCENARIO_TEXT.get(scenario_type, ""))
+    parts.append(REGION_TEXT.get(region_style, ""))
+    parts.append(SINDOOR_TEXT.get(sindoor_policy, SINDOOR_TEXT["No sindoor unless explicitly requested"]))
     if custom_note.strip():
         parts.append(f"Additional direction: {custom_note.strip()}")
-    parts.append("Quality rules: realistic, clean composition, culturally grounded, no fake logos, no unnecessary text inside image.")
+    parts.append("Quality rules: realistic, clean composition, culturally grounded, no fake logos, no unnecessary text inside image, no distorted faces, no extra fingers.")
     return "\n\n".join(part for part in parts if part)
 
 
 def render_header() -> None:
     st.set_page_config(page_title="Naz Lab Image Workstation", page_icon="🎨", layout="wide")
     st.title("🎨 Naz Lab Image Workstation")
-    st.caption("Phase 3.1 — polished queue, prompt presets, status control, output library.")
-    st.info("Bangladeshi visuals by default. Regional context defaults to Rangpur/Nilphamari/North Bengal when useful.")
+    st.caption("Phase 3.2 — Bangladesh policy, no-sindoor safeguard, scenario/region selectors, final prompt builder.")
+    st.info("Bangladeshi people and scenarios by default. Women: no sindoor unless explicitly requested. Urban and rural Bangladesh both supported.")
 
 
 def render_status() -> None:
@@ -137,8 +182,18 @@ def render_status() -> None:
     st.markdown("### Visual requirements")
     st.json(VISUAL_REQUIREMENTS)
 
-    st.markdown("### Presets")
-    st.json(PRESET_TEXT)
+    st.markdown("### Policy selectors")
+    st.write({
+        "scenario_options": SCENARIO_OPTIONS,
+        "region_options": REGION_OPTIONS,
+        "sindoor_policy_options": SINDOOR_OPTIONS,
+        "generator_modes": GENERATOR_MODES,
+    })
+
+    with st.expander("Prompt preset details", expanded=False):
+        st.json(PRESET_TEXT)
+        st.json(SCENARIO_TEXT)
+        st.json(REGION_TEXT)
 
     with st.expander("Paths", expanded=False):
         st.write({
@@ -164,9 +219,9 @@ def render_queue() -> None:
             "File": path.name,
             "Status": data.get("status", "unknown") if isinstance(data, dict) else "unknown",
             "Preset": data.get("visual_preset", "") if isinstance(data, dict) else "",
+            "Scenario": data.get("scenario_type", "") if isinstance(data, dict) else "",
+            "Region": data.get("region_style", "") if isinstance(data, dict) else "",
             "Created": data.get("created_at", "") if isinstance(data, dict) else "",
-            "Source": data.get("source_workstation", "") if isinstance(data, dict) else "",
-            "Mode": data.get("source_mode", "") if isinstance(data, dict) else "",
         })
     st.dataframe(rows, use_container_width=True, hide_index=True)
 
@@ -179,23 +234,31 @@ def render_queue() -> None:
 
     prompt = data.get("prompt", "")
     current_preset = data.get("visual_preset", "General Bangladeshi")
-    preset_index = PRESET_OPTIONS.index(current_preset) if current_preset in PRESET_OPTIONS else 0
+    current_scenario = data.get("scenario_type", "Auto by context")
+    current_region = data.get("region_style", "Rangpur/Nilphamari/North Bengal")
+    current_sindoor = data.get("women_sindoor_policy", "No sindoor unless explicitly requested")
+    current_generator = data.get("generator_mode", "manual_bridge")
 
     st.markdown("### Job card")
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
     c1.metric("Status", data.get("status", "unknown"))
-    c2.metric("Source", data.get("source_workstation", "unknown"))
-    c3.metric("Preset", current_preset)
+    c2.metric("Preset", current_preset)
+    c3.metric("Scenario", current_scenario)
+    c4.metric("Region", current_region)
 
     st.markdown("### Copy-ready base prompt")
-    st.text_area("Base prompt", prompt, height=180, help="Copy this prompt into an image generator if needed.")
+    st.text_area("Base prompt", prompt, height=160, help="Original prompt from Text Workstation or prompt library.")
 
     with st.form("update_job_form"):
         status = st.selectbox("Job status", STATUS_OPTIONS, index=STATUS_OPTIONS.index(data.get("status", "pending")) if data.get("status", "pending") in STATUS_OPTIONS else 0)
-        preset = st.selectbox("Visual preset", PRESET_OPTIONS, index=preset_index)
+        preset = st.selectbox("Visual preset", PRESET_OPTIONS, index=PRESET_OPTIONS.index(current_preset) if current_preset in PRESET_OPTIONS else 0)
+        scenario_type = st.selectbox("Scenario type", SCENARIO_OPTIONS, index=SCENARIO_OPTIONS.index(current_scenario) if current_scenario in SCENARIO_OPTIONS else 0)
+        region_style = st.selectbox("Region style", REGION_OPTIONS, index=REGION_OPTIONS.index(current_region) if current_region in REGION_OPTIONS else 0)
+        sindoor_policy = st.selectbox("Women sindoor policy", SINDOOR_OPTIONS, index=SINDOOR_OPTIONS.index(current_sindoor) if current_sindoor in SINDOOR_OPTIONS else 0)
+        generator_mode = st.selectbox("Generator mode", GENERATOR_MODES, index=GENERATOR_MODES.index(current_generator) if current_generator in GENERATOR_MODES else 0)
         custom_direction = st.text_area("Custom / regional / brand direction", value=data.get("custom_direction", ""), height=100)
-        enhanced_prompt = build_enhanced_prompt(prompt, preset, custom_direction)
-        st.text_area("Enhanced prompt preview", enhanced_prompt, height=220)
+        final_prompt = build_final_prompt(prompt, preset, scenario_type, region_style, sindoor_policy, custom_direction)
+        st.text_area("Final generator-ready prompt", final_prompt, height=260)
         output_path = st.text_input("Output image path", value=data.get("output_path", ""))
         notes = st.text_area("Notes", value=data.get("notes", ""), height=100)
         submitted = st.form_submit_button("Save job update")
@@ -203,12 +266,18 @@ def render_queue() -> None:
     if submitted:
         data["status"] = status
         data["visual_preset"] = preset
+        data["scenario_type"] = scenario_type
+        data["region_style"] = region_style
+        data["bangladesh_default"] = True
+        data["women_sindoor_policy"] = sindoor_policy
+        data["generator_mode"] = generator_mode
         data["custom_direction"] = custom_direction.strip()
-        data["enhanced_prompt"] = enhanced_prompt
+        data["final_prompt"] = final_prompt
+        data["enhanced_prompt"] = final_prompt
         data["output_path"] = output_path.strip()
         data["notes"] = notes.strip()
         write_job(selected_path, data)
-        st.success("Job updated.")
+        st.success("Job updated with final prompt policy fields.")
         st.rerun()
 
     with st.expander("Raw job JSON", expanded=False):
@@ -250,8 +319,8 @@ def render_prompt_library() -> None:
 
 def render_launch() -> None:
     st.header("Launch notes")
-    st.markdown("This Phase 3.1 version manages the queue and output library. It does not generate images yet.")
-    st.markdown("Next build: generator backend integration after queue workflow is stable.")
+    st.markdown("This Phase 3.2 version creates generator-ready prompts and manages the queue. It does not generate images yet.")
+    st.markdown("Next build: generator backend integration after policy workflow is stable.")
     st.code("streamlit run image_workstation/app.py --server.port 8503 --server.address 0.0.0.0", language="bash")
 
 
