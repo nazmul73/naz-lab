@@ -1,4 +1,4 @@
-"""Naz Lab Master Control Dashboard Phase 2.10 package search refresh."""
+"""Naz Lab Master Control Dashboard Phase 2.11 package export refresh."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ from shared.drive_paths import (  # noqa: E402
 )
 from shared.json_utils import safe_read_json, update_workstation_status  # noqa: E402
 
-PHASE = "2.10"
+PHASE = "2.11"
 PHASE_STATUS = "stable"
 
 VOICE_OUTPUTS = BASE_PATH / "voice_outputs"
@@ -98,7 +98,7 @@ PACKAGE_FOLDERS = {
 
 WORKSTATIONS = [
     {"name": "Text Workstation", "phase": "1.8 stable", "key": "text_workstation", "folder": TEXT_OUTPUTS, "port": "8501"},
-    {"name": "Master Dashboard", "phase": "2.10 stable", "key": "master_dashboard", "folder": BASE_PATH, "port": "8502"},
+    {"name": "Master Dashboard", "phase": "2.11 stable", "key": "master_dashboard", "folder": BASE_PATH, "port": "8502"},
     {"name": "Image Workstation", "phase": "3.x stable", "key": "image_workstation", "folder": IMAGE_OUTPUTS, "port": "8503"},
     {"name": "Voice Workstation", "phase": "4.x reference workflow", "key": "voice_workstation", "folder": VOICE_OUTPUTS, "port": "8504"},
     {"name": "Video Workstation", "phase": "5.3 stable", "key": "video_workstation", "folder": VIDEO_OUTPUTS, "port": "8505"},
@@ -188,7 +188,7 @@ def render_status(language: str) -> None:
     c3.metric("Drive base", status_label(BASE_PATH))
     c4.metric("Active workstations", str(len(WORKSTATIONS)))
     c5.metric("Output log entries", len(logs))
-    st.success("Master Dashboard status: stable for Phase 2.10 package search refresh")
+    st.success("Master Dashboard status: stable for Phase 2.11 package export refresh")
     st.info(LANGUAGE_REQUIREMENT_BN if language == "Bangla" else LANGUAGE_REQUIREMENT_EN)
 
     st.markdown("### Workstation matrix")
@@ -206,22 +206,19 @@ def render_status(language: str) -> None:
             "Last seen": data.get("last_seen", ""),
         })
     st.dataframe(rows, use_container_width=True, hide_index=True)
-
     st.markdown("### Project automation status")
     st.json(PROJECT_AUTOMATION_STATUS)
-
     st.markdown("### Quick links")
     cols = st.columns(4)
     for index, item in enumerate(WORKSTATIONS):
         with cols[index % 4]:
             st.markdown(f"**{item['name']}**")
             link_markdown("Open", links.get(item["key"], {}).get("public_url", ""))
-
     st.markdown("### Next readiness")
     st.write({
         "current_stack": "Text + Dashboard + Image + Voice + Video + Portrait + Project Workflow",
         "project_automation": "True Noir Tales + ToolFlow + General Bangla polished",
-        "package_search": "ready",
+        "package_search_export": "ready",
         "recommended_next_1": "Safer reference managers where needed",
         "recommended_next_2": "Optional backend planning",
         "recommended_next_3": "Bangla quality alignment maintenance",
@@ -310,6 +307,7 @@ def render_jobs() -> None:
 def render_package_search() -> None:
     st.header("Package search")
     st.caption("Search saved JSON packages across project, image, voice, video, and portrait package folders.")
+    st.info("Packages are already saved in Google Drive. This tab is for search, preview, copy, and download/export.")
 
     c1, c2, c3, c4 = st.columns(4)
     folder_label = c1.selectbox("Folder", ["All package folders"] + list(PACKAGE_FOLDERS.keys()))
@@ -343,12 +341,18 @@ def render_package_search() -> None:
         return
 
     st.dataframe(rows, use_container_width=True, hide_index=True)
+    report_json = json.dumps({"generated_at": datetime.now().isoformat(timespec="seconds"), "filters": {"folder": folder_label, "project": project_filter, "status": status_filter, "keyword": keyword}, "matches": rows}, ensure_ascii=False, indent=2)
+    st.download_button("Download filtered report JSON", data=report_json, file_name="naz_lab_package_search_report.json", mime="application/json")
+
     selected_path = st.selectbox("Open package JSON", [row["Path"] for row in rows])
     selected = Path(selected_path)
     data = read_json(selected, {})
+    package_json = json.dumps(data, ensure_ascii=False, indent=2)
     st.markdown(f"### Preview: `{selected.name}`")
+    st.caption(f"Saved path: {selected}")
+    st.download_button("Download selected package JSON", data=package_json, file_name=selected.name, mime="application/json")
     st.json(data)
-    st.text_area("Copy package JSON", json.dumps(data, ensure_ascii=False, indent=2), height=420)
+    st.text_area("Copy package JSON", package_json, height=420)
 
 
 def render_launch() -> None:
@@ -372,7 +376,7 @@ def render_roadmap(language: str) -> None:
     st.markdown("""
 1. Phase 0 Foundation — complete  
 2. Phase 1 Text Workstation — stable  
-3. Phase 2 Master Dashboard — stable with package search  
+3. Phase 2 Master Dashboard — stable with package search/export  
 4. Phase 3 Image Workstation — stable  
 5. Phase 4 Voice Workstation — reference workflow active  
 6. Phase 5 Video Workstation — stable  
@@ -397,13 +401,13 @@ def render_roadmap(language: str) -> None:
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Master Dashboard", page_icon="🧪", layout="wide")
     st.title("🧪 Naz Lab Master Control Dashboard")
-    st.caption("Phase 2.10 refresh — full stack, polished project automation, and package search")
+    st.caption("Phase 2.11 refresh — package search, preview, copy, and download export")
     update_workstation_status(WORKSTATION_LINKS_JSON, "master_dashboard", {"status": PHASE_STATUS, "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")})
     with st.sidebar:
         st.header("Dashboard settings")
         language = st.radio("Dashboard language note", ["Bangla", "English"], index=0)
         st.caption("Naz Lab default: Bangla-first. Regional default: Rangpur/Nilphamari/North Bengal.")
-        st.success("Phase 2.10 stable")
+        st.success("Phase 2.11 stable")
     tabs = st.tabs(["Status", "Links", "Workstations", "Outputs", "Job Queue", "Package Search", "Launch", "Roadmap"])
     with tabs[0]: render_status(language)
     with tabs[1]: render_links()
