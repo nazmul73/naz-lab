@@ -7,6 +7,7 @@ This folder contains project-level guidance for Naz Lab.
 - `bangla_quality_engine.md` — Global Bangla-first quality rules.
 - `voice_video_bangla_quality.md` — Bangla quality rules for Voice and Video workflows.
 - `reference_asset_policy.md` — Safe reference voice/face/portrait asset policy.
+- `backend_planning.md` — Backend planning foundation for future heavy generation tools and adapters.
 
 ## Key language rules
 
@@ -48,6 +49,26 @@ Reference policy constants live in:
 shared/reference_asset_policy.py
 ```
 
+## Backend planning rules
+
+Backend generation should stay separate from the Master Dashboard.
+
+Heavy tools such as Fooocus, Stable Diffusion, XTTS, video generation tools, LivePortrait, and FaceFusion should run in isolated workstation runtimes or future backend adapters.
+
+Backend adapters must validate:
+
+- package/job JSON
+- output folders
+- allowed file extensions
+- reference asset authorization metadata
+- GPU/API/token requirements when relevant
+
+Backend planning lives in:
+
+```text
+docs/backend_planning.md
+```
+
 ## Safety reminders
 
 - Use adult-only subjects for true-crime/noir content.
@@ -56,9 +77,16 @@ shared/reference_asset_policy.py
 - Women should have no sindoor unless explicitly requested.
 - Reference face/voice workflows require user-provided or explicitly authorized reference assets.
 
-## Current next build order
+## Current build status
 
-1. Voice Workstation safer reference manager integration.
-2. Portrait Workstation safer reference manager integration.
-3. Download/export buttons for Dashboard Package Search.
-4. Backend planning when ready.
+- Voice Workstation safer reference manager integration — done.
+- Portrait Workstation safer reference manager integration — done.
+- Dashboard Package Search download/export buttons — done.
+- Backend planning foundation — done.
+
+## Recommended next work
+
+1. Test updated workstations in Colab.
+2. Fix any runtime/UI issue from the tests.
+3. Add backend adapter skeletons only after the planning doc is accepted.
+4. Run final integration polish/checklist.
