@@ -9,7 +9,8 @@ This launcher:
 - clones or updates the latest repo
 - creates the required Drive folder structure
 - installs Streamlit and requests
-- installs Ollama with a robust fallback path
+- installs system dependency `zstd` required by current Ollama releases
+- installs Ollama
 - links Ollama models to Drive so models persist across sessions
 - starts Ollama
 - pulls a safe CPU fallback model and optional Gemma model
@@ -102,6 +103,9 @@ print("Drive structure ready:", BASE_PATH)
 print("Installing Python dependencies...")
 subprocess.run(["python", "-m", "pip", "install", "-q", "streamlit", "requests"], check=True)
 
+print("Installing system dependency zstd for Ollama extraction...")
+subprocess.run("apt-get update -qq && apt-get install -y -qq zstd", shell=True, check=True)
+
 # 5. Robust Ollama install helpers
 def run_logged(command, *, check=False):
     print("Running:", command)
@@ -137,27 +141,13 @@ def install_ollama():
         print("Ollama installed with official script.")
         return True
 
-    print("Official Ollama install failed. Trying direct Linux amd64 tarball fallback...")
-    fallback_cmd = " && ".join([
-        "cd /content",
-        "rm -f ollama-linux-amd64.tgz",
-        "curl -fL https://ollama.com/download/ollama-linux-amd64.tgz -o ollama-linux-amd64.tgz",
-        "tar -C /usr -xzf ollama-linux-amd64.tgz",
-        "chmod +x /usr/bin/ollama /usr/local/bin/ollama 2>/dev/null || true",
-    ])
-    fallback = run_logged(fallback_cmd, check=False)
-    if fallback.returncode == 0 and ollama_exists():
-        print("Ollama installed with direct tarball fallback.")
-        return True
-
-    print("Ollama install failed. Install log tail:")
+    print("Official Ollama install failed after zstd install. Install log tail:")
     print(OLLAMA_INSTALL_LOG.read_text(encoding="utf-8", errors="ignore")[-4000:])
     return False
 
 if not install_ollama():
     raise RuntimeError(
-        "Ollama installation failed. See /content/ollama_install_phase1.log. "
-        "This is an environment/network install failure before the app launch step."
+        "Ollama installation failed even after installing zstd. See /content/ollama_install_phase1.log."
     )
 
 print("Ollama binary:")
@@ -260,9 +250,8 @@ output.serve_kernel_port_as_window(PORT)
 ```text
 Naz Lab Phase 1 Text Workstation Launcher
 Drive structure ready: /content/drive/MyDrive/NazLab
+Installing system dependency zstd for Ollama extraction...
 Ollama installed with official script.
-# or
-Ollama installed with direct tarball fallback.
 Ollama models path: /root/.ollama/models -> /content/drive/MyDrive/NazLab/models/ollama
 Installed Ollama models:
 ...
