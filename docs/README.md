@@ -18,6 +18,7 @@ This folder contains project-level guidance for Naz Lab.
 - `naz_lab_v1_finalization_plan.md` — Naz Lab v1 finalization scope with real video generation deferred.
 - `naz_lab_v1_ready.md` — Naz Lab v1 ready marker after final verification.
 - `input_test_console_pass.md` — Input Test Console and Dashboard integration pass marker.
+- `dashboard_2_15_input_console_pass.md` — Dashboard Phase 2.15 Input Test Console integration pass marker.
 - `video_generation_deferred_roadmap.md` — Future v1.5/v2 roadmap for real video generation.
 - `dashboard_v1_readiness_note.md` — Dashboard Phase 2.14 interpretation for Naz Lab v1 final verification.
 - `../backend_adapters/README.md` — Backend Adapter Skeletons 1.0 overview and run commands.
@@ -124,6 +125,12 @@ Input Test Console pass marker lives in:
 
 ```text
 docs/input_test_console_pass.md
+```
+
+Dashboard 2.15 Input Console pass marker lives in:
+
+```text
+docs/dashboard_2_15_input_console_pass.md
 ```
 
 Video generation deferred roadmap lives in:
@@ -250,6 +257,7 @@ launchers/input_test_console_colab_proxy.md
 - Dashboard final reel pack tab — done and final-verified.
 - Dashboard Package Search — done and frontend-verified.
 - Dashboard v1 readiness note — done.
+- Dashboard Phase 2.15 Input Console integration — done and verified.
 - Frontend Input Test Console — done and passed.
 - One-cell Input Test Console launcher — done.
 - Colab proxy Input Test Console launcher — done.
@@ -266,6 +274,7 @@ launchers/input_test_console_colab_proxy.md
 Naz Lab v1 — Ready
 Video generation — Deferred after v1
 Frontend Input Test Console — PASS
+Dashboard Phase 2.15 — PASS
 Dashboard Final Packs integration — PASS
 Dashboard Package Search integration — PASS
 ```
