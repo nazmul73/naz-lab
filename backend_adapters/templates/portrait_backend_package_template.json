@@ -1,0 +1,17 @@
+{
+  "backend_phase": "Backend Adapter Skeletons 1.0",
+  "backend_kind": "portrait",
+  "backend_status": "draft",
+  "project_preset": "General",
+  "language": "Bangla",
+  "portrait_type": "Social media portrait",
+  "positive_prompt": "Realistic natural Bangladeshi adult portrait, respectful, culturally grounded, Facebook-ready.",
+  "negative_prompt": "no gore, no dead body, no visible wounds, no distorted face, no misleading identity claim, no unauthorized face reference",
+  "reference_image_path": "",
+  "reference_image_authorized": false,
+  "reference_image_notes": "",
+  "reference_policy": "Reference image requires user-provided or explicitly authorized image.",
+  "no_misleading_identity_claim": true,
+  "portrait_output_path": "/content/drive/MyDrive/NazLab/portrait_outputs/example.png",
+  "backend_events": []
+}
