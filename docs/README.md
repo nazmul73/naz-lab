@@ -16,6 +16,7 @@ This folder contains project-level guidance for Naz Lab.
 - `final_reel_pack_assembly_runbook.md` — Final reel pack JSON/Markdown assembly runbook.
 - `final_verification_runbook.md` — Final lightweight verification runbook for smoke test, final pack, and Dashboard Phase 2.14.
 - `naz_lab_v1_finalization_plan.md` — Naz Lab v1 finalization scope with real video generation deferred.
+- `naz_lab_v1_ready.md` — Naz Lab v1 ready marker after final verification.
 - `video_generation_deferred_roadmap.md` — Future v1.5/v2 roadmap for real video generation.
 - `dashboard_v1_readiness_note.md` — Dashboard Phase 2.14 interpretation for Naz Lab v1 final verification.
 - `../backend_adapters/README.md` — Backend Adapter Skeletons 1.0 overview and run commands.
@@ -107,6 +108,12 @@ Naz Lab v1 finalization plan lives in:
 
 ```text
 docs/naz_lab_v1_finalization_plan.md
+```
+
+Naz Lab v1 ready marker lives in:
+
+```text
+docs/naz_lab_v1_ready.md
 ```
 
 Video generation deferred roadmap lives in:
@@ -212,17 +219,25 @@ launchers/all_in_one_colab_launcher.md
 - Video placeholder backend adapter — done and tested by user.
 - Final Reel Pack Assembly Runbook 1.0 — done.
 - Final reel pack assembler — done and tested by user.
-- Dashboard final reel pack tab — done.
+- Dashboard final reel pack tab — done and final-verified.
 - Dashboard v1 readiness note — done.
 - Robust all-in-one Colab launcher — done.
 - Lightweight integration smoke test — done.
 - Final verification runbook — done.
 - Naz Lab v1 finalization plan — done.
+- Naz Lab v1 ready marker — done.
 - Video generation deferred roadmap — done.
+
+## Current marker
+
+```text
+Naz Lab v1 — Ready
+Video generation — Deferred after v1
+```
 
 ## Recommended next work
 
-1. Run final verification runbook once in Colab.
-2. If final verification passes, mark Naz Lab v1 ready.
+1. Work with Naz Lab v1 for real content creation.
+2. Improve non-video tools only if practical issues appear during use.
 3. Do real video generation later during separate work sessions.
 4. Keep Bangla quality and reference asset policy aligned across all future work.
