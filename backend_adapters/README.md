@@ -1,6 +1,6 @@
 # Naz Lab Backend Adapters
 
-Status: Backend Adapter Skeletons 1.0
+Status: Backend Adapter Skeletons 1.0 + Generic TTS Adapter 1.0
 
 This folder contains lightweight backend adapter entry points for future Naz Lab generation backends.
 
@@ -8,7 +8,7 @@ This folder contains lightweight backend adapter entry points for future Naz Lab
 
 Do not install or run heavy generation tools from this folder yet.
 
-The current backend adapter layer is only for:
+The current backend adapter layer is for:
 
 - package/job scanning
 - schema validation
@@ -18,6 +18,7 @@ The current backend adapter layer is only for:
 - package backend status marking
 - reusable backend package templates
 - template-based backend package creation
+- first generic non-cloning TTS audio generation
 
 ## Current files
 
@@ -25,6 +26,7 @@ The current backend adapter layer is only for:
 - `create_backend_package.py` — creates a backend package JSON from a reusable template.
 - `mark_backend_status.py` — safely marks a package JSON as `ready_for_backend`, `blocked`, `failed`, `completed`, etc.
 - `generic_tts_adapter.py` — validates a voice package and prints a future generic TTS execution plan.
+- `generic_tts_gtts_adapter.py` — generates generic non-cloning MP3 audio from a validated voice package using gTTS.
 - `image_adapter.py` — validates an image package/job and prints a future image generation plan.
 - `video_adapter.py` — validates a video package and prints a future video/reel execution plan.
 - `portrait_adapter.py` — validates a portrait package and prints a future portrait backend execution plan.
@@ -81,7 +83,7 @@ A JSON response showing ok=true and the created package path inside the relevant
 Mark a package ready for backend:
 
 ```bash
-python backend_adapters/mark_backend_status.py /content/drive/MyDrive/NazLab/voice_jobs/example.json ready_for_backend "Ready for generic TTS backend" --allow-any-transition
+python backend_adapters/mark_backend_status.py /content/drive/MyDrive/NazLab/job_queue/voice_jobs/example.json ready_for_backend "Ready for generic TTS backend" --allow-any-transition
 ```
 
 Expected result:
@@ -93,25 +95,37 @@ A small JSON response showing ok=true, package path, backend_status, and backend
 Validate a future voice/TTS package:
 
 ```bash
-python backend_adapters/generic_tts_adapter.py /content/drive/MyDrive/NazLab/voice_jobs/example.json
+python backend_adapters/generic_tts_adapter.py /content/drive/MyDrive/NazLab/job_queue/voice_jobs/example.json
+```
+
+Generate generic non-cloning TTS audio:
+
+```bash
+python backend_adapters/generic_tts_gtts_adapter.py /content/drive/MyDrive/NazLab/job_queue/voice_jobs/example.json
+```
+
+Expected result:
+
+```text
+A JSON response showing ok=true, status=completed, and audio_output_path for the generated MP3.
 ```
 
 Validate a future image package/job:
 
 ```bash
-python backend_adapters/image_adapter.py /content/drive/MyDrive/NazLab/image_jobs/example.json
+python backend_adapters/image_adapter.py /content/drive/MyDrive/NazLab/job_queue/image_jobs/example.json
 ```
 
 Validate a future video package:
 
 ```bash
-python backend_adapters/video_adapter.py /content/drive/MyDrive/NazLab/video_jobs/example.json
+python backend_adapters/video_adapter.py /content/drive/MyDrive/NazLab/job_queue/video_jobs/example.json
 ```
 
 Validate a future portrait package:
 
 ```bash
-python backend_adapters/portrait_adapter.py /content/drive/MyDrive/NazLab/face_jobs/example.json
+python backend_adapters/portrait_adapter.py /content/drive/MyDrive/NazLab/job_queue/face_jobs/example.json
 ```
 
 ## Backend adapter roadmap
@@ -127,12 +141,13 @@ Completed in Skeletons 1.0:
 7. Video and portrait adapter planning stubs.
 8. Backend package templates.
 9. Backend template creator/helper.
+10. Generic gTTS backend adapter for non-cloning MP3 generation.
 
 Recommended next:
 
-1. Add backend runbook docs for skeleton commands.
-2. Add real backend runbooks only when a real backend is selected for testing.
-3. Start with the safest real backend: generic TTS or image prompt-to-output adapter.
+1. Test generic gTTS adapter in Colab.
+2. If test passes, choose either TTS quality improvement or image prompt-to-output backend.
+3. Add real backend runbooks only when a real backend is selected for testing.
 
 ## Safety requirement
 
@@ -141,6 +156,8 @@ Future adapters must block reference-based generation unless the package metadat
 - `reference_voice_authorized: true` for voice reference workflows
 - `reference_image_authorized: true` for portrait/reference image workflows
 - `no_misleading_identity_claim: true` for portrait/face workflows
+
+Generic gTTS adapter must not clone voices and must block reference clone mode.
 
 ## Bangla-first requirement
 
