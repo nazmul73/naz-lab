@@ -21,6 +21,7 @@ This folder contains project-level guidance for Naz Lab.
 - `dashboard_v1_readiness_note.md` — Dashboard Phase 2.14 interpretation for Naz Lab v1 final verification.
 - `../backend_adapters/README.md` — Backend Adapter Skeletons 1.0 overview and run commands.
 - `../launchers/all_in_one_colab_launcher.md` — Robust one-click Colab launcher with Cloudflare public URL handling.
+- `../launchers/input_test_console_one_cell.md` — One-cell frontend launcher for Input Test Console.
 
 ## Key language rules
 
@@ -69,6 +70,7 @@ Naz Lab v1 finalizes the current Bangla-first content creation workflow without 
 Included in v1:
 
 - text/script/caption workflows
+- frontend Input Test Console
 - project workflow packages
 - image prompt/package workflows
 - generic non-cloning TTS audio path
@@ -181,10 +183,22 @@ shared/backend_queue.py
 shared/backend_status.py
 ```
 
+Frontend Input Test Console lives in:
+
+```text
+test_console/app.py
+```
+
 Robust Colab launcher lives in:
 
 ```text
 launchers/all_in_one_colab_launcher.md
+```
+
+Input Test Console one-cell launcher lives in:
+
+```text
+launchers/input_test_console_one_cell.md
 ```
 
 ## Safety reminders
@@ -221,6 +235,8 @@ launchers/all_in_one_colab_launcher.md
 - Final reel pack assembler — done and tested by user.
 - Dashboard final reel pack tab — done and final-verified.
 - Dashboard v1 readiness note — done.
+- Frontend Input Test Console — done.
+- One-cell Input Test Console launcher — done.
 - Robust all-in-one Colab launcher — done.
 - Lightweight integration smoke test — done.
 - Final verification runbook — done.
@@ -233,11 +249,12 @@ launchers/all_in_one_colab_launcher.md
 ```text
 Naz Lab v1 — Ready
 Video generation — Deferred after v1
+Frontend Input Test Console — Ready for testing
 ```
 
 ## Recommended next work
 
-1. Work with Naz Lab v1 for real content creation.
-2. Improve non-video tools only if practical issues appear during use.
+1. Test the frontend Input Test Console in Colab.
+2. Improve non-video frontend UX only if practical issues appear during use.
 3. Do real video generation later during separate work sessions.
 4. Keep Bangla quality and reference asset policy aligned across all future work.
