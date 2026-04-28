@@ -15,14 +15,32 @@ The current backend adapter layer is only for:
 - backend readiness checks
 - reference asset policy checks
 - future adapter planning
+- package backend status marking
+- reusable backend package templates
 
 ## Current files
 
 - `scan_backend_queues.py` — scans package/job JSON folders and prints a validation report.
+- `mark_backend_status.py` — safely marks a package JSON as `ready_for_backend`, `blocked`, `failed`, `completed`, etc.
 - `generic_tts_adapter.py` — validates a voice package and prints a future generic TTS execution plan.
 - `image_adapter.py` — validates an image package/job and prints a future image generation plan.
 - `video_adapter.py` — validates a video package and prints a future video/reel execution plan.
 - `portrait_adapter.py` — validates a portrait package and prints a future portrait backend execution plan.
+
+## Templates
+
+Reusable package templates live in:
+
+```text
+backend_adapters/templates/
+```
+
+Current templates:
+
+- `voice_backend_package_template.json`
+- `image_backend_package_template.json`
+- `video_backend_package_template.json`
+- `portrait_backend_package_template.json`
 
 ## Shared helper modules
 
@@ -44,6 +62,18 @@ Expected result:
 
 ```text
 A JSON report showing total packages, ready packages, blocked packages, warnings, and per-folder validation results.
+```
+
+Mark a package ready for backend:
+
+```bash
+python backend_adapters/mark_backend_status.py /content/drive/MyDrive/NazLab/voice_packages/example.json ready_for_backend "Ready for generic TTS backend" --allow-any-transition
+```
+
+Expected result:
+
+```text
+A small JSON response showing ok=true, package path, backend_status, and backend_last_updated.
 ```
 
 Validate a future voice/TTS package:
@@ -77,16 +107,17 @@ Completed in Skeletons 1.0:
 1. Lightweight scanner.
 2. Dashboard backend status panel.
 3. Generic backend package status writer.
-4. Generic TTS adapter skeleton without heavy model install.
-5. Image adapter skeleton without heavy model install.
-6. Video and portrait adapter planning stubs.
+4. Backend package status writer CLI.
+5. Generic TTS adapter skeleton without heavy model install.
+6. Image adapter skeleton without heavy model install.
+7. Video and portrait adapter planning stubs.
+8. Backend package templates.
 
 Recommended next:
 
-1. Add backend package status writer CLI.
-2. Add backend adapter package templates.
-3. Add backend runbooks only when a real backend is selected for testing.
-4. Start with the safest real backend: generic TTS or image prompt-to-output adapter.
+1. Add backend template copier/helper.
+2. Add backend runbooks only when a real backend is selected for testing.
+3. Start with the safest real backend: generic TTS or image prompt-to-output adapter.
 
 ## Safety requirement
 
