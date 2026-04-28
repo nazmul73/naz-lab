@@ -11,8 +11,9 @@ drive.mount('/content/drive')
 
 ## Cell 2 - Choose and Start Workstation
 
-Change `WORKSTATION="dashboard"` to any supported value:
+Change `WORKSTATION="test"` to any supported value:
 
+- `test` — Input Test Console, best for frontend testing
 - `text`
 - `dashboard`
 - `image`
@@ -25,7 +26,7 @@ Change `WORKSTATION="dashboard"` to any supported value:
 %%bash
 set -Eeuo pipefail
 
-WORKSTATION="dashboard"
+WORKSTATION="test"
 
 REPO_URL="https://github.com/nazmul73/naz-lab.git"
 REPO_DIR="/content/naz-lab"
@@ -37,6 +38,12 @@ if [ ! -d /content/drive/MyDrive ]; then
 fi
 
 case "$WORKSTATION" in
+  test)
+    APP_REL="test_console/app.py"
+    REQ_REL=""
+    PORT="8508"
+    NAME="INPUT TEST CONSOLE"
+    ;;
   text)
     APP_REL="text_workstation/app.py"
     REQ_REL="text_workstation/requirements.txt"
@@ -81,7 +88,7 @@ case "$WORKSTATION" in
     ;;
   *)
     echo "ERROR: Unknown WORKSTATION value: $WORKSTATION"
-    echo "Use one of: text, dashboard, image, voice, video, portrait, project"
+    echo "Use one of: test, text, dashboard, image, voice, video, portrait, project"
     exit 1
     ;;
 esac
@@ -202,6 +209,7 @@ echo "Cloudflare log: $CLOUDFLARE_LOG"
 
 ## Notes
 
+- Use `WORKSTATION="test"` for the frontend Input Test Console.
 - Cloudflare URLs change every runtime/session.
 - This launcher uses `127.0.0.1` instead of `localhost` to avoid Colab IPv6 origin issues.
 - Use Dashboard Links tab to save the current public URLs.
