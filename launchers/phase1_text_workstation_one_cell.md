@@ -6,7 +6,7 @@ This launcher:
 
 - mounts Google Drive
 - uses `/content/drive/MyDrive/NazLab/` for persistent storage
-- clones or updates the latest repo
+- supports existing ZIP-based repo at `/content/naz-lab`
 - creates the required Drive folder structure
 - checks/installs Streamlit with a logged resilient pip flow
 - installs system dependency `zstd` required by current Ollama releases
@@ -15,7 +15,8 @@ This launcher:
 - starts Ollama
 - pulls a safe CPU fallback model and optional Gemma model
 - validates `text_workstation/app.py`
-- launches the Text Workstation with a Colab proxy window
+- launches the Text Workstation from a stable working directory
+- opens the app with Colab proxy
 
 ```python
 # @title 🚀 Naz Lab Phase 1: Text Workstation One-Cell Launcher
@@ -42,6 +43,7 @@ print("Naz Lab Phase 1 Text Workstation Launcher")
 print("============================================================")
 
 # 1. Mount Drive
+os.chdir("/content")
 if not Path("/content/drive/MyDrive").exists():
     print("Mounting Google Drive...")
     drive.mount("/content/drive")
@@ -49,30 +51,30 @@ if not Path("/content/drive/MyDrive").exists():
 if not Path("/content/drive/MyDrive").exists():
     raise RuntimeError("Google Drive is not mounted. Please authorize Drive mount and run again.")
 
-# 2. Clone or update repo
+# 2. Locate repo. Prefer existing ZIP-based repo when git is broken in Colab.
 os.chdir("/content")
-if (REPO_DIR / ".git").exists():
-    print("Updating existing repo...")
+if REPO_DIR.exists() and (REPO_DIR / APP_REL).exists():
+    print("Using repo at", REPO_DIR)
+elif (REPO_DIR / ".git").exists():
+    print("Updating existing git repo...")
     os.chdir(REPO_DIR)
     subprocess.run(["git", "fetch", "--depth", "1", "origin", "main"], check=False)
     subprocess.run(["git", "reset", "--hard", "origin/main"], check=False)
-elif REPO_DIR.exists() and (REPO_DIR / APP_REL).exists():
-    print("Using existing ZIP-based repo at", REPO_DIR)
-    os.chdir(REPO_DIR)
-else:
+elif not REPO_DIR.exists():
     print("Cloning repo...")
-    if REPO_DIR.exists():
-        subprocess.run(["rm", "-rf", str(REPO_DIR)], check=True)
     clone_result = subprocess.run(["git", "clone", "--depth", "1", REPO_URL, str(REPO_DIR)], check=False)
     if clone_result.returncode != 0:
         raise RuntimeError("Git clone failed. Use ZIP fallback repo download first, then run this launcher again.")
-    os.chdir(REPO_DIR)
-
-print("Latest commit if git metadata is available:")
-subprocess.run(["git", "log", "-1", "--oneline"], check=False)
+else:
+    raise RuntimeError(f"Repo folder exists but app is missing: {REPO_DIR / APP_REL}")
 
 if not (REPO_DIR / APP_REL).exists():
     raise RuntimeError(f"Required app not found: {REPO_DIR / APP_REL}")
+
+os.chdir(REPO_DIR)
+print("Stable working directory:", os.getcwd())
+print("Latest commit if git metadata is available:")
+subprocess.run(["git", "log", "-1", "--oneline"], check=False)
 
 # 3. Create persistent Naz Lab Drive structure
 required_dirs = [
@@ -224,7 +226,7 @@ subprocess.run("pkill -f 'ollama serve' || true", shell=True, check=False)
 time.sleep(2)
 ollama_log = Path("/content/ollama_phase1.log")
 with ollama_log.open("w", encoding="utf-8") as log_file:
-    ollama_proc = subprocess.Popen(["ollama", "serve"], stdout=log_file, stderr=subprocess.STDOUT)
+    ollama_proc = subprocess.Popen(["ollama", "serve"], stdout=log_file, stderr=subprocess.STDOUT, cwd=str(REPO_DIR))
 
 time.sleep(8)
 print("Ollama log tail:")
@@ -232,28 +234,31 @@ print(ollama_log.read_text(encoding="utf-8", errors="ignore")[-1500:])
 
 # 8. Pull models. qwen is CPU-safe; gemma2 is the requested persistent Gemma model.
 print("Pulling CPU fallback model qwen2.5:0.5b...")
-qwen_result = subprocess.run(["ollama", "pull", "qwen2.5:0.5b"], check=False)
+qwen_result = subprocess.run(["ollama", "pull", "qwen2.5:0.5b"], check=False, cwd=str(REPO_DIR))
 if qwen_result.returncode != 0:
     print("qwen2.5:0.5b pull failed. The app can launch, but generation will need a model installed.")
 
 print("Pulling Gemma model gemma2:2b if runtime allows...")
-gemma_result = subprocess.run(["ollama", "pull", "gemma2:2b"], check=False)
+gemma_result = subprocess.run(["ollama", "pull", "gemma2:2b"], check=False, cwd=str(REPO_DIR))
 if gemma_result.returncode != 0:
     print("Gemma pull did not complete. You can still use qwen2.5:0.5b if it installed successfully.")
 
 print("Installed Ollama models:")
-subprocess.run(["ollama", "list"], check=False)
+subprocess.run(["ollama", "list"], check=False, cwd=str(REPO_DIR))
 
 # 9. Validate app
 print("Validating Text Workstation app...")
-subprocess.run([sys.executable, "-m", "py_compile", str(REPO_DIR / APP_REL)], check=True)
+os.chdir(REPO_DIR)
+subprocess.run([sys.executable, "-m", "py_compile", str(REPO_DIR / APP_REL)], check=True, cwd=str(REPO_DIR))
 
 # 10. Stop old Streamlit and launch app
 print("Stopping old Streamlit...")
-subprocess.run("pkill -f streamlit || true", shell=True, check=False)
+subprocess.run("pkill -f streamlit || true", shell=True, check=False, cwd=str(REPO_DIR))
 time.sleep(2)
 
 print("Starting Text Workstation on port", PORT)
+os.chdir(REPO_DIR)
+print("Launch cwd:", os.getcwd())
 with LOG_PATH.open("w", encoding="utf-8") as log_file:
     process = subprocess.Popen(
         [
@@ -266,6 +271,7 @@ with LOG_PATH.open("w", encoding="utf-8") as log_file:
         ],
         stdout=log_file,
         stderr=subprocess.STDOUT,
+        cwd=str(REPO_DIR),
     )
 
 time.sleep(8)
@@ -294,6 +300,7 @@ output.serve_kernel_port_as_window(PORT)
 
 ```text
 Naz Lab Phase 1 Text Workstation Launcher
+Stable working directory: /content/naz-lab
 Drive structure ready: /content/drive/MyDrive/NazLab
 Streamlit already installed.
 # or
@@ -304,6 +311,7 @@ Ollama models path: /root/.ollama/models -> /content/drive/MyDrive/NazLab/models
 Installed Ollama models:
 ...
 Validating Text Workstation app...
+Launch cwd: /content/naz-lab
 Starting Text Workstation on port 8501
 NAZ LAB PHASE 1 TEXT WORKSTATION READY
 Opening Colab proxy window...
