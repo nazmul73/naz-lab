@@ -22,9 +22,11 @@ This folder contains project-level guidance for Naz Lab.
 - `dashboard_2_15_input_console_pass.md` — Dashboard Phase 2.15 Input Test Console integration pass marker.
 - `real_content_package_trial_protocol.md` — Practical real content package trial protocol.
 - `real_trials_finalization_checklist.md` — Real package trial finalization checklist.
-- `toolflow_real_trial_protocol.md` — ToolFlow real package trial protocol, ready for user test.
+- `toolflow_real_trial_protocol.md` — ToolFlow real package trial protocol.
 - `toolflow_dashboard_verification_runbook.md` — ToolFlow Dashboard Package Search verification runbook.
-- `real_trials_completion_prep.md` — Real Content Package Trials completion prep, without PASS marker.
+- `toolflow_real_trial_pass.md` — ToolFlow real content package trial pass marker.
+- `real_content_package_trials_complete.md` — Real Content Package Trials complete marker.
+- `real_trials_completion_prep.md` — Real Content Package Trials completion prep.
 - `v1_5_backend_target_options.md` — v1.5 backend target decision prep.
 - `general_bangla_real_trial_pass.md` — General Bangla real content package trial pass marker.
 - `true_noir_real_trial_pass.md` — True Noir Tales real content package trial pass marker.
@@ -40,18 +42,18 @@ This folder contains project-level guidance for Naz Lab.
 ## Current marker
 
 ```text
-Naz Lab v1 — Ready
+Naz Lab v1 — Ready / Practical-use verified
 Video generation — Locked / Deferred after v1
 Frontend Input Test Console — PASS
-Dashboard Phase 2.16.1 — HOTFIX READY FOR USER TEST
+Dashboard Phase 2.16.1 — HOTFIX VERIFIED
 Dashboard Final Packs integration — PASS
-Dashboard Package Search integration — HOTFIX READY
-Dashboard Deep JSON Search — HOTFIX READY
-Real Content Package Trial — ACTIVE
+Dashboard Package Search integration — PASS
+Dashboard Deep JSON Search — PASS
+Real Content Package Trial — COMPLETE
 General Bangla Real Trial — PASS
 True Noir Tales Real Trial — PASS
-ToolFlow Real Trial — SAVED, DASHBOARD VERIFICATION PENDING
-Backend Next Phase — FROZEN UNTIL REAL TRIALS COMPLETE
+ToolFlow Real Trial — PASS
+Backend Next Phase — READY FOR v1.5 TARGET SELECTION
 ```
 
 ## v1 practical-use rule
@@ -123,23 +125,19 @@ Backend generation should stay separate from the Master Dashboard.
 
 Heavy tools such as Fooocus, Stable Diffusion, XTTS, video generation tools, LivePortrait, and FaceFusion should run in isolated workstation runtimes or future backend adapters.
 
-Backend next phase is frozen until:
-
-1. ToolFlow real content package trial passes.
-2. Real Content Package Trials complete marker exists.
-3. The user explicitly chooses the next backend target.
-4. Runtime/dependency planning is done separately.
+Backend next phase can now move to planning after the user chooses exactly one v1.5 target.
+Runtime/dependency planning must be done separately before any heavy backend implementation.
 
 ## Current build status
 
 - Voice Workstation safer reference manager integration — done and tested.
 - Portrait Workstation safer reference manager integration — done and tested.
 - Dashboard Package Search download/export buttons — done and tested.
-- Dashboard Package Search deep JSON search — hotfix prepared in Phase 2.16.1.
-- Dashboard Phase 2.16.1 — hotfix committed, pending user Dashboard verification.
-- ToolFlow Dashboard verification runbook — prepared.
-- Real trials completion prep — prepared, not marked complete.
-- v1.5 backend target options — prepared for later decision.
+- Dashboard Package Search deep JSON search — fixed and verified in Phase 2.16.1.
+- Dashboard Phase 2.16.1 — hotfix committed and verified.
+- ToolFlow Dashboard verification — passed by user confirmation.
+- ToolFlow real content package trial — passed.
+- Real Content Package Trials — complete.
 - Backend planning foundation — done.
 - Final integration checklist — done.
 - Backend Adapter Skeletons 1.0 — done as lightweight skeleton, no heavy generation tools installed.
@@ -156,13 +154,10 @@ Backend next phase is frozen until:
 - Dashboard final reel pack tab — done and final-verified.
 - Dashboard Phase 2.15 Input Console integration — done and verified.
 - Frontend Input Test Console — done and passed.
-- Real Content Package Trial Protocol — active.
 - General Bangla real content package trial — passed.
 - True Noir Tales real content package trial — passed.
-- ToolFlow real content package trial — saved, Dashboard verification pending.
-- Real trials finalization checklist — active.
-- Naz Lab v1 practical use marker — ready, pending ToolFlow final test.
-- Backend next phase freeze — active.
+- Naz Lab v1 practical use marker — ready.
+- Backend next phase freeze — lifted for target-selection planning only.
 - Video generation deferred lock — active.
 - One-cell Input Test Console launcher — done.
 - Colab proxy Input Test Console launcher — done.
@@ -175,8 +170,10 @@ Backend next phase is frozen until:
 
 ## Recommended next work
 
-1. Run Dashboard Phase 2.16.1 hotfix in Colab.
-2. Verify ToolFlow package in Dashboard Package Search.
-3. Add ToolFlow pass marker after user verification.
-4. Add Real Content Package Trials complete marker after ToolFlow pass.
-5. Then choose one next backend target for v1.5.
+Choose one next backend target for v1.5:
+
+1. real image backend
+2. FFmpeg assembly
+3. real video generation groundwork
+4. higher quality TTS
+5. local PC deployment support
