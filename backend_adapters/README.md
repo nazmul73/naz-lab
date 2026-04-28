@@ -22,12 +22,14 @@ The current backend adapter layer is for:
 - placeholder image output generation for pipeline testing
 - placeholder video manifest generation for pipeline testing
 - final reel pack JSON/Markdown assembly
+- lightweight compile/import smoke testing
 
 ## Current files
 
 - `scan_backend_queues.py` — scans package/job JSON folders and prints a validation report.
 - `create_backend_package.py` — creates a backend package JSON from a reusable template.
 - `mark_backend_status.py` — safely marks a package JSON as `ready_for_backend`, `blocked`, `failed`, `completed`, etc.
+- `smoke_test_lightweight.py` — compiles/imports lightweight apps, backend adapters, and shared helpers.
 - `generic_tts_adapter.py` — validates a voice package and prints a future generic TTS execution plan.
 - `generic_tts_gtts_adapter.py` — generates generic non-cloning MP3 audio from a validated voice package using gTTS.
 - `image_adapter.py` — validates an image package/job and prints a future image generation plan.
@@ -63,6 +65,18 @@ Current templates:
 ## Run commands
 
 From repo root:
+
+```bash
+python backend_adapters/smoke_test_lightweight.py
+```
+
+Expected result:
+
+```text
+A JSON response with ok=true, compile_total, import_total, and an empty failed list.
+```
+
+Scan backend queues:
 
 ```bash
 python backend_adapters/scan_backend_queues.py
@@ -187,12 +201,13 @@ Completed in Skeletons 1.0:
 11. Image placeholder adapter for package-to-output validation.
 12. Video placeholder adapter for package-to-output validation.
 13. Final reel pack assembly manifest adapter.
+14. Lightweight smoke-test command.
 
 Recommended next:
 
-1. Test final reel pack assembler in Colab.
-2. If test passes, add Dashboard final reel pack tab.
-3. Add real backend runbooks only when a real backend is selected for testing.
+1. Run final lightweight smoke test in Colab.
+2. Run Dashboard through robust all-in-one launcher.
+3. Add real backend runbooks only after final smoke test passes.
 
 ## Safety requirement
 
