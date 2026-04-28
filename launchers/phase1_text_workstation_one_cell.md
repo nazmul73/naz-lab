@@ -8,8 +8,8 @@ This launcher:
 - uses `/content/drive/MyDrive/NazLab/` for persistent storage
 - clones or updates the latest repo
 - creates the required Drive folder structure
-- installs Streamlit, requests, and Localtunnel support
-- installs Ollama if missing
+- installs Streamlit and requests
+- installs Ollama with a robust fallback path
 - links Ollama models to Drive so models persist across sessions
 - starts Ollama
 - pulls a safe CPU fallback model and optional Gemma model
@@ -19,6 +19,7 @@ This launcher:
 ```python
 # @title 🚀 Naz Lab Phase 1: Text Workstation One-Cell Launcher
 import os
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -30,6 +31,7 @@ BASE_PATH = Path("/content/drive/MyDrive/NazLab")
 APP_REL = "text_workstation/app.py"
 PORT = 8501
 LOG_PATH = Path("/content/streamlit_text_workstation_phase1.log")
+OLLAMA_INSTALL_LOG = Path("/content/ollama_install_phase1.log")
 
 print("============================================================")
 print("Naz Lab Phase 1 Text Workstation Launcher")
@@ -100,19 +102,68 @@ print("Drive structure ready:", BASE_PATH)
 print("Installing Python dependencies...")
 subprocess.run(["python", "-m", "pip", "install", "-q", "streamlit", "requests"], check=True)
 
-# 5. Install Node/localtunnel support if available; Colab proxy remains primary.
-print("Checking Node/npm for optional localtunnel...")
-subprocess.run("node --version || true", shell=True, check=False)
-subprocess.run("npm --version || true", shell=True, check=False)
+# 5. Robust Ollama install helpers
+def run_logged(command, *, check=False):
+    print("Running:", command)
+    result = subprocess.run(
+        command,
+        shell=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    with OLLAMA_INSTALL_LOG.open("a", encoding="utf-8") as handle:
+        handle.write("\n$ " + command + "\n")
+        handle.write(result.stdout or "")
+        handle.write(f"\n[exit_code={result.returncode}]\n")
+    if check and result.returncode != 0:
+        raise subprocess.CalledProcessError(result.returncode, command, output=result.stdout)
+    return result
 
-# 6. Install Ollama if missing
-if not Path("/usr/local/bin/ollama").exists():
-    print("Installing Ollama...")
-    subprocess.run("curl -fsSL https://ollama.com/install.sh | sh", shell=True, check=True)
-else:
-    print("Ollama already installed.")
 
-# 7. Link Ollama model directory to Drive persistence
+def ollama_exists():
+    return shutil.which("ollama") is not None or Path("/usr/local/bin/ollama").exists() or Path("/usr/bin/ollama").exists()
+
+
+def install_ollama():
+    if ollama_exists():
+        print("Ollama already installed.")
+        return True
+
+    OLLAMA_INSTALL_LOG.write_text("Naz Lab Ollama install log\n", encoding="utf-8")
+    print("Installing Ollama with official install script...")
+    official = run_logged("curl -fsSL https://ollama.com/install.sh | sh", check=False)
+    if official.returncode == 0 and ollama_exists():
+        print("Ollama installed with official script.")
+        return True
+
+    print("Official Ollama install failed. Trying direct Linux amd64 tarball fallback...")
+    fallback_cmd = " && ".join([
+        "cd /content",
+        "rm -f ollama-linux-amd64.tgz",
+        "curl -fL https://ollama.com/download/ollama-linux-amd64.tgz -o ollama-linux-amd64.tgz",
+        "tar -C /usr -xzf ollama-linux-amd64.tgz",
+        "chmod +x /usr/bin/ollama /usr/local/bin/ollama 2>/dev/null || true",
+    ])
+    fallback = run_logged(fallback_cmd, check=False)
+    if fallback.returncode == 0 and ollama_exists():
+        print("Ollama installed with direct tarball fallback.")
+        return True
+
+    print("Ollama install failed. Install log tail:")
+    print(OLLAMA_INSTALL_LOG.read_text(encoding="utf-8", errors="ignore")[-4000:])
+    return False
+
+if not install_ollama():
+    raise RuntimeError(
+        "Ollama installation failed. See /content/ollama_install_phase1.log. "
+        "This is an environment/network install failure before the app launch step."
+    )
+
+print("Ollama binary:")
+subprocess.run("which ollama && ollama --version", shell=True, check=False)
+
+# 6. Link Ollama model directory to Drive persistence
 print("Configuring Ollama model persistence...")
 Path("/root/.ollama").mkdir(parents=True, exist_ok=True)
 ollama_models_link = Path("/root/.ollama/models")
@@ -132,7 +183,7 @@ else:
 
 print("Ollama models path:", ollama_models_link, "->", drive_ollama_models)
 
-# 8. Start Ollama server
+# 7. Start Ollama server
 print("Starting Ollama server...")
 subprocess.run("pkill -f 'ollama serve' || true", shell=True, check=False)
 time.sleep(2)
@@ -144,23 +195,25 @@ time.sleep(8)
 print("Ollama log tail:")
 print(ollama_log.read_text(encoding="utf-8", errors="ignore")[-1500:])
 
-# 9. Pull models. qwen is CPU-safe; gemma2 is the requested persistent Gemma model.
+# 8. Pull models. qwen is CPU-safe; gemma2 is the requested persistent Gemma model.
 print("Pulling CPU fallback model qwen2.5:0.5b...")
-subprocess.run(["ollama", "pull", "qwen2.5:0.5b"], check=False)
+qwen_result = subprocess.run(["ollama", "pull", "qwen2.5:0.5b"], check=False)
+if qwen_result.returncode != 0:
+    print("qwen2.5:0.5b pull failed. The app can launch, but generation will need a model installed.")
 
 print("Pulling Gemma model gemma2:2b if runtime allows...")
 gemma_result = subprocess.run(["ollama", "pull", "gemma2:2b"], check=False)
 if gemma_result.returncode != 0:
-    print("Gemma pull did not complete. You can still use qwen2.5:0.5b in the app on CPU runtime.")
+    print("Gemma pull did not complete. You can still use qwen2.5:0.5b if it installed successfully.")
 
 print("Installed Ollama models:")
 subprocess.run(["ollama", "list"], check=False)
 
-# 10. Validate app
+# 9. Validate app
 print("Validating Text Workstation app...")
 subprocess.run(["python", "-m", "py_compile", str(REPO_DIR / APP_REL)], check=True)
 
-# 11. Stop old Streamlit and launch app
+# 10. Stop old Streamlit and launch app
 print("Stopping old Streamlit...")
 subprocess.run("pkill -f streamlit || true", shell=True, check=False)
 time.sleep(2)
@@ -207,6 +260,9 @@ output.serve_kernel_port_as_window(PORT)
 ```text
 Naz Lab Phase 1 Text Workstation Launcher
 Drive structure ready: /content/drive/MyDrive/NazLab
+Ollama installed with official script.
+# or
+Ollama installed with direct tarball fallback.
 Ollama models path: /root/.ollama/models -> /content/drive/MyDrive/NazLab/models/ollama
 Installed Ollama models:
 ...
