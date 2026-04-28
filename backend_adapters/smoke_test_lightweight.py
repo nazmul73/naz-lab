@@ -22,6 +22,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 COMPILE_TARGETS = [
+    "test_console/app.py",
     "master_dashboard/app.py",
     "text_workstation/app.py",
     "image_workstation/app.py",
