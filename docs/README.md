@@ -23,6 +23,9 @@ This folder contains project-level guidance for Naz Lab.
 - `real_content_package_trial_protocol.md` — Practical real content package trial protocol.
 - `real_trials_finalization_checklist.md` — Real package trial finalization checklist.
 - `toolflow_real_trial_protocol.md` — ToolFlow real package trial protocol, ready for user test.
+- `toolflow_dashboard_verification_runbook.md` — ToolFlow Dashboard Package Search verification runbook.
+- `real_trials_completion_prep.md` — Real Content Package Trials completion prep, without PASS marker.
+- `v1_5_backend_target_options.md` — v1.5 backend target decision prep.
 - `general_bangla_real_trial_pass.md` — General Bangla real content package trial pass marker.
 - `true_noir_real_trial_pass.md` — True Noir Tales real content package trial pass marker.
 - `backend_next_phase_freeze.md` — Backend next-phase freeze for v1 practical completion.
@@ -40,14 +43,14 @@ This folder contains project-level guidance for Naz Lab.
 Naz Lab v1 — Ready
 Video generation — Locked / Deferred after v1
 Frontend Input Test Console — PASS
-Dashboard Phase 2.16 — PASS
+Dashboard Phase 2.16.1 — HOTFIX READY FOR USER TEST
 Dashboard Final Packs integration — PASS
-Dashboard Package Search integration — PASS
-Dashboard Deep JSON Search — PASS
+Dashboard Package Search integration — HOTFIX READY
+Dashboard Deep JSON Search — HOTFIX READY
 Real Content Package Trial — ACTIVE
 General Bangla Real Trial — PASS
 True Noir Tales Real Trial — PASS
-ToolFlow Real Trial — READY FOR USER TEST
+ToolFlow Real Trial — SAVED, DASHBOARD VERIFICATION PENDING
 Backend Next Phase — FROZEN UNTIL REAL TRIALS COMPLETE
 ```
 
@@ -132,8 +135,11 @@ Backend next phase is frozen until:
 - Voice Workstation safer reference manager integration — done and tested.
 - Portrait Workstation safer reference manager integration — done and tested.
 - Dashboard Package Search download/export buttons — done and tested.
-- Dashboard Package Search deep JSON search — done.
-- Dashboard Phase 2.16 — done.
+- Dashboard Package Search deep JSON search — hotfix prepared in Phase 2.16.1.
+- Dashboard Phase 2.16.1 — hotfix committed, pending user Dashboard verification.
+- ToolFlow Dashboard verification runbook — prepared.
+- Real trials completion prep — prepared, not marked complete.
+- v1.5 backend target options — prepared for later decision.
 - Backend planning foundation — done.
 - Final integration checklist — done.
 - Backend Adapter Skeletons 1.0 — done as lightweight skeleton, no heavy generation tools installed.
@@ -153,7 +159,7 @@ Backend next phase is frozen until:
 - Real Content Package Trial Protocol — active.
 - General Bangla real content package trial — passed.
 - True Noir Tales real content package trial — passed.
-- ToolFlow real content package trial protocol — ready for user test.
+- ToolFlow real content package trial — saved, Dashboard verification pending.
 - Real trials finalization checklist — active.
 - Naz Lab v1 practical use marker — ready, pending ToolFlow final test.
 - Backend next phase freeze — active.
@@ -169,8 +175,8 @@ Backend next phase is frozen until:
 
 ## Recommended next work
 
-1. Run ToolFlow real content package trial.
-2. Verify ToolFlow package in Dashboard Phase 2.16 deep search.
+1. Run Dashboard Phase 2.16.1 hotfix in Colab.
+2. Verify ToolFlow package in Dashboard Package Search.
 3. Add ToolFlow pass marker after user verification.
 4. Add Real Content Package Trials complete marker after ToolFlow pass.
 5. Then choose one next backend target for v1.5.
