@@ -1,4 +1,4 @@
-"""Naz Lab Input Test Console Phase 1.0.
+"""Naz Lab Input Test Console Phase 1.1.
 
 Frontend-first testing console for Naz Lab v1 workflows.
 This app is for entering topic/input and testing package outputs without using
@@ -22,8 +22,8 @@ if str(REPO_ROOT) not in sys.path:
 from shared.drive_paths import BASE_PATH, OUTPUT_LOG_JSON, WORKSTATION_LINKS_JSON  # noqa: E402
 from shared.json_utils import append_output_log, safe_write_json, update_workstation_status  # noqa: E402
 
-PHASE = "1.0"
-PHASE_STATUS = "frontend-input-test-console"
+PHASE = "1.1"
+PHASE_STATUS = "frontend-input-test-console-clean-negative-prompt"
 
 TEST_PACKAGES = BASE_PATH / "test_console_packages"
 PROJECT_PACKAGES = BASE_PATH / "project_packages"
@@ -47,7 +47,8 @@ PLATFORMS = ["Facebook Reel", "Facebook Post", "Carousel", "Story", "Full Packag
 LANGUAGES = ["Bangla", "English", "Mixed Bangla-English"]
 
 BANGLA_RULE = "Natural spoken Bangla, Facebook-ready, voiceover-ready, simple, human, not stiff textbook Bangla. Light Rangpur/Nilphamari/North Bengal flavor when useful."
-SAFETY_RULE = "Adult-only when human subjects are used. No gore, no dead body, no visible wounds, no exposed violence, no unauthorized reference face/voice."
+SAFETY_RULE = "Use adult subjects when human subjects are used. Keep content safe and non-misleading. Do not use unauthorized reference face/voice."
+DEFAULT_NEGATIVE_PROMPT = "no fake logo, no watermark, no distorted face"
 VIDEO_DEFERRED = "Real video generation is deferred after Naz Lab v1. This console creates video plans/manifests only."
 
 
@@ -124,22 +125,21 @@ def build_image_package(project: str, topic: str, language: str, platform: str, 
     if project == "True Noir Tales":
         prompt = (
             "Realistic cinematic true crime noir visual in Bangladesh, adult subject only, emotionally tense, moody lighting, "
-            "dramatic shadows, human-centered composition, subtle storytelling detail, premium social media poster look, no gore, "
-            "no blood, no dead body, no visible wounds, no exposed violence. Topic: " + topic
+            "dramatic shadows, human-centered composition, subtle storytelling detail, premium social media poster look. Topic: " + topic
         )
     elif project == "ToolFlow":
         prompt = (
             "Clean modern productivity visual, adult creator using AI tools on laptop, premium SaaS aesthetic, organized workflow, "
-            "minimal UI feeling, trustworthy non-hype look, no fake logos, no misleading UI. Topic: " + topic
+            "minimal UI feeling, trustworthy non-hype look. Topic: " + topic
         )
     else:
         prompt = (
             "Natural Bangladeshi social content visual, adult creator or small business owner, realistic cinematic photography, "
-            "Facebook-ready composition, culturally grounded Bangladesh setting, warm practical mood, no fake logos, no misleading elements. Topic: " + topic
+            "Facebook-ready composition, culturally grounded Bangladesh setting, warm practical mood. Topic: " + topic
         )
     return {
         "positive_prompt": prompt,
-        "negative_prompt": "no gore, no dead body, no visible wounds, no exposed violence, no fake logo, no watermark, no distorted face, no unauthorized reference face",
+        "negative_prompt": DEFAULT_NEGATIVE_PROMPT,
         "format": "1:1 square, 4:5 post, or 9:16 reel cover",
         "platform": platform,
         "language": language,
@@ -169,7 +169,7 @@ def build_portrait_package(topic: str, direction: str) -> dict[str, Any]:
     return {
         "portrait_type": "Generic professional portrait",
         "positive_prompt": "Realistic professional Bangladeshi adult creator portrait, clean social media profile image, natural expression, respectful, culturally grounded, premium but realistic.",
-        "negative_prompt": "no gore, no visible wounds, no distorted face, no misleading identity claim, no unauthorized face reference, no watermark",
+        "negative_prompt": DEFAULT_NEGATIVE_PROMPT,
         "reference_image_path": "",
         "reference_image_authorized": False,
         "no_misleading_identity_claim": True,
@@ -203,7 +203,7 @@ def build_final_pack(project: str, topic: str, language: str, platform: str, aud
     voice_pkg = build_voice_package(topic, language, direction)
     video_pkg = build_video_plan(topic, platform, direction)
     return {
-        "phase": "Naz Lab Input Test Console 1.0",
+        "phase": "Naz Lab Input Test Console 1.1",
         "status": "frontend_test_ready",
         "created_at": datetime.now().isoformat(timespec="seconds"),
         "project": project,
@@ -399,7 +399,7 @@ def render_launch() -> None:
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Input Test Console", page_icon="🧪", layout="wide")
     st.title("🧪 Naz Lab Input Test Console")
-    st.caption("Phase 1.0 — frontend input testing for Naz Lab v1 workflows")
+    st.caption("Phase 1.1 — frontend input testing for Naz Lab v1 workflows")
     ensure_dirs()
     update_workstation_status(
         WORKSTATION_LINKS_JSON,
