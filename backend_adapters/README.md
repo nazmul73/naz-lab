@@ -19,15 +19,20 @@ The current backend adapter layer is only for:
 ## Current files
 
 - `scan_backend_queues.py` — scans package/job JSON folders and prints a validation report.
+- `generic_tts_adapter.py` — validates a voice package and prints a future generic TTS execution plan.
+- `image_adapter.py` — validates an image package/job and prints a future image generation plan.
+- `video_adapter.py` — validates a video package and prints a future video/reel execution plan.
+- `portrait_adapter.py` — validates a portrait package and prints a future portrait backend execution plan.
 
 ## Shared helper modules
 
 - `shared/backend_schema.py` — backend status constants, kind inference, and default package shell.
 - `shared/backend_validation.py` — required fields, status, output path, and reference policy validation.
 - `shared/backend_queue.py` — scans backend queue/package folders.
+- `shared/backend_status.py` — safely marks package backend status with event history.
 - `shared/reference_asset_policy.py` — reference voice/image policy constants.
 
-## Run command
+## Run commands
 
 From repo root:
 
@@ -41,17 +46,47 @@ Expected result:
 A JSON report showing total packages, ready packages, blocked packages, warnings, and per-folder validation results.
 ```
 
+Validate a future voice/TTS package:
+
+```bash
+python backend_adapters/generic_tts_adapter.py /content/drive/MyDrive/NazLab/voice_packages/example.json
+```
+
+Validate a future image package/job:
+
+```bash
+python backend_adapters/image_adapter.py /content/drive/MyDrive/NazLab/image_jobs/example.json
+```
+
+Validate a future video package:
+
+```bash
+python backend_adapters/video_adapter.py /content/drive/MyDrive/NazLab/video_packages/example.json
+```
+
+Validate a future portrait package:
+
+```bash
+python backend_adapters/portrait_adapter.py /content/drive/MyDrive/NazLab/portrait_packages/example.json
+```
+
 ## Backend adapter roadmap
 
-Recommended order:
+Completed in Skeletons 1.0:
 
-1. Keep lightweight scanner stable.
-2. Add Dashboard backend status panel.
-3. Add generic backend package status writer.
-4. Add generic TTS adapter skeleton without heavy model install.
-5. Add image adapter skeleton without heavy model install.
-6. Add video and portrait adapter planning stubs.
-7. Add real backend runbooks only when selected for testing.
+1. Lightweight scanner.
+2. Dashboard backend status panel.
+3. Generic backend package status writer.
+4. Generic TTS adapter skeleton without heavy model install.
+5. Image adapter skeleton without heavy model install.
+6. Video and portrait adapter planning stubs.
+
+Recommended next:
+
+1. Add backend package status writer CLI.
+2. Add backend adapter package templates.
+3. Add backend runbooks only when a real backend is selected for testing.
+4. Start with the safest real backend: generic TTS or image prompt-to-output adapter.
 
 ## Safety requirement
 
