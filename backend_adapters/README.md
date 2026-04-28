@@ -17,10 +17,12 @@ The current backend adapter layer is only for:
 - future adapter planning
 - package backend status marking
 - reusable backend package templates
+- template-based backend package creation
 
 ## Current files
 
 - `scan_backend_queues.py` — scans package/job JSON folders and prints a validation report.
+- `create_backend_package.py` — creates a backend package JSON from a reusable template.
 - `mark_backend_status.py` — safely marks a package JSON as `ready_for_backend`, `blocked`, `failed`, `completed`, etc.
 - `generic_tts_adapter.py` — validates a voice package and prints a future generic TTS execution plan.
 - `image_adapter.py` — validates an image package/job and prints a future image generation plan.
@@ -64,10 +66,22 @@ Expected result:
 A JSON report showing total packages, ready packages, blocked packages, warnings, and per-folder validation results.
 ```
 
+Create a backend package from template:
+
+```bash
+python backend_adapters/create_backend_package.py voice --project "General" --title "bangla voice test"
+```
+
+Expected result:
+
+```text
+A JSON response showing ok=true and the created package path inside the relevant Drive job folder.
+```
+
 Mark a package ready for backend:
 
 ```bash
-python backend_adapters/mark_backend_status.py /content/drive/MyDrive/NazLab/voice_packages/example.json ready_for_backend "Ready for generic TTS backend" --allow-any-transition
+python backend_adapters/mark_backend_status.py /content/drive/MyDrive/NazLab/voice_jobs/example.json ready_for_backend "Ready for generic TTS backend" --allow-any-transition
 ```
 
 Expected result:
@@ -79,7 +93,7 @@ A small JSON response showing ok=true, package path, backend_status, and backend
 Validate a future voice/TTS package:
 
 ```bash
-python backend_adapters/generic_tts_adapter.py /content/drive/MyDrive/NazLab/voice_packages/example.json
+python backend_adapters/generic_tts_adapter.py /content/drive/MyDrive/NazLab/voice_jobs/example.json
 ```
 
 Validate a future image package/job:
@@ -91,13 +105,13 @@ python backend_adapters/image_adapter.py /content/drive/MyDrive/NazLab/image_job
 Validate a future video package:
 
 ```bash
-python backend_adapters/video_adapter.py /content/drive/MyDrive/NazLab/video_packages/example.json
+python backend_adapters/video_adapter.py /content/drive/MyDrive/NazLab/video_jobs/example.json
 ```
 
 Validate a future portrait package:
 
 ```bash
-python backend_adapters/portrait_adapter.py /content/drive/MyDrive/NazLab/portrait_packages/example.json
+python backend_adapters/portrait_adapter.py /content/drive/MyDrive/NazLab/face_jobs/example.json
 ```
 
 ## Backend adapter roadmap
@@ -112,11 +126,12 @@ Completed in Skeletons 1.0:
 6. Image adapter skeleton without heavy model install.
 7. Video and portrait adapter planning stubs.
 8. Backend package templates.
+9. Backend template creator/helper.
 
 Recommended next:
 
-1. Add backend template copier/helper.
-2. Add backend runbooks only when a real backend is selected for testing.
+1. Add backend runbook docs for skeleton commands.
+2. Add real backend runbooks only when a real backend is selected for testing.
 3. Start with the safest real backend: generic TTS or image prompt-to-output adapter.
 
 ## Safety requirement
