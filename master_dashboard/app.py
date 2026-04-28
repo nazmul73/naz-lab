@@ -1,4 +1,4 @@
-"""Naz Lab Master Control Dashboard Phase 2.15 input console aware."""
+"""Naz Lab Master Control Dashboard Phase 2.16 deep package search."""
 
 from __future__ import annotations
 
@@ -31,19 +31,17 @@ from shared.drive_paths import (  # noqa: E402
 )
 from shared.json_utils import safe_read_json, update_workstation_status  # noqa: E402
 
-PHASE = "2.15"
-PHASE_STATUS = "stable-input-console-aware"
+PHASE = "2.16"
+PHASE_STATUS = "stable-deep-package-search"
 
 VOICE_OUTPUTS = BASE_PATH / "voice_outputs"
 VOICE_PACKAGES = BASE_PATH / "voice_packages"
-VOICE_REFERENCES = BASE_PATH / "voice_references"
 VOICE_PROFILE_PACKAGES = BASE_PATH / "voice_profile_packages"
 AUDIO_OUTPUTS = BASE_PATH / "audio_outputs"
 VIDEO_PACKAGES = BASE_PATH / "video_packages"
 VIDEO_STORYBOARDS = BASE_PATH / "video_storyboards"
 PORTRAIT_PACKAGES = BASE_PATH / "portrait_packages"
 PORTRAIT_OUTPUTS = BASE_PATH / "portrait_outputs"
-PORTRAIT_REFERENCES = BASE_PATH / "portrait_references"
 PROJECT_PACKAGES = BASE_PATH / "project_packages"
 PROJECT_WORKFLOWS = BASE_PATH / "project_workflows"
 FINAL_REEL_PACKS = BASE_PATH / "final_reel_packs"
@@ -53,18 +51,15 @@ LANGUAGE_REQUIREMENT_BN = "Naz Lab default হবে Bangla-first। বেশ�
 LANGUAGE_REQUIREMENT_EN = "Naz Lab is Bangla-first by default. English remains available for selected projects such as True Noir Tales and ToolFlow."
 
 BANGLA_STYLE_REQUIREMENTS = {
-    "Global priority": "Bangla first, English second, other languages optional.",
     "Core Bangla": "স্বাভাবিক, সহজ, মুখে বলার মতো, ready-to-use বাংলা।",
-    "Netizen Bangla": "Facebook comment/post/reel audience-এর মতো natural online tone।",
-    "Voiceover Bangla": "মুখে পড়লে যেন কাঠখোট্টা না লাগে; short sentence, clear pacing।",
-    "Primary regional Bangla": "রংপুরিয়া / উত্তরবঙ্গ / নীলফামারী tone হবে default regional flavor।",
-    "English exceptions": "True Noir Tales and ToolFlow can stay English-first when selected.",
+    "Voiceover Bangla": "short sentence, clear pacing, not stiff textbook Bangla.",
+    "Primary regional Bangla": "Rangpur/Nilphamari/North Bengal flavor when useful.",
 }
 
 PROJECT_AUTOMATION_STATUS = {
-    "True Noir Tales": "polished one-topic-to-full-package automation",
-    "ToolFlow": "polished one-topic-to-full-package automation",
-    "General Bangla": "polished Bangla-first one-topic-to-full-package automation",
+    "General Bangla": "real content package trial passed",
+    "True Noir Tales": "real content package trial in progress",
+    "ToolFlow": "real content package trial pending",
     "Input Test Console": "frontend practical testing layer passed",
 }
 
@@ -77,7 +72,6 @@ FOLDERS = {
     "Image outputs": IMAGE_OUTPUTS,
     "Voice outputs": VOICE_OUTPUTS,
     "Voice packages": VOICE_PACKAGES,
-    "Voice reference audio": VOICE_REFERENCES,
     "Voice profile packages": VOICE_PROFILE_PACKAGES,
     "Audio outputs": AUDIO_OUTPUTS,
     "Video outputs": VIDEO_OUTPUTS,
@@ -85,7 +79,6 @@ FOLDERS = {
     "Video storyboards": VIDEO_STORYBOARDS,
     "Portrait packages": PORTRAIT_PACKAGES,
     "Portrait outputs": PORTRAIT_OUTPUTS,
-    "Portrait references": PORTRAIT_REFERENCES,
     "Project packages": PROJECT_PACKAGES,
     "Project workflows": PROJECT_WORKFLOWS,
     "Final reel packs": FINAL_REEL_PACKS,
@@ -106,7 +99,7 @@ PACKAGE_FOLDERS = {
 WORKSTATIONS = [
     {"name": "Input Test Console", "phase": "1.2 stable", "key": "test_console", "folder": TEST_CONSOLE_PACKAGES, "port": "8508"},
     {"name": "Text Workstation", "phase": "1.8 stable", "key": "text_workstation", "folder": TEXT_OUTPUTS, "port": "8501"},
-    {"name": "Master Dashboard", "phase": "2.15 stable", "key": "master_dashboard", "folder": BASE_PATH, "port": "8502"},
+    {"name": "Master Dashboard", "phase": "2.16 stable", "key": "master_dashboard", "folder": BASE_PATH, "port": "8502"},
     {"name": "Image Workstation", "phase": "3.x stable", "key": "image_workstation", "folder": IMAGE_OUTPUTS, "port": "8503"},
     {"name": "Voice Workstation", "phase": "4.5 safe reference manager", "key": "voice_workstation", "folder": VOICE_OUTPUTS, "port": "8504"},
     {"name": "Video Workstation", "phase": "5.3 stable", "key": "video_workstation", "folder": VIDEO_OUTPUTS, "port": "8505"},
@@ -123,6 +116,22 @@ def read_json(path: Path, default: Any) -> Any:
             return json.loads(path.read_text(encoding="utf-8"))
         except Exception:
             return default
+
+
+def safe_json_text(data: Any) -> str:
+    try:
+        return json.dumps(data, ensure_ascii=False, indent=2)
+    except Exception:
+        return str(data)
+
+
+def deep_text(value: Any) -> str:
+    """Flatten nested package JSON into searchable text."""
+    if isinstance(value, dict):
+        return " ".join([str(k) + " " + deep_text(v) for k, v in value.items()])
+    if isinstance(value, list):
+        return " ".join(deep_text(v) for v in value)
+    return str(value)
 
 
 def count_files(folder: Path, pattern: str = "*") -> int:
@@ -142,6 +151,11 @@ def status_label(folder: Path) -> str:
     return "OK" if folder.exists() and folder.is_dir() else "Missing"
 
 
+def workstation_data() -> dict[str, Any]:
+    data = read_json(WORKSTATION_LINKS_JSON, {})
+    return data if isinstance(data, dict) else {}
+
+
 def output_log_entries() -> list[dict[str, Any]]:
     data = read_json(OUTPUT_LOG_JSON, {"logs": []})
     if isinstance(data, dict) and isinstance(data.get("logs"), list):
@@ -151,29 +165,31 @@ def output_log_entries() -> list[dict[str, Any]]:
     return []
 
 
-def workstation_data() -> dict[str, Any]:
-    data = read_json(WORKSTATION_LINKS_JSON, {})
-    return data if isinstance(data, dict) else {}
-
-
 def package_summary(path: Path) -> dict[str, Any]:
     data = read_json(path, {})
-    topic = ""
-    if isinstance(data, dict):
-        topic = str(data.get("topic", data.get("prompt", data.get("title", ""))))
+    text_blob = deep_text(data) if isinstance(data, (dict, list)) else ""
     project = ""
+    topic = ""
+    status = "unknown"
+    platform = ""
+    created = ""
     if isinstance(data, dict):
         project = str(data.get("project", data.get("project_preset", data.get("visual_preset", ""))))
+        topic = str(data.get("topic", data.get("prompt", data.get("title", ""))))
+        status = str(data.get("backend_status", data.get("status", "unknown")))
+        platform = str(data.get("platform", data.get("content_type", data.get("portrait_type", ""))))
+        created = str(data.get("created_at", ""))
     return {
         "File": path.name,
         "Folder": path.parent.name,
         "Project": project,
-        "Status": data.get("backend_status", data.get("status", "unknown")) if isinstance(data, dict) else "unknown",
-        "Platform": data.get("platform", data.get("content_type", data.get("portrait_type", ""))) if isinstance(data, dict) else "",
+        "Status": status,
+        "Platform": platform,
         "Topic": topic[:140],
-        "Created": data.get("created_at", "") if isinstance(data, dict) else "",
+        "Created": created,
         "Modified": datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
         "Path": str(path),
+        "SearchText": f"{path.name} {path.parent.name} {path} {project} {status} {platform} {topic} {text_blob}",
     }
 
 
@@ -181,19 +197,24 @@ def load_package_rows(folder: Path, limit: int) -> list[dict[str, Any]]:
     return [package_summary(path) for path in latest_files(folder, limit=limit, pattern="*.json")]
 
 
+def display_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [{k: v for k, v in row.items() if k != "SearchText"} for row in rows]
+
+
 def rows_to_csv(rows: list[dict[str, Any]]) -> str:
-    if not rows:
+    clean = display_rows(rows)
+    if not clean:
         return ""
     output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=list(rows[0].keys()))
+    writer = csv.DictWriter(output, fieldnames=list(clean[0].keys()))
     writer.writeheader()
-    writer.writerows(rows)
+    writer.writerows(clean)
     return output.getvalue()
 
 
 def rows_to_markdown(rows: list[dict[str, Any]]) -> str:
     lines = ["# Naz Lab Package Search Report", "", f"Generated: {datetime.now().isoformat(timespec='seconds')}", ""]
-    for index, row in enumerate(rows, start=1):
+    for index, row in enumerate(display_rows(rows), start=1):
         lines.extend([
             f"## {index}. {row.get('File', '')}",
             f"- Folder: {row.get('Folder', '')}",
@@ -217,7 +238,7 @@ def package_to_markdown(path: Path, data: Any) -> str:
         for key in priority_keys:
             if key in data:
                 lines.append(f"- {key}: {data.get(key)}")
-        lines.extend(["", "## Full JSON", "", "```json", json.dumps(data, ensure_ascii=False, indent=2), "```"])
+        lines.extend(["", "## Full JSON", "", "```json", safe_json_text(data), "```"])
     else:
         lines.extend(["## Content", "", str(data)])
     return "\n".join(lines)
@@ -253,9 +274,8 @@ def render_status(language: str) -> None:
     c3.metric("Drive base", status_label(BASE_PATH))
     c4.metric("Active workstations", str(len(WORKSTATIONS)))
     c5.metric("Output log entries", len(logs))
-    st.success("Master Dashboard status: stable for Phase 2.15 with Input Test Console awareness")
+    st.success("Master Dashboard status: stable for Phase 2.16 with deep package search")
     st.info(LANGUAGE_REQUIREMENT_BN if language == "Bangla" else LANGUAGE_REQUIREMENT_EN)
-
     rows = []
     for item in WORKSTATIONS:
         data = links.get(item["key"], {})
@@ -275,11 +295,8 @@ def render_status(language: str) -> None:
     st.json(PROJECT_AUTOMATION_STATUS)
     st.markdown("### Current readiness")
     st.write({
-        "current_stack": "Input Test Console + Text + Dashboard + Image + Voice + Video planning + Portrait + Project Workflow + Backend placeholders + Final Packs",
-        "input_test_console": "frontend practical testing layer passed",
-        "package_search_export": "JSON + CSV + Markdown + selected package export ready",
-        "backend_status_panel": "lightweight scan panel ready",
-        "final_reel_packs": "JSON/Markdown preview and download ready",
+        "current_stack": "Input Test Console + Dashboard + Text/Image/Voice/Video planning/Portrait + Project Workflow",
+        "package_search": "deep search across full nested JSON content",
         "video_generation": "deferred after v1",
         "status": "ready",
     })
@@ -342,7 +359,7 @@ def render_jobs() -> None:
         rows = load_package_rows(folder, 30)
         st.metric(f"{label} count", len(rows))
         if rows:
-            st.dataframe(rows, use_container_width=True, hide_index=True)
+            st.dataframe(display_rows(rows), use_container_width=True, hide_index=True)
         else:
             st.info(f"No {label.lower()} yet.")
 
@@ -357,14 +374,13 @@ def render_backend_status() -> None:
     c2.metric("Ready", summary.get("ready", 0))
     c3.metric("Blocked", summary.get("blocked", 0))
     c4.metric("Warning only", summary.get("warning_only", 0))
-    st.info("Backend adapters are lightweight. Heavy tools such as XTTS, Fooocus, LivePortrait, FaceFusion, and video models are not run from this panel.")
+    st.info("Backend adapters are lightweight. Heavy tools are not run from this panel.")
     rows = flatten_backend_rows(report)
     if rows:
         st.dataframe(rows, use_container_width=True, hide_index=True)
     else:
         st.info("No backend package/job JSON files found yet.")
-    report_json = json.dumps(report, ensure_ascii=False, indent=2)
-    st.download_button("Download backend scan JSON", data=report_json, file_name="naz_lab_backend_scan_report.json", mime="application/json")
+    st.download_button("Download backend scan JSON", data=safe_json_text(report), file_name="naz_lab_backend_scan_report.json", mime="application/json")
     with st.expander("Raw backend scan report", expanded=False):
         st.json(report)
 
@@ -378,24 +394,21 @@ def render_final_packs() -> None:
     st.metric("Final pack JSON files", len(json_files))
     st.metric("Final pack Markdown files", len(md_files))
     if not json_files:
-        st.info("No final reel packs found yet. Run final_reel_pack_assembler.py first or save a Final Reel Pack Manifest from Input Test Console.")
+        st.info("No final reel packs found yet.")
         return
-
     rows = [package_summary(path) for path in json_files]
-    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.dataframe(display_rows(rows), use_container_width=True, hide_index=True)
     selected_path = st.selectbox("Open final reel pack", [str(path) for path in json_files])
     selected = Path(selected_path)
     data = read_json(selected, {})
-    json_text = json.dumps(data, ensure_ascii=False, indent=2)
+    json_text = safe_json_text(data)
     markdown_path = md_files.get(selected.stem)
     markdown_text = markdown_path.read_text(encoding="utf-8", errors="ignore") if markdown_path and markdown_path.exists() else package_to_markdown(selected, data)
-
     c1, c2 = st.columns(2)
     with c1:
         st.download_button("Download final pack JSON", data=json_text, file_name=selected.name, mime="application/json")
     with c2:
         st.download_button("Download final pack Markdown", data=markdown_text, file_name=f"{selected.stem}.md", mime="text/markdown")
-
     st.markdown("### Pack preview")
     if isinstance(data, dict):
         pc1, pc2, pc3, pc4 = st.columns(4)
@@ -403,50 +416,43 @@ def render_final_packs() -> None:
         pc2.metric("Images", len(data.get("image_paths", [])))
         pc3.metric("Warnings", len(data.get("warnings", [])))
         pc4.metric("Sources", len(data.get("source_packages", [])))
-        st.write({"audio_path": data.get("audio_path", ""), "video_manifest_path": data.get("video_manifest_path", "")})
-        warnings = data.get("warnings", [])
-        if warnings:
-            st.warning("Warnings: " + "; ".join(str(item) for item in warnings))
-        else:
-            st.success("No warnings in this final reel pack.")
     st.text_area("Copy final pack JSON", json_text, height=360)
     st.text_area("Copy final pack Markdown", markdown_text, height=300)
 
 
 def render_package_search() -> None:
     st.header("Package search")
-    st.caption("Search saved JSON packages across project, image, voice, video, portrait, final pack, and test console folders.")
+    st.caption("Deep search: filename, path, summary fields, and full nested JSON content are searchable.")
     c1, c2, c3, c4 = st.columns(4)
     folder_label = c1.selectbox("Folder", ["All package folders"] + list(PACKAGE_FOLDERS.keys()))
     project_filter = c2.text_input("Project contains", value="")
     status_filter = c3.text_input("Status contains", value="")
-    limit = c4.number_input("Latest files per folder", min_value=5, max_value=100, value=30, step=5)
-    keyword = st.text_input("Keyword in topic/file/path", value="")
-
+    limit = c4.number_input("Latest files per folder", min_value=5, max_value=500, value=100, step=25)
+    keyword = st.text_input("Keyword anywhere in package JSON/file/path", value="")
     folders = PACKAGE_FOLDERS.values() if folder_label == "All package folders" else [PACKAGE_FOLDERS[folder_label]]
     rows: list[dict[str, Any]] = []
     for folder in folders:
         rows.extend(load_package_rows(folder, int(limit)))
 
     def keep(row: dict[str, Any]) -> bool:
-        if project_filter and project_filter.lower() not in str(row.get("Project", "")).lower():
+        search_text = str(row.get("SearchText", "")).lower()
+        if project_filter and project_filter.lower() not in search_text:
             return False
         if status_filter and status_filter.lower() not in str(row.get("Status", "")).lower():
             return False
-        if keyword:
-            haystack = " ".join(str(row.get(key, "")) for key in ["File", "Folder", "Project", "Status", "Platform", "Topic", "Path"])
-            if keyword.lower() not in haystack.lower():
-                return False
+        if keyword and keyword.lower() not in search_text:
+            return False
         return True
 
     rows = sorted([row for row in rows if keep(row)], key=lambda item: item.get("Modified", ""), reverse=True)
     st.metric("Matching packages", len(rows))
     if not rows:
-        st.info("No matching packages found.")
+        st.info("No matching packages found. Try increasing latest files limit or clearing filters.")
         return
-    st.dataframe(rows, use_container_width=True, hide_index=True)
-    report_payload = {"generated_at": datetime.now().isoformat(timespec="seconds"), "filters": {"folder": folder_label, "project": project_filter, "status": status_filter, "keyword": keyword}, "matches": rows}
-    report_json = json.dumps(report_payload, ensure_ascii=False, indent=2)
+    visible_rows = display_rows(rows)
+    st.dataframe(visible_rows, use_container_width=True, hide_index=True)
+    report_payload = {"generated_at": datetime.now().isoformat(timespec="seconds"), "filters": {"folder": folder_label, "project": project_filter, "status": status_filter, "keyword": keyword}, "matches": visible_rows}
+    report_json = safe_json_text(report_payload)
     report_csv = rows_to_csv(rows)
     report_md = rows_to_markdown(rows)
     export_cols = st.columns(3)
@@ -456,11 +462,10 @@ def render_package_search() -> None:
         st.download_button("Download report CSV", data=report_csv, file_name="naz_lab_package_search_report.csv", mime="text/csv")
     with export_cols[2]:
         st.download_button("Download report Markdown", data=report_md, file_name="naz_lab_package_search_report.md", mime="text/markdown")
-
     selected_path = st.selectbox("Open package JSON", [row["Path"] for row in rows])
     selected = Path(selected_path)
     data = read_json(selected, {})
-    package_json = json.dumps(data, ensure_ascii=False, indent=2)
+    package_json = safe_json_text(data)
     package_md = package_to_markdown(selected, data)
     package_txt = f"Naz Lab Package Export\nSource: {selected}\nExported: {datetime.now().isoformat(timespec='seconds')}\n\n{package_json}"
     st.markdown(f"### Preview: `{selected.name}`")
@@ -479,11 +484,8 @@ def render_package_search() -> None:
 def render_launch() -> None:
     st.header("Launch instructions")
     st.write({"Input Test Console": "8508", "Text Workstation": "8501", "Master Dashboard": "8502", "Image Workstation": "8503", "Voice Workstation": "8504", "Video Workstation": "8505", "Portrait Workstation": "8506", "Project Workflow Workstation": "8507"})
-    st.markdown("Recommended: use `launchers/all_in_one_colab_launcher.md` and set `WORKSTATION` to the app you want.")
     st.code('WORKSTATION="test"  # Input Test Console', language="bash")
     st.code('WORKSTATION="dashboard"  # Master Dashboard', language="bash")
-    st.markdown("When Cloudflare is unreliable, use the Colab proxy launcher:")
-    st.code("launchers/input_test_console_colab_proxy.md", language="text")
     st.code("streamlit run master_dashboard/app.py --server.port 8502 --server.address 0.0.0.0", language="bash")
 
 
@@ -492,28 +494,22 @@ def render_roadmap(language: str) -> None:
     st.markdown("""
 1. Phase 0 Foundation — complete  
 2. Phase 1 Text Workstation — stable  
-3. Phase 2 Master Dashboard — stable with package search/export/backend status/final packs and Input Test Console awareness  
+3. Phase 2 Master Dashboard — stable with deep package search  
 4. Phase 3 Image Workstation — stable  
 5. Phase 4 Voice Workstation — safer reference manager active  
 6. Phase 5 Video Workstation — stable planning/manifest only  
 7. Phase 6 Portrait Workstation — safer reference manager active  
-8. Phase 7 All-in-one Launcher — ready  
-9. Phase 8 True Noir Tales / ToolFlow workflow docs — ready  
-10. Phase 9 Bangla Quality Engine — active  
-11. Phase 10 Project Workflow Workstation — stable and polished  
-12. Phase 11 Reference Asset Policy — foundation ready  
-13. Backend Adapter Skeletons 1.0 — lightweight schema/scanner active  
-14. Generic TTS + Image placeholder + Video placeholder + Final Pack Assembly — active  
-15. Input Test Console practical frontend testing — passed
+8. Input Test Console practical frontend testing — passed  
+9. Real content package trials — active
 """)
     st.markdown("### Project automation")
     st.json(PROJECT_AUTOMATION_STATUS)
     if language == "Bangla":
         st.markdown("""
 পরের কাজের priority:
-- বাস্তব কনটেন্ট প্যাকেজ ট্রায়াল
+- True Noir Tales trial verify
+- ToolFlow real package trial
 - Bangla quality polish যেখানে দরকার
-- real image backend runbook or FFmpeg assembly runbook later
 - video generation আলাদা session-এ
 """)
 
@@ -521,13 +517,13 @@ def render_roadmap(language: str) -> None:
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Master Dashboard", page_icon="🧪", layout="wide")
     st.title("🧪 Naz Lab Master Control Dashboard")
-    st.caption("Phase 2.15 — input console aware, package search/export, backend status, and final reel pack preview/download")
+    st.caption("Phase 2.16 — deep package search, input console aware, backend status, and final pack preview/download")
     update_workstation_status(WORKSTATION_LINKS_JSON, "master_dashboard", {"status": PHASE_STATUS, "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")})
     with st.sidebar:
         st.header("Dashboard settings")
         language = st.radio("Dashboard language note", ["Bangla", "English"], index=0)
         st.caption("Naz Lab default: Bangla-first. Regional default: Rangpur/Nilphamari/North Bengal.")
-        st.success("Phase 2.15 stable")
+        st.success("Phase 2.16 stable")
     tabs = st.tabs(["Status", "Links", "Workstations", "Outputs", "Job Queue", "Backend Status", "Final Packs", "Package Search", "Launch", "Roadmap"])
     with tabs[0]:
         render_status(language)
