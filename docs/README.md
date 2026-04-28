@@ -21,6 +21,7 @@ This folder contains project-level guidance for Naz Lab.
 - `dashboard_2_15_input_console_pass.md` — Dashboard Phase 2.15 Input Test Console integration pass marker.
 - `real_content_package_trial_protocol.md` — Practical real content package trial protocol.
 - `general_bangla_real_trial_pass.md` — General Bangla real content package trial pass marker.
+- `true_noir_real_trial_pass.md` — True Noir Tales real content package trial pass marker.
 - `video_generation_deferred_roadmap.md` — Future v1.5/v2 roadmap for real video generation.
 - `dashboard_v1_readiness_note.md` — Dashboard Phase 2.14 interpretation for Naz Lab v1 final verification.
 - `../backend_adapters/README.md` — Backend Adapter Skeletons 1.0 overview and run commands.
@@ -147,6 +148,12 @@ General Bangla real trial pass marker lives in:
 docs/general_bangla_real_trial_pass.md
 ```
 
+True Noir Tales real trial pass marker lives in:
+
+```text
+docs/true_noir_real_trial_pass.md
+```
+
 Video generation deferred roadmap lives in:
 
 ```text
@@ -270,11 +277,13 @@ launchers/input_test_console_colab_proxy.md
 - Final reel pack assembler — done and tested by user.
 - Dashboard final reel pack tab — done and final-verified.
 - Dashboard Package Search — done and frontend-verified.
+- Dashboard Package Search deep JSON search — done.
 - Dashboard v1 readiness note — done.
 - Dashboard Phase 2.15 Input Console integration — done and verified.
 - Frontend Input Test Console — done and passed.
 - Real Content Package Trial Protocol — active.
 - General Bangla real content package trial — passed.
+- True Noir Tales real content package trial — passed.
 - One-cell Input Test Console launcher — done.
 - Colab proxy Input Test Console launcher — done.
 - Robust all-in-one Colab launcher — done.
@@ -290,16 +299,17 @@ launchers/input_test_console_colab_proxy.md
 Naz Lab v1 — Ready
 Video generation — Deferred after v1
 Frontend Input Test Console — PASS
-Dashboard Phase 2.15 — PASS
+Dashboard Phase 2.16 — PASS
 Dashboard Final Packs integration — PASS
 Dashboard Package Search integration — PASS
+Dashboard Deep JSON Search — PASS
 Real Content Package Trial — ACTIVE
 General Bangla Real Trial — PASS
+True Noir Tales Real Trial — PASS
 ```
 
 ## Recommended next work
 
-1. Run True Noir Tales real content package trial.
-2. Run ToolFlow real content package trial.
-3. Polish output quality where real use shows issues.
-4. Do real video generation later during separate work sessions.
+1. Run ToolFlow real content package trial.
+2. Polish output quality where real use shows issues.
+3. Do real video generation later during separate work sessions.
