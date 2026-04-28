@@ -13,6 +13,7 @@ This folder contains project-level guidance for Naz Lab.
 - `generic_tts_backend_runbook.md` — First real backend target runbook for safe generic TTS.
 - `image_prompt_backend_runbook.md` — Image prompt-to-output placeholder backend runbook.
 - `video_placeholder_backend_runbook.md` — Video placeholder backend runbook.
+- `final_reel_pack_assembly_runbook.md` — Final reel pack JSON/Markdown assembly runbook.
 - `../backend_adapters/README.md` — Backend Adapter Skeletons 1.0 overview and run commands.
 
 ## Key language rules
@@ -105,6 +106,12 @@ Video placeholder backend runbook lives in:
 docs/video_placeholder_backend_runbook.md
 ```
 
+Final reel pack assembly runbook lives in:
+
+```text
+docs/final_reel_pack_assembly_runbook.md
+```
+
 Backend adapter skeletons live in:
 
 ```text
@@ -126,6 +133,7 @@ shared/backend_status.py
 - Generic TTS backend must not perform voice cloning.
 - Image placeholder backend must not claim to create final AI artwork.
 - Video placeholder backend must not claim to create final rendered video.
+- Final reel pack assembler must not claim to render final MP4.
 
 ## Current build status
 
@@ -142,11 +150,13 @@ shared/backend_status.py
 - Image Prompt Backend Runbook 1.0 — done.
 - Image placeholder backend adapter — done and tested by user.
 - Video Placeholder Backend Runbook 1.0 — done.
-- Video placeholder backend adapter — done, needs Colab test.
+- Video placeholder backend adapter — done and tested by user.
+- Final Reel Pack Assembly Runbook 1.0 — done.
+- Final reel pack assembler — done, needs Colab test.
 
 ## Recommended next work
 
-1. Test video placeholder backend in Colab.
-2. If video placeholder passes, choose Final Reel Pack assembly planner or portrait placeholder backend.
+1. Test final reel pack assembler in Colab.
+2. If final reel pack assembly passes, add Dashboard final reel pack tab.
 3. Keep backend work one adapter at a time.
 4. Keep Bangla quality and reference asset policy aligned across all new backend work.
