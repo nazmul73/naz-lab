@@ -1,0 +1,13 @@
+{
+  "backend_phase": "Backend Adapter Skeletons 1.0",
+  "backend_kind": "image",
+  "backend_status": "draft",
+  "project_preset": "General",
+  "language": "Bangla",
+  "regional_tone": "Rangpur/Nilphamari",
+  "positive_prompt": "Realistic cinematic Bangladeshi social media image, adult subjects only, natural grounded environment.",
+  "negative_prompt": "no gore, no dead body, no visible wounds, no exposed violence, no watermark, no distorted face",
+  "output_format": "1:1 square",
+  "image_output_path": "/content/drive/MyDrive/NazLab/image_outputs/example.png",
+  "backend_events": []
+}
