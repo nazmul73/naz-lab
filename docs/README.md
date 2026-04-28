@@ -15,6 +15,7 @@ This folder contains project-level guidance for Naz Lab.
 - `video_placeholder_backend_runbook.md` — Video placeholder backend runbook.
 - `final_reel_pack_assembly_runbook.md` — Final reel pack JSON/Markdown assembly runbook.
 - `../backend_adapters/README.md` — Backend Adapter Skeletons 1.0 overview and run commands.
+- `../launchers/all_in_one_colab_launcher.md` — Robust one-click Colab launcher with Cloudflare public URL handling.
 
 ## Key language rules
 
@@ -123,6 +124,12 @@ shared/backend_queue.py
 shared/backend_status.py
 ```
 
+Robust Colab launcher lives in:
+
+```text
+launchers/all_in_one_colab_launcher.md
+```
+
 ## Safety reminders
 
 - Use adult-only subjects for true-crime/noir content.
@@ -152,11 +159,13 @@ shared/backend_status.py
 - Video Placeholder Backend Runbook 1.0 — done.
 - Video placeholder backend adapter — done and tested by user.
 - Final Reel Pack Assembly Runbook 1.0 — done.
-- Final reel pack assembler — done, needs Colab test.
+- Final reel pack assembler — done and tested by user.
+- Dashboard final reel pack tab — done.
+- Robust all-in-one Colab launcher — done.
 
 ## Recommended next work
 
-1. Test final reel pack assembler in Colab.
-2. If final reel pack assembly passes, add Dashboard final reel pack tab.
-3. Keep backend work one adapter at a time.
+1. Add final integration smoke-test command that checks Python compile/import for all lightweight backend adapters.
+2. Keep backend work one adapter at a time.
+3. Add real image backend runbook or FFmpeg assembly runbook only after final dashboard smoke test.
 4. Keep Bangla quality and reference asset policy aligned across all new backend work.
