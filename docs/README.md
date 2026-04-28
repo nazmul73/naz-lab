@@ -19,6 +19,7 @@ This folder contains project-level guidance for Naz Lab.
 - `naz_lab_v1_ready.md` — Naz Lab v1 ready marker after final verification.
 - `input_test_console_pass.md` — Input Test Console and Dashboard integration pass marker.
 - `dashboard_2_15_input_console_pass.md` — Dashboard Phase 2.15 Input Test Console integration pass marker.
+- `real_content_package_trial_protocol.md` — Practical real content package trial protocol.
 - `video_generation_deferred_roadmap.md` — Future v1.5/v2 roadmap for real video generation.
 - `dashboard_v1_readiness_note.md` — Dashboard Phase 2.14 interpretation for Naz Lab v1 final verification.
 - `../backend_adapters/README.md` — Backend Adapter Skeletons 1.0 overview and run commands.
@@ -131,6 +132,12 @@ Dashboard 2.15 Input Console pass marker lives in:
 
 ```text
 docs/dashboard_2_15_input_console_pass.md
+```
+
+Real content package trial protocol lives in:
+
+```text
+docs/real_content_package_trial_protocol.md
 ```
 
 Video generation deferred roadmap lives in:
@@ -259,6 +266,7 @@ launchers/input_test_console_colab_proxy.md
 - Dashboard v1 readiness note — done.
 - Dashboard Phase 2.15 Input Console integration — done and verified.
 - Frontend Input Test Console — done and passed.
+- Real Content Package Trial Protocol — active.
 - One-cell Input Test Console launcher — done.
 - Colab proxy Input Test Console launcher — done.
 - Robust all-in-one Colab launcher — done.
@@ -277,11 +285,13 @@ Frontend Input Test Console — PASS
 Dashboard Phase 2.15 — PASS
 Dashboard Final Packs integration — PASS
 Dashboard Package Search integration — PASS
+Real Content Package Trial — ACTIVE
 ```
 
 ## Recommended next work
 
-1. Use Input Test Console for real content package trials.
-2. Improve non-video frontend UX only if practical issues appear during use.
-3. Polish generated Bangla quality where needed.
-4. Do real video generation later during separate work sessions.
+1. Run General Bangla real content package trial.
+2. Review output quality in Input Test Console.
+3. Save the package and verify it in Dashboard Package Search.
+4. Polish generated Bangla quality where needed.
+5. Do real video generation later during separate work sessions.
