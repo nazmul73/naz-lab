@@ -15,6 +15,8 @@ This folder contains project-level guidance for Naz Lab.
 - `video_placeholder_backend_runbook.md` — Video placeholder backend runbook.
 - `final_reel_pack_assembly_runbook.md` — Final reel pack JSON/Markdown assembly runbook.
 - `final_verification_runbook.md` — Final lightweight verification runbook for smoke test, final pack, and Dashboard Phase 2.14.
+- `naz_lab_v1_finalization_plan.md` — Naz Lab v1 finalization scope with real video generation deferred.
+- `video_generation_deferred_roadmap.md` — Future v1.5/v2 roadmap for real video generation.
 - `../backend_adapters/README.md` — Backend Adapter Skeletons 1.0 overview and run commands.
 - `../launchers/all_in_one_colab_launcher.md` — Robust one-click Colab launcher with Cloudflare public URL handling.
 
@@ -58,6 +60,28 @@ Reference policy constants live in:
 shared/reference_asset_policy.py
 ```
 
+## v1 finalization rule
+
+Naz Lab v1 finalizes the current Bangla-first content creation workflow without real video generation.
+
+Included in v1:
+
+- text/script/caption workflows
+- project workflow packages
+- image prompt/package workflows
+- generic non-cloning TTS audio path
+- portrait/reference safety workflows
+- video planning and placeholder manifest
+- final reel pack JSON/Markdown assembly
+- Dashboard preview/download/control center
+
+Deferred after v1:
+
+- real AI video generation
+- FFmpeg-rendered final MP4
+- image-to-video backend
+- GPU video runtime
+
 ## Backend planning rules
 
 Backend generation should stay separate from the Master Dashboard.
@@ -76,6 +100,18 @@ Backend planning lives in:
 
 ```text
 docs/backend_planning.md
+```
+
+Naz Lab v1 finalization plan lives in:
+
+```text
+docs/naz_lab_v1_finalization_plan.md
+```
+
+Video generation deferred roadmap lives in:
+
+```text
+docs/video_generation_deferred_roadmap.md
 ```
 
 Final integration checklist lives in:
@@ -148,6 +184,7 @@ launchers/all_in_one_colab_launcher.md
 - Image placeholder backend must not claim to create final AI artwork.
 - Video placeholder backend must not claim to create final rendered video.
 - Final reel pack assembler must not claim to render final MP4.
+- Real video generation is deferred until after Naz Lab v1 final verification passes.
 
 ## Current build status
 
@@ -171,10 +208,12 @@ launchers/all_in_one_colab_launcher.md
 - Robust all-in-one Colab launcher — done.
 - Lightweight integration smoke test — done.
 - Final verification runbook — done.
+- Naz Lab v1 finalization plan — done.
+- Video generation deferred roadmap — done.
 
 ## Recommended next work
 
-1. Run final verification runbook once in Colab.
-2. If final verification passes, start real image backend runbook or FFmpeg assembly runbook.
-3. Keep backend work one adapter at a time.
-4. Keep Bangla quality and reference asset policy aligned across all new backend work.
+1. Add Dashboard v1 readiness language if needed.
+2. Run final verification runbook once in Colab.
+3. If final verification passes, mark Naz Lab v1 ready.
+4. Do real video generation later during separate work sessions.
