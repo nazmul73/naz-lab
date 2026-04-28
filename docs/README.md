@@ -9,6 +9,7 @@ This folder contains project-level guidance for Naz Lab.
 - `reference_asset_policy.md` — Safe reference voice/face/portrait asset policy.
 - `backend_planning.md` — Backend planning foundation for future heavy generation tools and adapters.
 - `final_integration_checklist.md` — Final integration readiness checklist before backend adapter skeletons.
+- `../backend_adapters/README.md` — Backend Adapter Skeletons 1.0 overview and run command.
 
 ## Key language rules
 
@@ -76,6 +77,15 @@ Final integration checklist lives in:
 docs/final_integration_checklist.md
 ```
 
+Backend adapter skeletons live in:
+
+```text
+backend_adapters/
+shared/backend_schema.py
+shared/backend_validation.py
+shared/backend_queue.py
+```
+
 ## Safety reminders
 
 - Use adult-only subjects for true-crime/noir content.
@@ -91,11 +101,12 @@ docs/final_integration_checklist.md
 - Dashboard Package Search download/export buttons — done and tested.
 - Backend planning foundation — done.
 - Final integration checklist — done.
+- Backend Adapter Skeletons 1.0 — in progress / lightweight scanner added.
 
 ## Recommended next work
 
-1. Review final integration checklist.
-2. Add Backend Adapter Skeletons 1.0.
-3. Add shared backend schema/status helpers.
-4. Add generic backend queue scanner.
-5. Add Dashboard backend status panel when backend skeletons exist.
+1. Add Dashboard backend status panel.
+2. Add generic backend package status writer.
+3. Add generic TTS adapter skeleton without heavy model install.
+4. Add image adapter skeleton without heavy model install.
+5. Add video and portrait adapter planning stubs.
