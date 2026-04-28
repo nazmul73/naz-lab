@@ -10,6 +10,7 @@ This folder contains project-level guidance for Naz Lab.
 - `backend_planning.md` — Backend planning foundation for future heavy generation tools and adapters.
 - `final_integration_checklist.md` — Final integration readiness checklist before backend adapter skeletons.
 - `backend_adapter_skeleton_runbook.md` — Lightweight backend skeleton command runbook.
+- `generic_tts_backend_runbook.md` — First real backend target runbook for safe generic TTS.
 - `../backend_adapters/README.md` — Backend Adapter Skeletons 1.0 overview and run commands.
 
 ## Key language rules
@@ -84,6 +85,12 @@ Backend skeleton runbook lives in:
 docs/backend_adapter_skeleton_runbook.md
 ```
 
+Generic TTS backend runbook lives in:
+
+```text
+docs/generic_tts_backend_runbook.md
+```
+
 Backend adapter skeletons live in:
 
 ```text
@@ -102,6 +109,7 @@ shared/backend_status.py
 - Use Bangladeshi people and scenarios by default for general Naz Lab visuals.
 - Women should have no sindoor unless explicitly requested.
 - Reference face/voice workflows require user-provided or explicitly authorized reference assets.
+- Generic TTS backend must not perform voice cloning.
 
 ## Current build status
 
@@ -113,10 +121,12 @@ shared/backend_status.py
 - Backend Adapter Skeletons 1.0 — done as lightweight skeleton, no heavy generation tools installed.
 - Dashboard backend status panel — done.
 - Backend skeleton command runbook — done.
+- Generic TTS Backend Runbook 1.0 — done.
 
 ## Recommended next work
 
-1. Decide first real backend target: generic TTS or image prompt-to-output adapter.
-2. Add real backend runbook only for the selected target.
-3. Keep backend work one adapter at a time.
-4. Keep Bangla quality and reference asset policy aligned across all new backend work.
+1. Add generic TTS backend adapter implementation.
+2. Test generic TTS backend in Colab.
+3. If generic TTS passes, choose either TTS quality improvement or image prompt-to-output backend.
+4. Keep backend work one adapter at a time.
+5. Keep Bangla quality and reference asset policy aligned across all new backend work.
