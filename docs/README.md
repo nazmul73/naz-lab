@@ -17,6 +17,7 @@ This folder contains project-level guidance for Naz Lab.
 - `final_verification_runbook.md` — Final lightweight verification runbook for smoke test, final pack, and Dashboard Phase 2.14.
 - `naz_lab_v1_finalization_plan.md` — Naz Lab v1 finalization scope with real video generation deferred.
 - `video_generation_deferred_roadmap.md` — Future v1.5/v2 roadmap for real video generation.
+- `dashboard_v1_readiness_note.md` — Dashboard Phase 2.14 interpretation for Naz Lab v1 final verification.
 - `../backend_adapters/README.md` — Backend Adapter Skeletons 1.0 overview and run commands.
 - `../launchers/all_in_one_colab_launcher.md` — Robust one-click Colab launcher with Cloudflare public URL handling.
 
@@ -114,6 +115,12 @@ Video generation deferred roadmap lives in:
 docs/video_generation_deferred_roadmap.md
 ```
 
+Dashboard v1 readiness note lives in:
+
+```text
+docs/dashboard_v1_readiness_note.md
+```
+
 Final integration checklist lives in:
 
 ```text
@@ -184,6 +191,7 @@ launchers/all_in_one_colab_launcher.md
 - Image placeholder backend must not claim to create final AI artwork.
 - Video placeholder backend must not claim to create final rendered video.
 - Final reel pack assembler must not claim to render final MP4.
+- Dashboard v1 readiness does not include real video generation.
 - Real video generation is deferred until after Naz Lab v1 final verification passes.
 
 ## Current build status
@@ -205,6 +213,7 @@ launchers/all_in_one_colab_launcher.md
 - Final Reel Pack Assembly Runbook 1.0 — done.
 - Final reel pack assembler — done and tested by user.
 - Dashboard final reel pack tab — done.
+- Dashboard v1 readiness note — done.
 - Robust all-in-one Colab launcher — done.
 - Lightweight integration smoke test — done.
 - Final verification runbook — done.
@@ -213,7 +222,7 @@ launchers/all_in_one_colab_launcher.md
 
 ## Recommended next work
 
-1. Add Dashboard v1 readiness language if needed.
-2. Run final verification runbook once in Colab.
-3. If final verification passes, mark Naz Lab v1 ready.
-4. Do real video generation later during separate work sessions.
+1. Run final verification runbook once in Colab.
+2. If final verification passes, mark Naz Lab v1 ready.
+3. Do real video generation later during separate work sessions.
+4. Keep Bangla quality and reference asset policy aligned across all future work.
