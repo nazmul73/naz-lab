@@ -8,6 +8,7 @@ This folder contains project-level guidance for Naz Lab.
 - `voice_video_bangla_quality.md` — Bangla quality rules for Voice and Video workflows.
 - `reference_asset_policy.md` — Safe reference voice/face/portrait asset policy.
 - `backend_planning.md` — Backend planning foundation for future heavy generation tools and adapters.
+- `final_integration_checklist.md` — Final integration readiness checklist before backend adapter skeletons.
 
 ## Key language rules
 
@@ -69,6 +70,12 @@ Backend planning lives in:
 docs/backend_planning.md
 ```
 
+Final integration checklist lives in:
+
+```text
+docs/final_integration_checklist.md
+```
+
 ## Safety reminders
 
 - Use adult-only subjects for true-crime/noir content.
@@ -79,14 +86,16 @@ docs/backend_planning.md
 
 ## Current build status
 
-- Voice Workstation safer reference manager integration — done.
-- Portrait Workstation safer reference manager integration — done.
-- Dashboard Package Search download/export buttons — done.
+- Voice Workstation safer reference manager integration — done and tested.
+- Portrait Workstation safer reference manager integration — done and tested.
+- Dashboard Package Search download/export buttons — done and tested.
 - Backend planning foundation — done.
+- Final integration checklist — done.
 
 ## Recommended next work
 
-1. Test updated workstations in Colab.
-2. Fix any runtime/UI issue from the tests.
-3. Add backend adapter skeletons only after the planning doc is accepted.
-4. Run final integration polish/checklist.
+1. Review final integration checklist.
+2. Add Backend Adapter Skeletons 1.0.
+3. Add shared backend schema/status helpers.
+4. Add generic backend queue scanner.
+5. Add Dashboard backend status panel when backend skeletons exist.
