@@ -1,4 +1,4 @@
-"""Naz Lab Project Workflow Workstation Phase 10.2 stable.
+"""Naz Lab Project Workflow Workstation Phase 10.3 stable.
 
 Stable app for creating project-specific end-to-end package plans
 for True Noir Tales, ToolFlow, and General Bangla-first content.
@@ -21,8 +21,8 @@ if str(REPO_ROOT) not in sys.path:
 from shared.drive_paths import BASE_PATH, OUTPUT_LOG_JSON, WORKSTATION_LINKS_JSON  # noqa: E402
 from shared.json_utils import append_output_log, safe_read_json, safe_write_json, update_workstation_status  # noqa: E402
 
-PHASE = "10.2"
-PHASE_STATUS = "stable"
+PHASE = "10.3"
+PHASE_STATUS = "stable-input-ux-keys"
 PROJECT_PACKAGES = BASE_PATH / "project_packages"
 PROJECT_WORKFLOWS = BASE_PATH / "project_workflows"
 
@@ -291,7 +291,7 @@ def render_status() -> None:
     c2.metric("Status", PHASE_STATUS)
     c3.metric("Project packages", len(packages))
     c4.metric("Ready packages", ready)
-    st.success("Project Workflow Workstation status: stable for Phase 10")
+    st.success("Project Workflow Workstation status: stable for Phase 10.3")
     st.info("Creates full package plans from one topic. It does not generate media directly.")
     st.markdown("### Stable workflow")
     st.markdown("1. Pick project preset.  \n2. Choose language and platform.  \n3. Paste one topic/story/tool idea.  \n4. Review Script/Image/Voice/Video/Posting tabs.  \n5. Save project package JSON.")
@@ -304,8 +304,14 @@ def render_status() -> None:
         st.write({"project_packages": str(PROJECT_PACKAGES), "project_workflows": str(PROJECT_WORKFLOWS)})
 
 
-def render_package_sections(package: dict[str, Any]) -> None:
+def package_key(package: dict[str, Any], prefix: str) -> str:
+    base = f"{prefix}_{package.get('project_preset', 'project')}_{package.get('topic', package.get('created_at', 'package'))}"
+    return safe_name(base)[:120]
+
+
+def render_package_sections(package: dict[str, Any], key_prefix: str) -> None:
     body = package.get("package", {})
+    key_base = package_key(package, key_prefix)
     tabs = st.tabs(["Script/Post", "Image", "Voice", "Video", "Posting", "JSON"])
     with tabs[0]:
         st.json(body.get("script_package", body.get("main_post_package", body.get("text_package", {}))))
@@ -313,33 +319,34 @@ def render_package_sections(package: dict[str, Any]) -> None:
         st.json(body.get("image_package", {}))
         prompt = body.get("image_package", {}).get("prompt", "")
         if prompt:
-            st.text_area("Copy image prompt", prompt, height=160)
+            st.text_area("Copy image prompt", prompt, height=160, key=f"{key_base}_image_prompt")
     with tabs[2]:
         st.json(body.get("voice_package", {}))
         direction = body.get("voice_package", {}).get("direction", "")
         if direction:
-            st.text_area("Copy voice direction", direction, height=160)
+            st.text_area("Copy voice direction", direction, height=160, key=f"{key_base}_voice_direction")
     with tabs[3]:
         st.json(body.get("video_package", {}))
         direction = body.get("video_package", {}).get("direction", "")
         if direction:
-            st.text_area("Copy video direction", direction, height=160)
+            st.text_area("Copy video direction", direction, height=160, key=f"{key_base}_video_direction")
     with tabs[4]:
         st.json(body.get("posting_package", {}))
     with tabs[5]:
-        st.text_area("Copy-ready package JSON", to_pretty_json(package), height=420)
+        st.text_area("Copy-ready package JSON", to_pretty_json(package), height=420, key=f"{key_base}_package_json")
 
 
 def render_builder() -> None:
     st.header("Project workflow builder")
-    project = st.selectbox("Project", PROJECTS)
+    st.info("Input area is below. Fill one topic and the package preview will appear automatically.")
+    project = st.selectbox("Project", PROJECTS, key="builder_project")
     defaults = PROJECT_DEFAULTS[project]
-    language = st.selectbox("Language", LANGUAGES, index=LANGUAGES.index(defaults["language"]))
-    platform = st.selectbox("Platform", PLATFORMS)
-    status = st.selectbox("Package status", PACKAGE_STATUS, index=PACKAGE_STATUS.index("ready_for_production"))
-    audience = st.text_input("Target audience", value="Facebook audience")
-    topic = st.text_area("Topic / story / tool / idea", height=180, placeholder="Paste one topic, story idea, tool name, or workflow idea here.")
-    note = st.text_area("Custom direction", height=100, placeholder="Example: more suspense, more Bangla, more practical, shorter reel, etc.")
+    language = st.selectbox("Language", LANGUAGES, index=LANGUAGES.index(defaults["language"]), key="builder_language")
+    platform = st.selectbox("Platform", PLATFORMS, key="builder_platform")
+    status = st.selectbox("Package status", PACKAGE_STATUS, index=PACKAGE_STATUS.index("ready_for_production"), key="builder_status")
+    audience = st.text_input("Target audience", value="Facebook audience", key="builder_audience")
+    topic = st.text_area("Topic / story / tool / idea", height=180, placeholder="Paste one topic, story idea, tool name, or workflow idea here.", key="builder_topic")
+    note = st.text_area("Custom direction", height=100, placeholder="Example: more suspense, more Bangla, more practical, shorter reel, etc.", key="builder_note")
 
     if not topic.strip():
         st.warning("Add a topic to generate a package preview.")
@@ -347,8 +354,8 @@ def render_builder() -> None:
 
     package = build_package(project, topic, language, platform, audience, status, note)
     st.markdown("### Package preview")
-    render_package_sections(package)
-    if st.button("Save project package JSON"):
+    render_package_sections(package, key_prefix="builder_preview")
+    if st.button("Save project package JSON", key="save_project_package"):
         saved = save_package(package)
         st.success(f"Saved: {saved}")
 
@@ -359,16 +366,16 @@ def render_library() -> None:
     packages = list_json_files(PROJECT_PACKAGES)
     st.metric("Saved packages", len(packages))
     if packages:
-        selected = st.selectbox("Select package", [p.name for p in packages])
+        selected = st.selectbox("Select package", [p.name for p in packages], key="library_select_package")
         data = safe_read_json(PROJECT_PACKAGES / selected, {})
-        render_package_sections(data)
+        render_package_sections(data, key_prefix=f"library_{selected}")
     else:
         st.info("No project packages saved yet.")
 
 
 def render_launch() -> None:
     st.header("Launch notes")
-    st.markdown("Project Workflow Workstation Phase 10.2 is stable for one-topic-to-package planning.")
+    st.markdown("Project Workflow Workstation Phase 10.3 is stable for one-topic-to-package planning.")
     st.code("streamlit run project_workstation/app.py --server.port 8507 --server.address 0.0.0.0", language="bash")
     st.markdown("Recommended all-in-one launcher value:")
     st.code('WORKSTATION="project"', language="bash")
@@ -377,16 +384,20 @@ def render_launch() -> None:
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Project Workflow Workstation", page_icon="🧩", layout="wide")
     st.title("🧩 Naz Lab Project Workflow Workstation")
-    st.caption("Phase 10.2 stable — one topic to full project package plan.")
-    st.success("Project Workflow Workstation status: stable for Phase 10")
+    st.caption("Phase 10.3 stable — one topic to full project package plan.")
+    st.success("Project Workflow Workstation status: stable for Phase 10.3")
     st.info("Naz Lab is Bangla-first by default. True Noir Tales and ToolFlow can stay English-first project presets.")
     ensure_dirs()
     update_workstation_status(WORKSTATION_LINKS_JSON, "project_workstation", {"status": PHASE_STATUS, "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")})
     tabs = st.tabs(["Status", "Builder", "Library", "Launch"])
-    with tabs[0]: render_status()
-    with tabs[1]: render_builder()
-    with tabs[2]: render_library()
-    with tabs[3]: render_launch()
+    with tabs[0]:
+        render_status()
+    with tabs[1]:
+        render_builder()
+    with tabs[2]:
+        render_library()
+    with tabs[3]:
+        render_launch()
 
 
 if __name__ == "__main__":
