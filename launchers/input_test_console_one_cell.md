@@ -10,7 +10,9 @@ This one cell automatically:
 - stops old Streamlit/Cloudflare processes
 - starts the Input Test Console on port 8508
 - creates a Cloudflare public URL
-- prints the openable link
+- waits until the Cloudflare URL is reachable
+- retries Cloudflare tunnel creation if the first URL is not reachable
+- prints the verified openable link
 
 ## Colab cell
 
@@ -31,6 +33,37 @@ print_section() {
   echo "============================================================"
   echo "$1"
   echo "============================================================"
+}
+
+wait_for_public_url() {
+  local url="$1"
+  local ok=""
+  for attempt in $(seq 1 30); do
+    if curl -k -L -fsS --max-time 10 "$url" >/tmp/naz_lab_public_health.html 2>/tmp/naz_lab_public_health.err; then
+      ok="yes"
+      break
+    fi
+    sleep 2
+  done
+  if [ "$ok" = "yes" ]; then
+    return 0
+  fi
+  return 1
+}
+
+start_cloudflare_once() {
+  rm -f "$CLOUDFLARE_LOG"
+  nohup /content/cloudflared tunnel --url "http://${LOCAL_HOST}:${PORT}" > "$CLOUDFLARE_LOG" 2>&1 &
+  local public_url=""
+  for attempt in $(seq 1 30); do
+    public_url=$(grep -o 'https://[-a-zA-Z0-9.]*trycloudflare.com' "$CLOUDFLARE_LOG" | head -1 || true)
+    if [ -n "$public_url" ]; then
+      echo "$public_url"
+      return 0
+    fi
+    sleep 2
+  done
+  return 1
 }
 
 print_section "Naz Lab Input Test Console One-Cell Launcher"
@@ -80,7 +113,7 @@ nohup python -m streamlit run "$REPO_DIR/$APP_REL" \
 sleep 10
 cat "$STREAMLIT_LOG" | tail -80
 
-print_section "Health check"
+print_section "Local health check"
 if ! pgrep -f "streamlit run .*${APP_REL}" >/dev/null 2>&1; then
   echo "ERROR: Streamlit process is not running. Showing log:"
   cat "$STREAMLIT_LOG"
@@ -102,31 +135,42 @@ if [ ! -x /content/cloudflared ]; then
   chmod +x /content/cloudflared
 fi
 
-nohup /content/cloudflared tunnel --url "http://${LOCAL_HOST}:${PORT}" > "$CLOUDFLARE_LOG" 2>&1 &
-
 PUBLIC_URL=""
-for attempt in $(seq 1 30); do
-  PUBLIC_URL=$(grep -o 'https://[-a-zA-Z0-9.]*trycloudflare.com' "$CLOUDFLARE_LOG" | head -1 || true)
-  if [ -n "$PUBLIC_URL" ]; then
+for tunnel_attempt in 1 2 3; do
+  echo "Cloudflare tunnel attempt: $tunnel_attempt"
+  pkill -f cloudflared || true
+  sleep 2
+  CANDIDATE_URL=$(start_cloudflare_once || true)
+  cat "$CLOUDFLARE_LOG" | tail -80
+  if [ -z "$CANDIDATE_URL" ]; then
+    echo "No Cloudflare URL detected on attempt $tunnel_attempt."
+    continue
+  fi
+  echo "Detected URL: $CANDIDATE_URL"
+  echo "Waiting until public URL is reachable..."
+  if wait_for_public_url "$CANDIDATE_URL"; then
+    PUBLIC_URL="$CANDIDATE_URL"
     break
   fi
-  sleep 2
+  echo "URL was created but not reachable yet: $CANDIDATE_URL"
+  echo "Public curl error:"
+  cat /tmp/naz_lab_public_health.err || true
 done
 
-cat "$CLOUDFLARE_LOG" | tail -100
-
 if [ -z "$PUBLIC_URL" ]; then
-  echo "ERROR: Cloudflare public URL was not created."
+  echo "ERROR: No reachable Cloudflare public URL was created after retries."
   echo "Streamlit log: $STREAMLIT_LOG"
   echo "Cloudflare log: $CLOUDFLARE_LOG"
+  echo "Try re-running this one-cell launcher once."
   exit 1
 fi
 
 print_section "NAZ LAB INPUT TEST CONSOLE READY"
-echo "Open this URL:"
+echo "Open this verified URL:"
 echo "$PUBLIC_URL"
 echo ""
-echo "If the link does not open immediately, wait 10-20 seconds and refresh once."
+echo "This URL was checked with curl before printing."
+echo "If browser still shows DNS error, wait 10-20 seconds and refresh once."
 echo "Streamlit log: $STREAMLIT_LOG"
 echo "Cloudflare log: $CLOUDFLARE_LOG"
 ```
