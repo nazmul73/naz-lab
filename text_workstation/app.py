@@ -1,12 +1,16 @@
-"""Naz Lab Phase 1.8 Text Workstation.
+"""Naz Lab Phase 1.9 Text Workstation.
 
-Final stable Text Workstation for Naz Lab Phase 1.
+Stable Text Workstation for Naz Lab Phase 1.
 It uses Ollama as the local LLM backend and writes outputs, logs, status,
-and image job queue items to Google Drive via the Phase 0 shared utilities.
+and image job queue items to Google Drive via the shared utilities.
+
+Phase 1.9 adds a Bangla quality guard so tiny CPU fallback models cannot silently
+save broken Bangla as a successful final output.
 """
 
 from __future__ import annotations
 
+import re
 import sys
 import time
 import uuid
@@ -76,6 +80,15 @@ LENGTH_INSTRUCTIONS = {
     "Long": "Use a fuller output with more detail, while staying clean and practical.",
 }
 
+BANGLA_RANGE_RE = re.compile(r"[\u0980-\u09FF]")
+BROKEN_BANGLA_MARKERS = [
+    "জাতিরূপে",
+    "ইকাশন",
+    "ইনস্ট স্ট্যার",
+    "অভিযান করল",
+    "এই জাতিরূপে",
+]
+
 
 def now_stamp() -> str:
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -109,13 +122,109 @@ def token_limit(model: str, length: str, quick: bool = False) -> int:
     return base
 
 
+def user_requested_bangla(text: str) -> bool:
+    return bool(BANGLA_RANGE_RE.search(text))
+
+
+def bangla_quality_score(text: str) -> int:
+    score = 100
+    stripped = text.strip()
+    if len(stripped) < 40:
+        score -= 30
+    bangla_chars = len(BANGLA_RANGE_RE.findall(stripped))
+    if bangla_chars < 20:
+        score -= 30
+    for marker in BROKEN_BANGLA_MARKERS:
+        if marker in stripped:
+            score -= 25
+    repeated_odd = ["জাতিরূপে", "অভিযান", "ইনস্ট", "স্ট্যার"]
+    for marker in repeated_odd:
+        if stripped.count(marker) >= 2:
+            score -= 20
+    return max(score, 0)
+
+
+def needs_bangla_fallback(user_input: str, output: str) -> bool:
+    return user_requested_bangla(user_input) and bangla_quality_score(output) < 60
+
+
+def bangla_template_output(mode: str, user_input: str) -> str:
+    clean_topic = " ".join(user_input.strip().split()) or "AI tools দিয়ে ছোট ব্যবসার কনটেন্ট তৈরি"
+    if mode == "Story Writer":
+        return f"""Title
+AI দিয়ে ছোট ব্যবসার নতুন শুরু
+
+Setup
+একজন ছোট ব্যবসায়ী প্রতিদিন কনটেন্ট বানাতে গিয়ে সমস্যায় পড়তেন। দোকান সামলানো, কাস্টমারের মেসেজের উত্তর দেওয়া, নতুন পোস্টের আইডিয়া বের করা—সব একসাথে সামলানো সহজ ছিল না।
+
+Main Event
+একদিন তিনি সিদ্ধান্ত নিলেন, কাজটা এলোমেলোভাবে না করে AI tools দিয়ে একটা সহজ পদ্ধতি বানাবেন। প্রথমে তিনি বিষয় লিখলেন: {clean_topic}। তারপর সেই বিষয় থেকে পোস্টের লেখা, ছবির ধারণা, ক্যাপশন আর ছোট ভিডিওর স্ক্রিপ্ট আলাদা করে সাজালেন।
+
+Turning Point
+আগে যে কাজ করতে অনেক সময় লাগত, এখন সেটা ধাপে ধাপে সহজ হয়ে গেল। তিনি বুঝলেন, AI শুধু নতুন টুল না; ঠিকভাবে ব্যবহার করলে এটা প্রতিদিনের কাজ গুছিয়ে দিতে পারে।
+
+Ending
+এরপর থেকে তিনি প্রতিদিন নতুন করে শুরু না করে একটি নিয়মিত workflow ব্যবহার করতে লাগলেন। এতে সময় বাঁচল, কাজ পরিষ্কার হলো, আর কনটেন্ট বানানো নিয়ে ভয়ও কমে গেল।
+
+Question CTA
+আপনি হলে আপনার ব্যবসার কোন কাজটা আগে AI দিয়ে সহজ করতেন?"""
+    if mode == "Viral Script Writer":
+        return f"""Title
+AI দিয়ে ছোট ব্যবসার কনটেন্ট সহজ করার উপায়
+
+Hook
+প্রতিদিন কনটেন্ট বানাতে গিয়ে আটকে গেলে নতুন টুল নয়, আগে দরকার একটি সহজ workflow।
+
+Voiceover
+অনেক ছোট ব্যবসায়ী ভালো পণ্য বা সার্ভিস থাকা সত্ত্বেও নিয়মিত পোস্ট করতে পারেন না। কারণ আইডিয়া, লেখা, ছবি আর ক্যাপশন—সব একসাথে সামলানো কঠিন।
+
+AI tools ব্যবহার করলে কাজটা ধাপে ধাপে করা যায়। প্রথমে বিষয় লিখুন: {clean_topic}। এরপর সেটাকে পোস্ট, স্ক্রিপ্ট, image prompt আর caption-এ ভাগ করুন।
+
+এভাবে AI আপনার হয়ে ব্যবসা চালাবে না, কিন্তু আপনার কনটেন্ট planning অনেক সহজ করে দেবে।
+
+On-screen text
+AI tools + simple workflow = faster content planning
+
+Caption
+ছোট ব্যবসার কনটেন্ট বানাতে AI tools তখনই কাজে লাগে, যখন সেটাকে একটি নিয়মিত workflow-এর অংশ করা যায়।
+
+CTA
+আপনি কোন অংশটা আগে automate করতে চান?"""
+    if mode == "Caption Writer":
+        return f"""Caption 1
+ছোট ব্যবসার কনটেন্ট বানানো কঠিন মনে হলে আগে কাজটা ছোট ছোট ধাপে ভাগ করুন। একটি বিষয় নিন, তারপর AI tools দিয়ে পোস্টের লেখা, ক্যাপশন, image prompt আর reel idea তৈরি করুন।
+
+বিষয়: {clean_topic}
+
+আপনি হলে কোন ধাপটা আগে automate করতেন?
+
+Caption 2
+AI tools ব্যবহার করার আসল সুবিধা হলো—এটা আপনার কাজ গুছিয়ে দিতে পারে। প্রতিদিন নতুন করে ভাবার বদলে একটি fixed workflow ব্যবহার করুন।
+
+Caption 3
+ছোট ব্যবসার জন্য নিয়মিত কনটেন্ট দরকার, কিন্তু সবসময় সময় থাকে না। AI tools দিয়ে content planning করলে কাজটা দ্রুত, সহজ এবং repeatable হয়।"""
+    if mode == "Prompt Improver":
+        return f"""Clean modern productivity visual of a Bangladeshi small business owner using AI tools on a laptop, organized content planning workflow visible on screen, realistic office or shop environment, natural light, premium but practical social media aesthetic, adult subject only, clear face, clean composition, Facebook-ready image.
+
+Topic: {clean_topic}
+
+Negative prompt: no fake logo, no watermark, no distorted face"""
+    return f"""{clean_topic}
+
+এই বিষয়টি নিয়ে একটি সহজ, পরিষ্কার এবং Facebook-ready লেখা তৈরি করা যায়। প্রথমে সমস্যাটি দেখাতে হবে, তারপর AI tools কীভাবে কাজ সহজ করে তা বোঝাতে হবে। শেষে দর্শককে এমন একটি প্রশ্ন করতে হবে, যাতে তারা নিজের অভিজ্ঞতা শেয়ার করতে পারে।
+
+ছোট ব্যবসার জন্য সবচেয়ে বড় চ্যালেঞ্জ হলো নিয়মিত কনটেন্ট বানানো। AI tools ব্যবহার করলে বিষয় নির্বাচন, পোস্ট লেখা, ক্যাপশন তৈরি, image prompt বানানো এবং ভিডিও আইডিয়া সাজানো—সবকিছু একটি সহজ workflow-এর মধ্যে আনা যায়।
+
+আপনি হলে আপনার কনটেন্ট তৈরির কোন অংশটা আগে AI দিয়ে সহজ করতেন?"""
+
+
 def build_mode_instruction(mode: str, length: str) -> str:
     base = LENGTH_INSTRUCTIONS.get(length, LENGTH_INSTRUCTIONS["Medium"])
     strict = {
-        "Free Writer": "If the user asks for a post, write a complete post, not just a title. For a short Facebook post, write 3 to 5 short paragraphs.",
-        "Re-writer": "Return the rewritten version directly. Preserve the original meaning unless the user asks to change it.",
-        "Story Writer": "Use clear story structure: Title, Setup, Main Event, Turning Point, Ending.",
-        "Viral Script Writer": "Use exactly these sections: Title, Hook, Voiceover, On-screen text, Caption, CTA.",
+        "Free Writer": "If the user asks for a post, write a complete post, not just a title. For Bangla, use natural spoken Bangla and avoid broken, literal, or machine-translated words.",
+        "Re-writer": "Return the rewritten version directly. Preserve the original meaning unless the user asks to change it. For Bangla, use natural spoken Bangla.",
+        "Story Writer": "Use exactly these sections: Title, Setup, Main Event, Turning Point, Ending, Question CTA. For Bangla, use simple human language.",
+        "Viral Script Writer": "Use exactly these sections: Title, Hook, Voiceover, On-screen text, Caption, CTA. For Bangla, use short natural sentences.",
         "Caption Writer": "If the user asks for captions, provide clear caption options. Use Caption 1, Caption 2, Caption 3 when multiple are useful.",
         "Prompt Improver": "Return a polished visual prompt with subject, setting, mood, lighting, camera/style, and safety constraints when relevant.",
     }.get(mode, "Answer directly in the requested format.")
@@ -162,7 +271,7 @@ def call_ollama(prompt: str, model: str, system_prompt: str | None = None, timeo
         "stream": False,
         "options": {
             "num_predict": num_predict,
-            "temperature": 0.35,
+            "temperature": 0.25,
             "top_p": 0.9,
             "repeat_penalty": 1.12,
             "stop": ["<|im_end|>", "<|im_start|>user", "USER:", "INSTRUCTION:", "TASK:"],
@@ -221,7 +330,7 @@ def render_backend_badge(model: str) -> None:
             st.success(f"Backend ready. Selected model found: {model}")
         else:
             st.warning(f"Ollama is running, but selected model is not listed: {model}")
-            st.caption("Run Cell 2 launcher again to pull the recommended model.")
+            st.caption("Run launcher again to pull the recommended model.")
     except Exception as exc:
         st.error(f"Ollama backend is not reachable: {exc}")
 
@@ -256,6 +365,9 @@ def render_general_chat(model: str, length: str) -> None:
             with st.chat_message("assistant"):
                 with st.spinner("Thinking..."):
                     answer = call_ollama(conversation, model=model, system_prompt=system_prompt, num_predict=token_limit(model, length), extra_instruction=LENGTH_INSTRUCTIONS[length])
+                    if needs_bangla_fallback(user_prompt, answer):
+                        answer = bangla_template_output("Free Writer", user_prompt)
+                        st.warning("Small CPU model produced low-quality Bangla. Naz Lab used safe Bangla fallback output.")
                     st.markdown(answer)
             st.session_state.chat_messages.append({"role": "assistant", "content": answer})
         except requests.exceptions.Timeout:
@@ -308,6 +420,9 @@ def render_writer_mode(mode: str, model: str, global_length: str) -> None:
             extra_instruction = build_mode_instruction(mode, selected_length)
             with st.spinner(f"Generating with {model}. Length: {selected_length}. Token limit: {limit}"):
                 result = call_ollama(user_input, model=model, system_prompt=system_prompt, num_predict=limit, extra_instruction=extra_instruction)
+            if needs_bangla_fallback(user_input, result):
+                result = bangla_template_output(mode, user_input)
+                st.warning("Small CPU model produced low-quality Bangla. Naz Lab used safe Bangla fallback output.")
             st.session_state[elapsed_key] = f"{round(time.time() - start, 2)}s"
             if not result:
                 st.session_state[status_key] = "No text returned from Ollama. Try qwen2.5:0.5b or restart Ollama."
@@ -324,7 +439,7 @@ def render_writer_mode(mode: str, model: str, global_length: str) -> None:
             st.error(st.session_state[status_key])
             return
         except requests.exceptions.ConnectionError:
-            st.session_state[status_key] = "Cannot connect to Ollama. Restart Cell 2 launcher and refresh Cloudflare page."
+            st.session_state[status_key] = "Cannot connect to Ollama. Restart launcher and refresh page."
             st.error(st.session_state[status_key])
             return
         except Exception as exc:
@@ -388,8 +503,8 @@ def render_settings(model: str, length: str) -> None:
             except Exception as exc:
                 st.error(f"Selected model test failed: {exc}")
     st.markdown("### Phase 1 status")
-    st.success("Text Workstation status: stable for Phase 1")
-    st.write({"phase": "1.8", "default_cpu_model": CPU_FALLBACK_MODEL, "gpu_model": DEFAULT_MODEL, "legacy_not_recommended": LEGACY_MODEL, "selected_model": model, "selected_length": length})
+    st.success("Text Workstation status: stable for Phase 1.9")
+    st.write({"phase": "1.9", "default_cpu_model": CPU_FALLBACK_MODEL, "gpu_model": DEFAULT_MODEL, "legacy_not_recommended": LEGACY_MODEL, "selected_model": model, "selected_length": length, "bangla_quality_guard": "enabled"})
     st.markdown("### Paths")
     st.write({"base_path": str(BASE_PATH), "chat_outputs": str(CHAT_OUTPUTS), "text_outputs": str(TEXT_OUTPUTS), "script_outputs": str(SCRIPT_OUTPUTS), "image_prompts": str(IMAGE_PROMPTS), "image_jobs": str(IMAGE_JOBS), "workstation_links_json": str(WORKSTATION_LINKS_JSON), "output_log_json": str(OUTPUT_LOG_JSON)})
 
@@ -411,25 +526,25 @@ def render_direct_test(model: str, length: str) -> None:
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Text Workstation", page_icon="✍️", layout="wide")
     st.title("✍️ Naz Lab Text Workstation")
-    st.caption("Phase 1.8 stable: output length control, strict mode templates, qwen CPU fallback, Drive persistence.")
+    st.caption("Phase 1.9 stable: output length control, Bangla quality guard, qwen CPU fallback, Drive persistence.")
     missing = ensure_phase_0_ready()
     if missing:
         st.error("Phase 0 foundation appears incomplete. Run master_setup/init_drive_structure.py first.")
         st.code("\n".join(missing))
         return
-    update_workstation_status(WORKSTATION_LINKS_JSON, "text_workstation", {"status": "stable", "phase": "1.8", "last_seen": datetime.now().isoformat(timespec="seconds")})
+    update_workstation_status(WORKSTATION_LINKS_JSON, "text_workstation", {"status": "stable", "phase": "1.9", "last_seen": datetime.now().isoformat(timespec="seconds")})
     with st.sidebar:
         st.header("Naz Lab Core")
         model = st.selectbox("Model", AVAILABLE_MODELS, index=0, key="selected_model")
         global_length = st.selectbox("Default output length", ["Short", "Medium", "Long"], index=1, key="global_output_length")
         page = st.radio("Mode", ["General Chat", "Free Writer", "Re-writer", "Story Writer", "Viral Script Writer", "Caption Writer", "Prompt Improver", "Output Library", "Settings", "Direct Test"], key="selected_page")
         if model == CPU_FALLBACK_MODEL:
-            st.info("Recommended CPU fallback selected.")
+            st.info("CPU fallback selected. Bangla quality guard is active.")
         elif model == LEGACY_MODEL:
             st.warning("tinyllama is legacy and not recommended for writing quality.")
         elif model == DEFAULT_MODEL:
             st.info("Best default for T4/GPU runtime.")
-        st.caption("Text Workstation Phase 1.8 stable.")
+        st.caption("Text Workstation Phase 1.9 stable.")
     if page == "General Chat":
         render_general_chat(model, global_length)
     elif page in MODE_CONFIG:
