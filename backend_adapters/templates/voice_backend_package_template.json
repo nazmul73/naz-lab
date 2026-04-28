@@ -1,0 +1,17 @@
+{
+  "backend_phase": "Backend Adapter Skeletons 1.0",
+  "backend_kind": "voice",
+  "backend_status": "draft",
+  "project_preset": "General",
+  "language": "Bangla",
+  "regional_tone": "Rangpur/Nilphamari",
+  "voice_mode": "Original / generic voice direction",
+  "tts_direction": "Natural spoken Bangla, Facebook-ready, clear pacing.",
+  "script_draft": "",
+  "reference_voice_path": "",
+  "reference_voice_authorized": false,
+  "reference_voice_notes": "",
+  "reference_policy": "Reference voice requires user-provided or explicitly authorized audio.",
+  "audio_output_path": "/content/drive/MyDrive/NazLab/audio_outputs/example.mp3",
+  "backend_events": []
+}
