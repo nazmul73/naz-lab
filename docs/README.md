@@ -9,6 +9,7 @@ This folder contains project-level guidance for Naz Lab.
 - `reference_asset_policy.md` — Safe reference voice/face/portrait asset policy.
 - `backend_planning.md` — Backend planning foundation for future heavy generation tools and adapters.
 - `final_integration_checklist.md` — Final integration readiness checklist before backend adapter skeletons.
+- `backend_adapter_skeleton_runbook.md` — Lightweight backend skeleton command runbook.
 - `../backend_adapters/README.md` — Backend Adapter Skeletons 1.0 overview and run commands.
 
 ## Key language rules
@@ -77,6 +78,12 @@ Final integration checklist lives in:
 docs/final_integration_checklist.md
 ```
 
+Backend skeleton runbook lives in:
+
+```text
+docs/backend_adapter_skeleton_runbook.md
+```
+
 Backend adapter skeletons live in:
 
 ```text
@@ -105,10 +112,11 @@ shared/backend_status.py
 - Final integration checklist — done.
 - Backend Adapter Skeletons 1.0 — done as lightweight skeleton, no heavy generation tools installed.
 - Dashboard backend status panel — done.
+- Backend skeleton command runbook — done.
 
 ## Recommended next work
 
-1. Add backend template copier/helper.
-2. Add real backend runbooks only when a backend is selected for testing.
-3. Start with the safest real backend: generic TTS or image prompt-to-output adapter.
+1. Decide first real backend target: generic TTS or image prompt-to-output adapter.
+2. Add real backend runbook only for the selected target.
+3. Keep backend work one adapter at a time.
 4. Keep Bangla quality and reference asset policy aligned across all new backend work.
