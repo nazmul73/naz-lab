@@ -1,6 +1,6 @@
 # Naz Lab Backend Adapters
 
-Status: Backend Adapter Skeletons 1.0 + Generic TTS Adapter 1.0 + Image Placeholder Adapter 1.0 + Video Placeholder Adapter 1.0
+Status: Backend Adapter Skeletons 1.0 + Generic TTS Adapter 1.0 + Image Placeholder Adapter 1.0 + Video Placeholder Adapter 1.0 + Final Reel Pack Assembly 1.0
 
 This folder contains lightweight backend adapter entry points for future Naz Lab generation backends.
 
@@ -21,6 +21,7 @@ The current backend adapter layer is for:
 - first generic non-cloning TTS audio generation
 - placeholder image output generation for pipeline testing
 - placeholder video manifest generation for pipeline testing
+- final reel pack JSON/Markdown assembly
 
 ## Current files
 
@@ -34,6 +35,7 @@ The current backend adapter layer is for:
 - `video_adapter.py` — validates a video package and prints a future video/reel execution plan.
 - `video_placeholder_adapter.py` — creates a video placeholder manifest from a validated video package/job.
 - `portrait_adapter.py` — validates a portrait package and prints a future portrait backend execution plan.
+- `final_reel_pack_assembler.py` — assembles final reel pack JSON and Markdown manifests from existing package/output files.
 
 ## Templates
 
@@ -150,6 +152,18 @@ Expected result:
 A JSON response showing ok=true, status=completed, and video_manifest_path for the generated placeholder manifest.
 ```
 
+Assemble final reel pack manifest:
+
+```bash
+python backend_adapters/final_reel_pack_assembler.py --project "General" --title "bangla final reel test"
+```
+
+Expected result:
+
+```text
+A JSON response showing ok=true, status=assembled, json_path, markdown_path, and warnings if outputs are missing.
+```
+
 Validate a future portrait package:
 
 ```bash
@@ -172,11 +186,12 @@ Completed in Skeletons 1.0:
 10. Generic gTTS backend adapter for non-cloning MP3 generation.
 11. Image placeholder adapter for package-to-output validation.
 12. Video placeholder adapter for package-to-output validation.
+13. Final reel pack assembly manifest adapter.
 
 Recommended next:
 
-1. Test video placeholder adapter in Colab.
-2. If test passes, choose either Final Reel Pack assembly planner or portrait placeholder backend.
+1. Test final reel pack assembler in Colab.
+2. If test passes, add Dashboard final reel pack tab.
 3. Add real backend runbooks only when a real backend is selected for testing.
 
 ## Safety requirement
@@ -192,6 +207,8 @@ Generic gTTS adapter must not clone voices and must block reference clone mode.
 Image placeholder adapter must not claim to create final AI artwork.
 
 Video placeholder adapter must not claim to create final rendered video.
+
+Final reel pack assembler must not claim to render final MP4.
 
 ## Bangla-first requirement
 
