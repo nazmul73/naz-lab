@@ -20,9 +20,10 @@ if str(REPO_ROOT) not in sys.path:
 
 from shared.backend_status import mark_backend_failed, mark_backend_status  # noqa: E402
 from shared.backend_validation import validate_backend_package  # noqa: E402
-from shared.drive_paths import AUDIO_OUTPUTS, OUTPUT_LOG_JSON  # noqa: E402
+from shared.drive_paths import BASE_PATH, OUTPUT_LOG_JSON  # noqa: E402
 from shared.json_utils import append_output_log, safe_read_json, safe_write_json  # noqa: E402
 
+AUDIO_OUTPUTS = BASE_PATH / "audio_outputs"
 BLOCKED_VOICE_MODES = {"authorized reference voice clone planning"}
 TEXT_FIELDS = ["script_draft", "voiceover_text", "text", "combined_package"]
 LANGUAGE_CODE_BY_NAME = {
