@@ -8,7 +8,7 @@ This launcher:
 - uses `/content/drive/MyDrive/NazLab/` for persistent storage
 - clones or updates the latest repo
 - creates the required Drive folder structure
-- installs Streamlit and requests
+- checks/installs Streamlit with a logged resilient pip flow
 - installs system dependency `zstd` required by current Ollama releases
 - installs Ollama
 - links Ollama models to Drive so models persist across sessions
@@ -19,9 +19,11 @@ This launcher:
 
 ```python
 # @title 🚀 Naz Lab Phase 1: Text Workstation One-Cell Launcher
+import importlib.util
 import os
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 from google.colab import drive, output
@@ -32,6 +34,7 @@ BASE_PATH = Path("/content/drive/MyDrive/NazLab")
 APP_REL = "text_workstation/app.py"
 PORT = 8501
 LOG_PATH = Path("/content/streamlit_text_workstation_phase1.log")
+PIP_LOG_PATH = Path("/content/pip_phase1.log")
 OLLAMA_INSTALL_LOG = Path("/content/ollama_install_phase1.log")
 
 print("============================================================")
@@ -51,17 +54,25 @@ os.chdir("/content")
 if (REPO_DIR / ".git").exists():
     print("Updating existing repo...")
     os.chdir(REPO_DIR)
-    subprocess.run(["git", "fetch", "--depth", "1", "origin", "main"], check=True)
-    subprocess.run(["git", "reset", "--hard", "origin/main"], check=True)
+    subprocess.run(["git", "fetch", "--depth", "1", "origin", "main"], check=False)
+    subprocess.run(["git", "reset", "--hard", "origin/main"], check=False)
+elif REPO_DIR.exists() and (REPO_DIR / APP_REL).exists():
+    print("Using existing ZIP-based repo at", REPO_DIR)
+    os.chdir(REPO_DIR)
 else:
     print("Cloning repo...")
     if REPO_DIR.exists():
         subprocess.run(["rm", "-rf", str(REPO_DIR)], check=True)
-    subprocess.run(["git", "clone", "--depth", "1", REPO_URL, str(REPO_DIR)], check=True)
+    clone_result = subprocess.run(["git", "clone", "--depth", "1", REPO_URL, str(REPO_DIR)], check=False)
+    if clone_result.returncode != 0:
+        raise RuntimeError("Git clone failed. Use ZIP fallback repo download first, then run this launcher again.")
     os.chdir(REPO_DIR)
 
-print("Latest commit:")
+print("Latest commit if git metadata is available:")
 subprocess.run(["git", "log", "-1", "--oneline"], check=False)
+
+if not (REPO_DIR / APP_REL).exists():
+    raise RuntimeError(f"Required app not found: {REPO_DIR / APP_REL}")
 
 # 3. Create persistent Naz Lab Drive structure
 required_dirs = [
@@ -99,9 +110,43 @@ for file_path, default_text in json_defaults.items():
 
 print("Drive structure ready:", BASE_PATH)
 
-# 4. Install dependencies
-print("Installing Python dependencies...")
-subprocess.run(["python", "-m", "pip", "install", "-q", "streamlit", "requests"], check=True)
+# 4. Python dependency handling
+def module_exists(name):
+    return importlib.util.find_spec(name) is not None
+
+
+def run_pip(command):
+    print("Running pip:", " ".join(command))
+    result = subprocess.run(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False)
+    with PIP_LOG_PATH.open("a", encoding="utf-8") as handle:
+        handle.write("\n$ " + " ".join(command) + "\n")
+        handle.write(result.stdout or "")
+        handle.write(f"\n[exit_code={result.returncode}]\n")
+    return result
+
+PIP_LOG_PATH.write_text("Naz Lab Phase 1 pip log\n", encoding="utf-8")
+
+if module_exists("streamlit"):
+    print("Streamlit already installed.")
+else:
+    print("Installing Streamlit...")
+    pip_attempts = [
+        [sys.executable, "-m", "pip", "install", "-q", "streamlit"],
+        [sys.executable, "-m", "pip", "install", "--break-system-packages", "-q", "streamlit"],
+        [sys.executable, "-m", "pip", "install", "--no-cache-dir", "-q", "streamlit"],
+    ]
+    installed = False
+    for cmd in pip_attempts:
+        result = run_pip(cmd)
+        if result.returncode == 0 and module_exists("streamlit"):
+            installed = True
+            break
+    if not installed:
+        print("Streamlit install failed. Pip log tail:")
+        print(PIP_LOG_PATH.read_text(encoding="utf-8", errors="ignore")[-4000:])
+        raise RuntimeError("Streamlit is not installed and pip install failed. See /content/pip_phase1.log")
+
+print("Streamlit import check OK.")
 
 print("Installing system dependency zstd for Ollama extraction...")
 subprocess.run("apt-get update -qq && apt-get install -y -qq zstd", shell=True, check=True)
@@ -201,7 +246,7 @@ subprocess.run(["ollama", "list"], check=False)
 
 # 9. Validate app
 print("Validating Text Workstation app...")
-subprocess.run(["python", "-m", "py_compile", str(REPO_DIR / APP_REL)], check=True)
+subprocess.run([sys.executable, "-m", "py_compile", str(REPO_DIR / APP_REL)], check=True)
 
 # 10. Stop old Streamlit and launch app
 print("Stopping old Streamlit...")
@@ -212,7 +257,7 @@ print("Starting Text Workstation on port", PORT)
 with LOG_PATH.open("w", encoding="utf-8") as log_file:
     process = subprocess.Popen(
         [
-            "python", "-m", "streamlit", "run", str(REPO_DIR / APP_REL),
+            sys.executable, "-m", "streamlit", "run", str(REPO_DIR / APP_REL),
             "--server.port", str(PORT),
             "--server.address", "0.0.0.0",
             "--server.headless", "true",
@@ -250,6 +295,9 @@ output.serve_kernel_port_as_window(PORT)
 ```text
 Naz Lab Phase 1 Text Workstation Launcher
 Drive structure ready: /content/drive/MyDrive/NazLab
+Streamlit already installed.
+# or
+Streamlit import check OK.
 Installing system dependency zstd for Ollama extraction...
 Ollama installed with official script.
 Ollama models path: /root/.ollama/models -> /content/drive/MyDrive/NazLab/models/ollama
