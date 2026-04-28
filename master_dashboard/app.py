@@ -1,7 +1,9 @@
-"""Naz Lab Master Control Dashboard Phase 2.11 package export refresh."""
+"""Naz Lab Master Control Dashboard Phase 2.12 package export buttons."""
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 import sys
 from datetime import datetime
@@ -29,8 +31,8 @@ from shared.drive_paths import (  # noqa: E402
 )
 from shared.json_utils import safe_read_json, update_workstation_status  # noqa: E402
 
-PHASE = "2.11"
-PHASE_STATUS = "stable"
+PHASE = "2.12"
+PHASE_STATUS = "stable-package-export-buttons"
 
 VOICE_OUTPUTS = BASE_PATH / "voice_outputs"
 VOICE_PACKAGES = BASE_PATH / "voice_packages"
@@ -98,11 +100,11 @@ PACKAGE_FOLDERS = {
 
 WORKSTATIONS = [
     {"name": "Text Workstation", "phase": "1.8 stable", "key": "text_workstation", "folder": TEXT_OUTPUTS, "port": "8501"},
-    {"name": "Master Dashboard", "phase": "2.11 stable", "key": "master_dashboard", "folder": BASE_PATH, "port": "8502"},
+    {"name": "Master Dashboard", "phase": "2.12 stable", "key": "master_dashboard", "folder": BASE_PATH, "port": "8502"},
     {"name": "Image Workstation", "phase": "3.x stable", "key": "image_workstation", "folder": IMAGE_OUTPUTS, "port": "8503"},
-    {"name": "Voice Workstation", "phase": "4.x reference workflow", "key": "voice_workstation", "folder": VOICE_OUTPUTS, "port": "8504"},
+    {"name": "Voice Workstation", "phase": "4.5 safe reference manager", "key": "voice_workstation", "folder": VOICE_OUTPUTS, "port": "8504"},
     {"name": "Video Workstation", "phase": "5.3 stable", "key": "video_workstation", "folder": VIDEO_OUTPUTS, "port": "8505"},
-    {"name": "Portrait Workstation", "phase": "6.3 stable", "key": "portrait_workstation", "folder": PORTRAIT_PACKAGES, "port": "8506"},
+    {"name": "Portrait Workstation", "phase": "6.4 safe reference manager", "key": "portrait_workstation", "folder": PORTRAIT_PACKAGES, "port": "8506"},
     {"name": "Project Workflow Workstation", "phase": "10.2 stable", "key": "project_workstation", "folder": PROJECT_PACKAGES, "port": "8507"},
 ]
 
@@ -178,6 +180,51 @@ def load_package_rows(folder: Path, limit: int) -> list[dict[str, Any]]:
     return [package_summary(path) for path in files]
 
 
+def rows_to_csv(rows: list[dict[str, Any]]) -> str:
+    if not rows:
+        return ""
+    output = io.StringIO()
+    fieldnames = list(rows[0].keys())
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerows(rows)
+    return output.getvalue()
+
+
+def rows_to_markdown(rows: list[dict[str, Any]]) -> str:
+    lines = ["# Naz Lab Package Search Report", "", f"Generated: {datetime.now().isoformat(timespec='seconds')}", ""]
+    for index, row in enumerate(rows, start=1):
+        lines.extend([
+            f"## {index}. {row.get('File', '')}",
+            f"- Folder: {row.get('Folder', '')}",
+            f"- Project: {row.get('Project', '')}",
+            f"- Status: {row.get('Status', '')}",
+            f"- Platform: {row.get('Platform', '')}",
+            f"- Topic: {row.get('Topic', '')}",
+            f"- Created: {row.get('Created', '')}",
+            f"- Modified: {row.get('Modified', '')}",
+            f"- Path: `{row.get('Path', '')}`",
+            "",
+        ])
+    return "\n".join(lines)
+
+
+def package_to_markdown(path: Path, data: Any) -> str:
+    lines = [f"# Naz Lab Package Export: {path.name}", "", f"Exported: {datetime.now().isoformat(timespec='seconds')}", f"Source path: `{path}`", ""]
+    if isinstance(data, dict):
+        priority_keys = [
+            "project_preset", "visual_preset", "topic", "title", "status", "platform", "content_type", "portrait_type", "language", "regional_tone", "created_at",
+        ]
+        lines.append("## Summary")
+        for key in priority_keys:
+            if key in data:
+                lines.append(f"- {key}: {data.get(key)}")
+        lines.extend(["", "## Full JSON", "", "```json", json.dumps(data, ensure_ascii=False, indent=2), "```"])
+    else:
+        lines.extend(["## Content", "", str(data)])
+    return "\n".join(lines)
+
+
 def render_status(language: str) -> None:
     st.header("System status")
     links = workstation_data()
@@ -188,7 +235,7 @@ def render_status(language: str) -> None:
     c3.metric("Drive base", status_label(BASE_PATH))
     c4.metric("Active workstations", str(len(WORKSTATIONS)))
     c5.metric("Output log entries", len(logs))
-    st.success("Master Dashboard status: stable for Phase 2.11 package export refresh")
+    st.success("Master Dashboard status: stable for Phase 2.12 package export buttons")
     st.info(LANGUAGE_REQUIREMENT_BN if language == "Bangla" else LANGUAGE_REQUIREMENT_EN)
 
     st.markdown("### Workstation matrix")
@@ -218,10 +265,9 @@ def render_status(language: str) -> None:
     st.write({
         "current_stack": "Text + Dashboard + Image + Voice + Video + Portrait + Project Workflow",
         "project_automation": "True Noir Tales + ToolFlow + General Bangla polished",
-        "package_search_export": "ready",
-        "recommended_next_1": "Safer reference managers where needed",
-        "recommended_next_2": "Optional backend planning",
-        "recommended_next_3": "Bangla quality alignment maintenance",
+        "package_search_export": "JSON + CSV + Markdown + selected package export ready",
+        "recommended_next_1": "Backend planning",
+        "recommended_next_2": "Bangla quality alignment maintenance",
         "status": "ready",
     })
     st.markdown("### Bangla-first quality requirements")
@@ -307,7 +353,7 @@ def render_jobs() -> None:
 def render_package_search() -> None:
     st.header("Package search")
     st.caption("Search saved JSON packages across project, image, voice, video, and portrait package folders.")
-    st.info("Packages are already saved in Google Drive. This tab is for search, preview, copy, and download/export.")
+    st.info("Packages are already saved in Google Drive. This tab is for search, preview, copy, and JSON/CSV/Markdown download/export.")
 
     c1, c2, c3, c4 = st.columns(4)
     folder_label = c1.selectbox("Folder", ["All package folders"] + list(PACKAGE_FOLDERS.keys()))
@@ -341,18 +387,45 @@ def render_package_search() -> None:
         return
 
     st.dataframe(rows, use_container_width=True, hide_index=True)
-    report_json = json.dumps({"generated_at": datetime.now().isoformat(timespec="seconds"), "filters": {"folder": folder_label, "project": project_filter, "status": status_filter, "keyword": keyword}, "matches": rows}, ensure_ascii=False, indent=2)
-    st.download_button("Download filtered report JSON", data=report_json, file_name="naz_lab_package_search_report.json", mime="application/json")
+    report_payload = {
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "filters": {"folder": folder_label, "project": project_filter, "status": status_filter, "keyword": keyword},
+        "matches": rows,
+    }
+    report_json = json.dumps(report_payload, ensure_ascii=False, indent=2)
+    report_csv = rows_to_csv(rows)
+    report_md = rows_to_markdown(rows)
+
+    st.markdown("### Export filtered results")
+    export_cols = st.columns(3)
+    with export_cols[0]:
+        st.download_button("Download report JSON", data=report_json, file_name="naz_lab_package_search_report.json", mime="application/json")
+    with export_cols[1]:
+        st.download_button("Download report CSV", data=report_csv, file_name="naz_lab_package_search_report.csv", mime="text/csv")
+    with export_cols[2]:
+        st.download_button("Download report Markdown", data=report_md, file_name="naz_lab_package_search_report.md", mime="text/markdown")
 
     selected_path = st.selectbox("Open package JSON", [row["Path"] for row in rows])
     selected = Path(selected_path)
     data = read_json(selected, {})
     package_json = json.dumps(data, ensure_ascii=False, indent=2)
+    package_md = package_to_markdown(selected, data)
+    package_txt = f"Naz Lab Package Export\nSource: {selected}\nExported: {datetime.now().isoformat(timespec='seconds')}\n\n{package_json}"
     st.markdown(f"### Preview: `{selected.name}`")
     st.caption(f"Saved path: {selected}")
-    st.download_button("Download selected package JSON", data=package_json, file_name=selected.name, mime="application/json")
+
+    st.markdown("### Export selected package")
+    selected_cols = st.columns(3)
+    with selected_cols[0]:
+        st.download_button("Download selected JSON", data=package_json, file_name=selected.name, mime="application/json")
+    with selected_cols[1]:
+        st.download_button("Download selected TXT", data=package_txt, file_name=f"{selected.stem}.txt", mime="text/plain")
+    with selected_cols[2]:
+        st.download_button("Download selected Markdown", data=package_md, file_name=f"{selected.stem}.md", mime="text/markdown")
+
     st.json(data)
     st.text_area("Copy package JSON", package_json, height=420)
+    st.text_area("Copy package Markdown", package_md, height=260)
 
 
 def render_launch() -> None:
@@ -367,8 +440,8 @@ def render_launch() -> None:
         "Project Workflow Workstation": "8507",
     })
     st.markdown("Recommended: use `launchers/all_in_one_colab_launcher.md` and set `WORKSTATION` to the app you want.")
-    st.code('WORKSTATION="project"', language="bash")
-    st.code("streamlit run project_workstation/app.py --server.port 8507 --server.address 0.0.0.0", language="bash")
+    st.code('WORKSTATION="dashboard"', language="bash")
+    st.code("streamlit run master_dashboard/app.py --server.port 8502 --server.address 0.0.0.0", language="bash")
 
 
 def render_roadmap(language: str) -> None:
@@ -376,38 +449,38 @@ def render_roadmap(language: str) -> None:
     st.markdown("""
 1. Phase 0 Foundation — complete  
 2. Phase 1 Text Workstation — stable  
-3. Phase 2 Master Dashboard — stable with package search/export  
+3. Phase 2 Master Dashboard — stable with package search/export buttons  
 4. Phase 3 Image Workstation — stable  
-5. Phase 4 Voice Workstation — reference workflow active  
+5. Phase 4 Voice Workstation — safer reference manager active  
 6. Phase 5 Video Workstation — stable  
-7. Phase 6 Portrait Workstation — stable  
+7. Phase 6 Portrait Workstation — safer reference manager active  
 8. Phase 7 All-in-one Launcher — ready  
 9. Phase 8 True Noir Tales / ToolFlow workflow docs — ready  
 10. Phase 9 Bangla Quality Engine — active  
-11. Phase 10 Project Workflow Workstation — stable and polished
+11. Phase 10 Project Workflow Workstation — stable and polished  
+12. Phase 11 Reference Asset Policy — foundation ready
 """)
     st.markdown("### Project automation")
     st.json(PROJECT_AUTOMATION_STATUS)
     if language == "Bangla":
         st.markdown("""
 পরের কাজের priority:
-- দরকার হলে safer reference manager যোগ করা
 - backend planning শুরু করা
 - Bangla quality engine সব জায়গায় aligned রাখা
-- package reporting আরও advanced করা
+- final integration polish/checklist করা
 """)
 
 
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Master Dashboard", page_icon="🧪", layout="wide")
     st.title("🧪 Naz Lab Master Control Dashboard")
-    st.caption("Phase 2.11 refresh — package search, preview, copy, and download export")
+    st.caption("Phase 2.12 — package search, preview, copy, and JSON/CSV/Markdown download export")
     update_workstation_status(WORKSTATION_LINKS_JSON, "master_dashboard", {"status": PHASE_STATUS, "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")})
     with st.sidebar:
         st.header("Dashboard settings")
         language = st.radio("Dashboard language note", ["Bangla", "English"], index=0)
         st.caption("Naz Lab default: Bangla-first. Regional default: Rangpur/Nilphamari/North Bengal.")
-        st.success("Phase 2.11 stable")
+        st.success("Phase 2.12 stable")
     tabs = st.tabs(["Status", "Links", "Workstations", "Outputs", "Job Queue", "Package Search", "Launch", "Roadmap"])
     with tabs[0]: render_status(language)
     with tabs[1]: render_links()
