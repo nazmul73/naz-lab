@@ -1,4 +1,4 @@
-"""Naz Lab Input Test Console Phase 1.1.
+"""Naz Lab Input Test Console Phase 1.2.
 
 Frontend-first testing console for Naz Lab v1 workflows.
 This app is for entering topic/input and testing package outputs without using
@@ -22,8 +22,8 @@ if str(REPO_ROOT) not in sys.path:
 from shared.drive_paths import BASE_PATH, OUTPUT_LOG_JSON, WORKSTATION_LINKS_JSON  # noqa: E402
 from shared.json_utils import append_output_log, safe_write_json, update_workstation_status  # noqa: E402
 
-PHASE = "1.1"
-PHASE_STATUS = "frontend-input-test-console-clean-negative-prompt"
+PHASE = "1.2"
+PHASE_STATUS = "frontend-input-test-console-bangla-quality-polish"
 
 TEST_PACKAGES = BASE_PATH / "test_console_packages"
 PROJECT_PACKAGES = BASE_PATH / "project_packages"
@@ -46,10 +46,10 @@ WORKFLOW_TYPES = [
 PLATFORMS = ["Facebook Reel", "Facebook Post", "Carousel", "Story", "Full Package"]
 LANGUAGES = ["Bangla", "English", "Mixed Bangla-English"]
 
-BANGLA_RULE = "Natural spoken Bangla, Facebook-ready, voiceover-ready, simple, human, not stiff textbook Bangla. Light Rangpur/Nilphamari/North Bengal flavor when useful."
-SAFETY_RULE = "Use adult subjects when human subjects are used. Keep content safe and non-misleading. Do not use unauthorized reference face/voice."
+BANGLA_RULE = "স্বাভাবিক মুখের বাংলা, Facebook-ready, voiceover-ready, সহজ, মানবিক, বইয়ের ভাষা নয়। দরকার হলে হালকা রংপুর/নীলফামারী/উত্তরবঙ্গের স্বাদ থাকবে।"
+SAFETY_RULE = "মানুষ থাকলে প্রাপ্তবয়স্ক বিষয় ব্যবহার করুন। কনটেন্ট নিরাপদ, পরিষ্কার ও বিভ্রান্তিকর নয় এমন রাখতে হবে। অনুমতি ছাড়া কারও মুখ/কণ্ঠ রেফারেন্স ব্যবহার করা যাবে না।"
 DEFAULT_NEGATIVE_PROMPT = "no fake logo, no watermark, no distorted face"
-VIDEO_DEFERRED = "Real video generation is deferred after Naz Lab v1. This console creates video plans/manifests only."
+VIDEO_DEFERRED = "বাস্তব ভিডিও জেনারেশন Naz Lab v1-এর পরে করা হবে। এই কনসোল শুধু ভিডিও পরিকল্পনা/ম্যানিফেস্ট তৈরি করে।"
 
 
 def ensure_dirs() -> None:
@@ -86,17 +86,17 @@ def build_text_package(project: str, topic: str, language: str, platform: str, a
     bangla = language != "English"
     if bangla:
         return {
-            "title": "AI দিয়ে content বানানোর সহজ workflow",
-            "hook": "প্রতিদিন content বানাতে গিয়ে যদি আটকে যান, তাহলে আগে tool না, একটা system দরকার।",
+            "title": "AI দিয়ে কনটেন্ট বানানোর সহজ পদ্ধতি",
+            "hook": "প্রতিদিন কনটেন্ট বানাতে গিয়ে আটকে গেলে আগে নতুন টুল না, একটা সহজ পদ্ধতি দরকার।",
             "voiceover_script": [
-                "প্রতিদিন নতুন idea খোঁজা কঠিন।",
-                "কিন্তু AI tool ঠিকভাবে ব্যবহার করলে topic, caption, script আর visual plan এক জায়গায় সাজানো যায়।",
-                "প্রথমে topic লিখুন। তারপর script বানান, image prompt বানান, voiceover তৈরি করুন।",
-                "সবশেষে final package save করে রাখুন।",
-                "আপনি কি এই workflow ব্যবহার করবেন?",
+                "প্রতিদিন নতুন আইডিয়া খুঁজে বের করা সহজ না।",
+                "কিন্তু AI টুল ঠিকভাবে ব্যবহার করলে বিষয়, লেখা, ছবি আর ভয়েসওভার—সব এক জায়গায় সাজানো যায়।",
+                "প্রথমে বিষয় লিখুন। তারপর ছোট স্ক্রিপ্ট বানান, ছবির প্রম্পট বানান, আর ভয়েসওভারের লাইন ঠিক করুন।",
+                "সবশেষে প্যাকেজটা সেভ করে রাখুন, যাতে পরে আবার ব্যবহার করা যায়।",
+                "আপনি হলে কোন অংশটা আগে অটোমেট করতেন?",
             ],
-            "caption": "AI tool random ভাবে ব্যবহার না করে system বানালে content creation অনেক সহজ হয়। আপনি কি এই workflow try করবেন?",
-            "cta": "আপনি কোন অংশ আগে automate করতে চান?",
+            "caption": "AI টুল এলোমেলোভাবে ব্যবহার না করে একটা সহজ পদ্ধতিতে চালালে কনটেন্ট বানানো অনেক সহজ হয়। আপনি কি এই পদ্ধতি ব্যবহার করবেন?",
+            "cta": "আপনি কোন অংশটা আগে অটোমেট করতে চান?",
             "hashtags": ["#BanglaContent", "#AITools", "#ContentCreation", "#FacebookReels"],
             "topic": topic,
             "audience": audience,
@@ -149,17 +149,17 @@ def build_image_package(project: str, topic: str, language: str, platform: str, 
 
 
 def build_voice_package(topic: str, language: str, direction: str) -> dict[str, Any]:
-    script = "আজ আমরা দেখব, কীভাবে AI tools ব্যবহার করে সহজভাবে content plan করা যায়। প্রথমে topic ঠিক করুন, তারপর script, image prompt আর voiceover একসাথে সাজান।"
+    script = "আজ আমরা দেখব, কীভাবে AI টুল ব্যবহার করে সহজভাবে কনটেন্ট পরিকল্পনা করা যায়। প্রথমে বিষয় ঠিক করুন, তারপর লেখা, ছবির প্রম্পট আর ভয়েসওভার একসাথে সাজান।"
     if language == "English":
         script = "Today we will see how to plan content with AI tools using a simple repeatable workflow."
     return {
         "voice_mode": "Original / generic voice direction",
         "language": language,
         "script_draft": script,
-        "tts_direction": "Natural, clear, voiceover-ready, simple pacing.",
+        "tts_direction": "স্বাভাবিক, পরিষ্কার, ভয়েসওভার-ready, সহজ গতি।",
         "reference_voice_path": "",
         "reference_voice_authorized": False,
-        "reference_policy": "Generic TTS only. No voice cloning in Naz Lab v1.",
+        "reference_policy": "Naz Lab v1-এ শুধু generic TTS। voice cloning নয়।",
         "topic": topic,
         "direction": direction,
     }
@@ -173,7 +173,7 @@ def build_portrait_package(topic: str, direction: str) -> dict[str, Any]:
         "reference_image_path": "",
         "reference_image_authorized": False,
         "no_misleading_identity_claim": True,
-        "reference_policy": "Reference image must be user-provided or explicitly authorized.",
+        "reference_policy": "রেফারেন্স ছবি ব্যবহার করতে হলে তা user-provided বা স্পষ্টভাবে authorized হতে হবে।",
         "topic": topic,
         "direction": direction,
     }
@@ -186,11 +186,11 @@ def build_video_plan(topic: str, platform: str, direction: str) -> dict[str, Any
         "platform": platform,
         "target_duration": "45-60 seconds",
         "scene_plan": [
-            {"scene": 1, "purpose": "Hook", "visual": "Creator or topic-related opening shot", "text": "একটা simple system দরকার"},
-            {"scene": 2, "purpose": "Problem", "visual": "Messy content planning moment", "text": "Random tool use করলে output এলোমেলো হয়"},
-            {"scene": 3, "purpose": "Workflow", "visual": "Topic -> Script -> Image -> Voice", "text": "এক topic থেকে full package"},
-            {"scene": 4, "purpose": "Result", "visual": "Organized final package", "text": "সব output এক জায়গায়"},
-            {"scene": 5, "purpose": "CTA", "visual": "Final question screen", "text": "আপনি কোন workflow test করবেন?"},
+            {"scene": 1, "purpose": "Hook", "visual": "বিষয়ভিত্তিক creator বা small business opening shot", "text": "আগে একটা সহজ পদ্ধতি দরকার"},
+            {"scene": 2, "purpose": "Problem", "visual": "এলোমেলো কনটেন্ট পরিকল্পনার মুহূর্ত", "text": "এলোমেলোভাবে টুল ব্যবহার করলে কাজ গুছানো যায় না"},
+            {"scene": 3, "purpose": "Workflow", "visual": "বিষয় -> লেখা -> ছবি -> ভয়েস", "text": "একটা বিষয় থেকেই পুরো প্যাকেজ"},
+            {"scene": 4, "purpose": "Result", "visual": "গুছানো final package", "text": "সব আউটপুট এক জায়গায়"},
+            {"scene": 5, "purpose": "CTA", "visual": "শেষ প্রশ্নের স্ক্রিন", "text": "আপনি কোন workflow আগে টেস্ট করবেন?"},
         ],
         "topic": topic,
         "direction": direction,
@@ -203,7 +203,7 @@ def build_final_pack(project: str, topic: str, language: str, platform: str, aud
     voice_pkg = build_voice_package(topic, language, direction)
     video_pkg = build_video_plan(topic, platform, direction)
     return {
-        "phase": "Naz Lab Input Test Console 1.1",
+        "phase": "Naz Lab Input Test Console 1.2",
         "status": "frontend_test_ready",
         "created_at": datetime.now().isoformat(timespec="seconds"),
         "project": project,
@@ -399,7 +399,7 @@ def render_launch() -> None:
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Input Test Console", page_icon="🧪", layout="wide")
     st.title("🧪 Naz Lab Input Test Console")
-    st.caption("Phase 1.1 — frontend input testing for Naz Lab v1 workflows")
+    st.caption("Phase 1.2 — frontend input testing for Naz Lab v1 workflows")
     ensure_dirs()
     update_workstation_status(
         WORKSTATION_LINKS_JSON,
