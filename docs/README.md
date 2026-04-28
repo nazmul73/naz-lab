@@ -17,11 +17,13 @@ This folder contains project-level guidance for Naz Lab.
 - `final_verification_runbook.md` — Final lightweight verification runbook for smoke test, final pack, and Dashboard Phase 2.14.
 - `naz_lab_v1_finalization_plan.md` — Naz Lab v1 finalization scope with real video generation deferred.
 - `naz_lab_v1_ready.md` — Naz Lab v1 ready marker after final verification.
+- `input_test_console_pass.md` — Input Test Console and Dashboard integration pass marker.
 - `video_generation_deferred_roadmap.md` — Future v1.5/v2 roadmap for real video generation.
 - `dashboard_v1_readiness_note.md` — Dashboard Phase 2.14 interpretation for Naz Lab v1 final verification.
 - `../backend_adapters/README.md` — Backend Adapter Skeletons 1.0 overview and run commands.
 - `../launchers/all_in_one_colab_launcher.md` — Robust one-click Colab launcher with Cloudflare public URL handling.
 - `../launchers/input_test_console_one_cell.md` — One-cell frontend launcher for Input Test Console.
+- `../launchers/input_test_console_colab_proxy.md` — Colab proxy launcher for Input Test Console when Cloudflare is unreliable.
 
 ## Key language rules
 
@@ -118,6 +120,12 @@ Naz Lab v1 ready marker lives in:
 docs/naz_lab_v1_ready.md
 ```
 
+Input Test Console pass marker lives in:
+
+```text
+docs/input_test_console_pass.md
+```
+
 Video generation deferred roadmap lives in:
 
 ```text
@@ -201,6 +209,12 @@ Input Test Console one-cell launcher lives in:
 launchers/input_test_console_one_cell.md
 ```
 
+Input Test Console Colab proxy launcher lives in:
+
+```text
+launchers/input_test_console_colab_proxy.md
+```
+
 ## Safety reminders
 
 - Use adult-only subjects for true-crime/noir content.
@@ -234,9 +248,11 @@ launchers/input_test_console_one_cell.md
 - Final Reel Pack Assembly Runbook 1.0 — done.
 - Final reel pack assembler — done and tested by user.
 - Dashboard final reel pack tab — done and final-verified.
+- Dashboard Package Search — done and frontend-verified.
 - Dashboard v1 readiness note — done.
-- Frontend Input Test Console — done.
+- Frontend Input Test Console — done and passed.
 - One-cell Input Test Console launcher — done.
+- Colab proxy Input Test Console launcher — done.
 - Robust all-in-one Colab launcher — done.
 - Lightweight integration smoke test — done.
 - Final verification runbook — done.
@@ -249,12 +265,14 @@ launchers/input_test_console_one_cell.md
 ```text
 Naz Lab v1 — Ready
 Video generation — Deferred after v1
-Frontend Input Test Console — Ready for testing
+Frontend Input Test Console — PASS
+Dashboard Final Packs integration — PASS
+Dashboard Package Search integration — PASS
 ```
 
 ## Recommended next work
 
-1. Test the frontend Input Test Console in Colab.
+1. Use Input Test Console for real content package trials.
 2. Improve non-video frontend UX only if practical issues appear during use.
-3. Do real video generation later during separate work sessions.
-4. Keep Bangla quality and reference asset policy aligned across all future work.
+3. Polish generated Bangla quality where needed.
+4. Do real video generation later during separate work sessions.
