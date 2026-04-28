@@ -1,4 +1,4 @@
-"""Naz Lab Master Control Dashboard Phase 2.14 final packs tab."""
+"""Naz Lab Master Control Dashboard Phase 2.15 input console aware."""
 
 from __future__ import annotations
 
@@ -31,8 +31,8 @@ from shared.drive_paths import (  # noqa: E402
 )
 from shared.json_utils import safe_read_json, update_workstation_status  # noqa: E402
 
-PHASE = "2.14"
-PHASE_STATUS = "stable-final-packs-tab"
+PHASE = "2.15"
+PHASE_STATUS = "stable-input-console-aware"
 
 VOICE_OUTPUTS = BASE_PATH / "voice_outputs"
 VOICE_PACKAGES = BASE_PATH / "voice_packages"
@@ -47,8 +47,9 @@ PORTRAIT_REFERENCES = BASE_PATH / "portrait_references"
 PROJECT_PACKAGES = BASE_PATH / "project_packages"
 PROJECT_WORKFLOWS = BASE_PATH / "project_workflows"
 FINAL_REEL_PACKS = BASE_PATH / "final_reel_packs"
+TEST_CONSOLE_PACKAGES = BASE_PATH / "test_console_packages"
 
-LANGUAGE_REQUIREMENT_BN = "Naz Lab default হবে Bangla-first। বেশির ভাগ content বাংলায় হবে। English থাকবে selected English project বা user request অনুযায়ী। আঞ্চলিক বাংলা লাগলে primary default: রংপুর/নীলফামারী/উত্তরবঙ্গ।"
+LANGUAGE_REQUIREMENT_BN = "Naz Lab default হবে Bangla-first। বেশির ভাগ কনটেন্ট বাংলায় হবে। English থাকবে selected English project বা user request অনুযায়ী। আঞ্চলিক বাংলা লাগলে primary default: রংপুর/নীলফামারী/উত্তরবঙ্গ।"
 LANGUAGE_REQUIREMENT_EN = "Naz Lab is Bangla-first by default. English remains available for selected projects such as True Noir Tales and ToolFlow."
 
 BANGLA_STYLE_REQUIREMENTS = {
@@ -64,6 +65,7 @@ PROJECT_AUTOMATION_STATUS = {
     "True Noir Tales": "polished one-topic-to-full-package automation",
     "ToolFlow": "polished one-topic-to-full-package automation",
     "General Bangla": "polished Bangla-first one-topic-to-full-package automation",
+    "Input Test Console": "frontend practical testing layer passed",
 }
 
 FOLDERS = {
@@ -87,6 +89,7 @@ FOLDERS = {
     "Project packages": PROJECT_PACKAGES,
     "Project workflows": PROJECT_WORKFLOWS,
     "Final reel packs": FINAL_REEL_PACKS,
+    "Test console packages": TEST_CONSOLE_PACKAGES,
 }
 
 PACKAGE_FOLDERS = {
@@ -97,16 +100,18 @@ PACKAGE_FOLDERS = {
     "Video packages": VIDEO_PACKAGES,
     "Portrait packages": PORTRAIT_PACKAGES,
     "Final reel packs": FINAL_REEL_PACKS,
+    "Test console packages": TEST_CONSOLE_PACKAGES,
 }
 
 WORKSTATIONS = [
+    {"name": "Input Test Console", "phase": "1.2 stable", "key": "test_console", "folder": TEST_CONSOLE_PACKAGES, "port": "8508"},
     {"name": "Text Workstation", "phase": "1.8 stable", "key": "text_workstation", "folder": TEXT_OUTPUTS, "port": "8501"},
-    {"name": "Master Dashboard", "phase": "2.14 stable", "key": "master_dashboard", "folder": BASE_PATH, "port": "8502"},
+    {"name": "Master Dashboard", "phase": "2.15 stable", "key": "master_dashboard", "folder": BASE_PATH, "port": "8502"},
     {"name": "Image Workstation", "phase": "3.x stable", "key": "image_workstation", "folder": IMAGE_OUTPUTS, "port": "8503"},
     {"name": "Voice Workstation", "phase": "4.5 safe reference manager", "key": "voice_workstation", "folder": VOICE_OUTPUTS, "port": "8504"},
     {"name": "Video Workstation", "phase": "5.3 stable", "key": "video_workstation", "folder": VIDEO_OUTPUTS, "port": "8505"},
     {"name": "Portrait Workstation", "phase": "6.4 safe reference manager", "key": "portrait_workstation", "folder": PORTRAIT_PACKAGES, "port": "8506"},
-    {"name": "Project Workflow Workstation", "phase": "10.2 stable", "key": "project_workstation", "folder": PROJECT_PACKAGES, "port": "8507"},
+    {"name": "Project Workflow Workstation", "phase": "10.3 stable", "key": "project_workstation", "folder": PROJECT_PACKAGES, "port": "8507"},
 ]
 
 
@@ -156,10 +161,13 @@ def package_summary(path: Path) -> dict[str, Any]:
     topic = ""
     if isinstance(data, dict):
         topic = str(data.get("topic", data.get("prompt", data.get("title", ""))))
+    project = ""
+    if isinstance(data, dict):
+        project = str(data.get("project", data.get("project_preset", data.get("visual_preset", ""))))
     return {
         "File": path.name,
         "Folder": path.parent.name,
-        "Project": data.get("project_preset", data.get("visual_preset", "")) if isinstance(data, dict) else "",
+        "Project": project,
         "Status": data.get("backend_status", data.get("status", "unknown")) if isinstance(data, dict) else "unknown",
         "Platform": data.get("platform", data.get("content_type", data.get("portrait_type", ""))) if isinstance(data, dict) else "",
         "Topic": topic[:140],
@@ -204,7 +212,7 @@ def rows_to_markdown(rows: list[dict[str, Any]]) -> str:
 def package_to_markdown(path: Path, data: Any) -> str:
     lines = [f"# Naz Lab Package Export: {path.name}", "", f"Exported: {datetime.now().isoformat(timespec='seconds')}", f"Source path: `{path}`", ""]
     if isinstance(data, dict):
-        priority_keys = ["project_preset", "topic", "title", "status", "backend_status", "platform", "content_type", "language", "created_at"]
+        priority_keys = ["project", "project_preset", "workflow", "topic", "title", "status", "backend_status", "platform", "content_type", "language", "created_at"]
         lines.append("## Summary")
         for key in priority_keys:
             if key in data:
@@ -245,7 +253,7 @@ def render_status(language: str) -> None:
     c3.metric("Drive base", status_label(BASE_PATH))
     c4.metric("Active workstations", str(len(WORKSTATIONS)))
     c5.metric("Output log entries", len(logs))
-    st.success("Master Dashboard status: stable for Phase 2.14 final packs tab")
+    st.success("Master Dashboard status: stable for Phase 2.15 with Input Test Console awareness")
     st.info(LANGUAGE_REQUIREMENT_BN if language == "Bangla" else LANGUAGE_REQUIREMENT_EN)
 
     rows = []
@@ -265,13 +273,14 @@ def render_status(language: str) -> None:
     st.dataframe(rows, use_container_width=True, hide_index=True)
     st.markdown("### Project automation status")
     st.json(PROJECT_AUTOMATION_STATUS)
-    st.markdown("### Next readiness")
+    st.markdown("### Current readiness")
     st.write({
-        "current_stack": "Text + Dashboard + Image + Voice + Video + Portrait + Project Workflow + Backend placeholders + Final Packs",
+        "current_stack": "Input Test Console + Text + Dashboard + Image + Voice + Video planning + Portrait + Project Workflow + Backend placeholders + Final Packs",
+        "input_test_console": "frontend practical testing layer passed",
         "package_search_export": "JSON + CSV + Markdown + selected package export ready",
         "backend_status_panel": "lightweight scan panel ready",
         "final_reel_packs": "JSON/Markdown preview and download ready",
-        "recommended_next_1": "real image backend runbook or FFmpeg assembly runbook",
+        "video_generation": "deferred after v1",
         "status": "ready",
     })
     st.markdown("### Bangla-first quality requirements")
@@ -280,13 +289,13 @@ def render_status(language: str) -> None:
 
 def render_links() -> None:
     st.header("Links")
-    st.caption("Save current Cloudflare URLs so the dashboard can show quick open links.")
+    st.caption("Save current Cloudflare or Colab proxy URLs so the dashboard can show quick open links.")
     links = workstation_data()
     with st.form("save_links_form"):
         values = {}
         for item in WORKSTATIONS:
             data = links.get(item["key"], {})
-            values[item["key"]] = st.text_input(f"{item['name']} public URL", value=data.get("public_url", ""))
+            values[item["key"]] = st.text_input(f"{item['name']} public/proxy URL", value=data.get("public_url", ""))
         submitted = st.form_submit_button("Save URLs")
     if submitted:
         for item in WORKSTATIONS:
@@ -327,7 +336,7 @@ def render_outputs() -> None:
 
 def render_jobs() -> None:
     st.header("Job queue")
-    sections = {"Image jobs": IMAGE_JOBS, "Voice packages": VOICE_PACKAGES, "Voice profile packages": VOICE_PROFILE_PACKAGES, "Video packages": VIDEO_PACKAGES, "Portrait packages": PORTRAIT_PACKAGES, "Project packages": PROJECT_PACKAGES, "Final reel packs": FINAL_REEL_PACKS}
+    sections = {"Image jobs": IMAGE_JOBS, "Voice packages": VOICE_PACKAGES, "Voice profile packages": VOICE_PROFILE_PACKAGES, "Video packages": VIDEO_PACKAGES, "Portrait packages": PORTRAIT_PACKAGES, "Project packages": PROJECT_PACKAGES, "Final reel packs": FINAL_REEL_PACKS, "Test console packages": TEST_CONSOLE_PACKAGES}
     for label, folder in sections.items():
         st.markdown(f"### {label}")
         rows = load_package_rows(folder, 30)
@@ -369,7 +378,7 @@ def render_final_packs() -> None:
     st.metric("Final pack JSON files", len(json_files))
     st.metric("Final pack Markdown files", len(md_files))
     if not json_files:
-        st.info("No final reel packs found yet. Run final_reel_pack_assembler.py first.")
+        st.info("No final reel packs found yet. Run final_reel_pack_assembler.py first or save a Final Reel Pack Manifest from Input Test Console.")
         return
 
     rows = [package_summary(path) for path in json_files]
@@ -406,7 +415,7 @@ def render_final_packs() -> None:
 
 def render_package_search() -> None:
     st.header("Package search")
-    st.caption("Search saved JSON packages across project, image, voice, video, portrait, and final pack folders.")
+    st.caption("Search saved JSON packages across project, image, voice, video, portrait, final pack, and test console folders.")
     c1, c2, c3, c4 = st.columns(4)
     folder_label = c1.selectbox("Folder", ["All package folders"] + list(PACKAGE_FOLDERS.keys()))
     project_filter = c2.text_input("Project contains", value="")
@@ -469,9 +478,12 @@ def render_package_search() -> None:
 
 def render_launch() -> None:
     st.header("Launch instructions")
-    st.write({"Text Workstation": "8501", "Master Dashboard": "8502", "Image Workstation": "8503", "Voice Workstation": "8504", "Video Workstation": "8505", "Portrait Workstation": "8506", "Project Workflow Workstation": "8507"})
+    st.write({"Input Test Console": "8508", "Text Workstation": "8501", "Master Dashboard": "8502", "Image Workstation": "8503", "Voice Workstation": "8504", "Video Workstation": "8505", "Portrait Workstation": "8506", "Project Workflow Workstation": "8507"})
     st.markdown("Recommended: use `launchers/all_in_one_colab_launcher.md` and set `WORKSTATION` to the app you want.")
-    st.code('WORKSTATION="dashboard"', language="bash")
+    st.code('WORKSTATION="test"  # Input Test Console', language="bash")
+    st.code('WORKSTATION="dashboard"  # Master Dashboard', language="bash")
+    st.markdown("When Cloudflare is unreliable, use the Colab proxy launcher:")
+    st.code("launchers/input_test_console_colab_proxy.md", language="text")
     st.code("streamlit run master_dashboard/app.py --server.port 8502 --server.address 0.0.0.0", language="bash")
 
 
@@ -480,10 +492,10 @@ def render_roadmap(language: str) -> None:
     st.markdown("""
 1. Phase 0 Foundation — complete  
 2. Phase 1 Text Workstation — stable  
-3. Phase 2 Master Dashboard — stable with package search/export/backend status/final packs  
+3. Phase 2 Master Dashboard — stable with package search/export/backend status/final packs and Input Test Console awareness  
 4. Phase 3 Image Workstation — stable  
 5. Phase 4 Voice Workstation — safer reference manager active  
-6. Phase 5 Video Workstation — stable  
+6. Phase 5 Video Workstation — stable planning/manifest only  
 7. Phase 6 Portrait Workstation — safer reference manager active  
 8. Phase 7 All-in-one Launcher — ready  
 9. Phase 8 True Noir Tales / ToolFlow workflow docs — ready  
@@ -491,29 +503,31 @@ def render_roadmap(language: str) -> None:
 11. Phase 10 Project Workflow Workstation — stable and polished  
 12. Phase 11 Reference Asset Policy — foundation ready  
 13. Backend Adapter Skeletons 1.0 — lightweight schema/scanner active  
-14. Generic TTS + Image placeholder + Video placeholder + Final Pack Assembly — active
+14. Generic TTS + Image placeholder + Video placeholder + Final Pack Assembly — active  
+15. Input Test Console practical frontend testing — passed
 """)
     st.markdown("### Project automation")
     st.json(PROJECT_AUTOMATION_STATUS)
     if language == "Bangla":
         st.markdown("""
 পরের কাজের priority:
-- real image backend runbook or FFmpeg assembly runbook
-- Dashboard final pack polish if needed
-- Bangla quality alignment maintenance
+- বাস্তব কনটেন্ট প্যাকেজ ট্রায়াল
+- Bangla quality polish যেখানে দরকার
+- real image backend runbook or FFmpeg assembly runbook later
+- video generation আলাদা session-এ
 """)
 
 
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Master Dashboard", page_icon="🧪", layout="wide")
     st.title("🧪 Naz Lab Master Control Dashboard")
-    st.caption("Phase 2.14 — package search/export, backend status, and final reel pack preview/download")
+    st.caption("Phase 2.15 — input console aware, package search/export, backend status, and final reel pack preview/download")
     update_workstation_status(WORKSTATION_LINKS_JSON, "master_dashboard", {"status": PHASE_STATUS, "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")})
     with st.sidebar:
         st.header("Dashboard settings")
         language = st.radio("Dashboard language note", ["Bangla", "English"], index=0)
         st.caption("Naz Lab default: Bangla-first. Regional default: Rangpur/Nilphamari/North Bengal.")
-        st.success("Phase 2.14 stable")
+        st.success("Phase 2.15 stable")
     tabs = st.tabs(["Status", "Links", "Workstations", "Outputs", "Job Queue", "Backend Status", "Final Packs", "Package Search", "Launch", "Roadmap"])
     with tabs[0]:
         render_status(language)
