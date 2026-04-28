@@ -11,6 +11,7 @@ This folder contains project-level guidance for Naz Lab.
 - `final_integration_checklist.md` — Final integration readiness checklist before backend adapter skeletons.
 - `backend_adapter_skeleton_runbook.md` — Lightweight backend skeleton command runbook.
 - `generic_tts_backend_runbook.md` — First real backend target runbook for safe generic TTS.
+- `image_prompt_backend_runbook.md` — Image prompt-to-output placeholder backend runbook.
 - `../backend_adapters/README.md` — Backend Adapter Skeletons 1.0 overview and run commands.
 
 ## Key language rules
@@ -91,6 +92,12 @@ Generic TTS backend runbook lives in:
 docs/generic_tts_backend_runbook.md
 ```
 
+Image prompt backend runbook lives in:
+
+```text
+docs/image_prompt_backend_runbook.md
+```
+
 Backend adapter skeletons live in:
 
 ```text
@@ -110,6 +117,7 @@ shared/backend_status.py
 - Women should have no sindoor unless explicitly requested.
 - Reference face/voice workflows require user-provided or explicitly authorized reference assets.
 - Generic TTS backend must not perform voice cloning.
+- Image placeholder backend must not claim to create final AI artwork.
 
 ## Current build status
 
@@ -122,11 +130,13 @@ shared/backend_status.py
 - Dashboard backend status panel — done.
 - Backend skeleton command runbook — done.
 - Generic TTS Backend Runbook 1.0 — done.
+- Generic gTTS backend adapter — done and tested by user.
+- Image Prompt Backend Runbook 1.0 — done.
+- Image placeholder backend adapter — done, needs Colab test.
 
 ## Recommended next work
 
-1. Add generic TTS backend adapter implementation.
-2. Test generic TTS backend in Colab.
-3. If generic TTS passes, choose either TTS quality improvement or image prompt-to-output backend.
-4. Keep backend work one adapter at a time.
-5. Keep Bangla quality and reference asset policy aligned across all new backend work.
+1. Test image placeholder backend in Colab.
+2. If image placeholder passes, choose real image backend runbook or video assembly placeholder backend.
+3. Keep backend work one adapter at a time.
+4. Keep Bangla quality and reference asset policy aligned across all new backend work.
