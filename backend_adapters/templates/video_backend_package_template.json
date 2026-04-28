@@ -1,0 +1,15 @@
+{
+  "backend_phase": "Backend Adapter Skeletons 1.0",
+  "backend_kind": "video",
+  "backend_status": "draft",
+  "project_preset": "General",
+  "language": "Bangla",
+  "platform": "Facebook Reels",
+  "duration_seconds": 60,
+  "scene_list": [],
+  "image_paths": [],
+  "voice_path": "",
+  "caption": "",
+  "video_output_path": "/content/drive/MyDrive/NazLab/video_outputs/example.mp4",
+  "backend_events": []
+}
