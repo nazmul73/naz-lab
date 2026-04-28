@@ -1,4 +1,4 @@
-"""Naz Lab Master Control Dashboard Phase 2.12 package export buttons."""
+"""Naz Lab Master Control Dashboard Phase 2.13 backend status panel."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from shared.backend_queue import scan_backend_queues  # noqa: E402
 from shared.drive_paths import (  # noqa: E402
     BASE_PATH,
     CHAT_OUTPUTS,
@@ -31,8 +32,8 @@ from shared.drive_paths import (  # noqa: E402
 )
 from shared.json_utils import safe_read_json, update_workstation_status  # noqa: E402
 
-PHASE = "2.12"
-PHASE_STATUS = "stable-package-export-buttons"
+PHASE = "2.13"
+PHASE_STATUS = "stable-backend-status-panel"
 
 VOICE_OUTPUTS = BASE_PATH / "voice_outputs"
 VOICE_PACKAGES = BASE_PATH / "voice_packages"
@@ -100,7 +101,7 @@ PACKAGE_FOLDERS = {
 
 WORKSTATIONS = [
     {"name": "Text Workstation", "phase": "1.8 stable", "key": "text_workstation", "folder": TEXT_OUTPUTS, "port": "8501"},
-    {"name": "Master Dashboard", "phase": "2.12 stable", "key": "master_dashboard", "folder": BASE_PATH, "port": "8502"},
+    {"name": "Master Dashboard", "phase": "2.13 stable", "key": "master_dashboard", "folder": BASE_PATH, "port": "8502"},
     {"name": "Image Workstation", "phase": "3.x stable", "key": "image_workstation", "folder": IMAGE_OUTPUTS, "port": "8503"},
     {"name": "Voice Workstation", "phase": "4.5 safe reference manager", "key": "voice_workstation", "folder": VOICE_OUTPUTS, "port": "8504"},
     {"name": "Video Workstation", "phase": "5.3 stable", "key": "video_workstation", "folder": VIDEO_OUTPUTS, "port": "8505"},
@@ -225,6 +226,28 @@ def package_to_markdown(path: Path, data: Any) -> str:
     return "\n".join(lines)
 
 
+def flatten_backend_rows(report: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for group, group_rows in report.get("folders", {}).items():
+        for row in group_rows:
+            rows.append(
+                {
+                    "Group": group,
+                    "Kind": row.get("kind", ""),
+                    "File": row.get("file", ""),
+                    "Project": row.get("project", ""),
+                    "Package status": row.get("status", ""),
+                    "Validation": row.get("validation_status", ""),
+                    "Ready": row.get("ok", False),
+                    "Messages": "; ".join(str(item) for item in row.get("messages", [])),
+                    "Warnings": "; ".join(str(item) for item in row.get("warnings", [])),
+                    "Modified": row.get("modified", ""),
+                    "Path": row.get("path", ""),
+                }
+            )
+    return sorted(rows, key=lambda item: item.get("Modified", ""), reverse=True)
+
+
 def render_status(language: str) -> None:
     st.header("System status")
     links = workstation_data()
@@ -235,7 +258,7 @@ def render_status(language: str) -> None:
     c3.metric("Drive base", status_label(BASE_PATH))
     c4.metric("Active workstations", str(len(WORKSTATIONS)))
     c5.metric("Output log entries", len(logs))
-    st.success("Master Dashboard status: stable for Phase 2.12 package export buttons")
+    st.success("Master Dashboard status: stable for Phase 2.13 backend status panel")
     st.info(LANGUAGE_REQUIREMENT_BN if language == "Bangla" else LANGUAGE_REQUIREMENT_EN)
 
     st.markdown("### Workstation matrix")
@@ -266,8 +289,9 @@ def render_status(language: str) -> None:
         "current_stack": "Text + Dashboard + Image + Voice + Video + Portrait + Project Workflow",
         "project_automation": "True Noir Tales + ToolFlow + General Bangla polished",
         "package_search_export": "JSON + CSV + Markdown + selected package export ready",
-        "recommended_next_1": "Backend planning",
-        "recommended_next_2": "Bangla quality alignment maintenance",
+        "backend_status_panel": "lightweight scan panel ready",
+        "recommended_next_1": "Generic backend package status writer",
+        "recommended_next_2": "Generic TTS adapter skeleton",
         "status": "ready",
     })
     st.markdown("### Bangla-first quality requirements")
@@ -348,6 +372,30 @@ def render_jobs() -> None:
             st.dataframe(rows, use_container_width=True, hide_index=True)
         else:
             st.info(f"No {label.lower()} yet.")
+
+
+def render_backend_status() -> None:
+    st.header("Backend status")
+    st.caption("Lightweight backend readiness scan. This does not run heavy generation tools.")
+    report = scan_backend_queues(limit_per_folder=100)
+    summary = report.get("summary", {})
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Total packages", summary.get("total", 0))
+    c2.metric("Ready", summary.get("ready", 0))
+    c3.metric("Blocked", summary.get("blocked", 0))
+    c4.metric("Warning only", summary.get("warning_only", 0))
+    st.info("Backend adapters are skeleton-only. Heavy tools such as XTTS, Fooocus, LivePortrait, FaceFusion, and video models are not run from this panel.")
+
+    rows = flatten_backend_rows(report)
+    if rows:
+        st.dataframe(rows, use_container_width=True, hide_index=True)
+    else:
+        st.info("No backend package/job JSON files found yet.")
+
+    report_json = json.dumps(report, ensure_ascii=False, indent=2)
+    st.download_button("Download backend scan JSON", data=report_json, file_name="naz_lab_backend_scan_report.json", mime="application/json")
+    with st.expander("Raw backend scan report", expanded=False):
+        st.json(report)
 
 
 def render_package_search() -> None:
@@ -449,7 +497,7 @@ def render_roadmap(language: str) -> None:
     st.markdown("""
 1. Phase 0 Foundation — complete  
 2. Phase 1 Text Workstation — stable  
-3. Phase 2 Master Dashboard — stable with package search/export buttons  
+3. Phase 2 Master Dashboard — stable with package search/export/backend status  
 4. Phase 3 Image Workstation — stable  
 5. Phase 4 Voice Workstation — safer reference manager active  
 6. Phase 5 Video Workstation — stable  
@@ -458,38 +506,41 @@ def render_roadmap(language: str) -> None:
 9. Phase 8 True Noir Tales / ToolFlow workflow docs — ready  
 10. Phase 9 Bangla Quality Engine — active  
 11. Phase 10 Project Workflow Workstation — stable and polished  
-12. Phase 11 Reference Asset Policy — foundation ready
+12. Phase 11 Reference Asset Policy — foundation ready  
+13. Backend Adapter Skeletons 1.0 — lightweight schema/scanner active
 """)
     st.markdown("### Project automation")
     st.json(PROJECT_AUTOMATION_STATUS)
     if language == "Bangla":
         st.markdown("""
 পরের কাজের priority:
-- backend planning শুরু করা
-- Bangla quality engine সব জায়গায় aligned রাখা
-- final integration polish/checklist করা
+- generic backend package status writer
+- generic TTS adapter skeleton
+- image adapter skeleton
+- Bangla quality alignment maintenance
 """)
 
 
 def main() -> None:
     st.set_page_config(page_title="Naz Lab Master Dashboard", page_icon="🧪", layout="wide")
     st.title("🧪 Naz Lab Master Control Dashboard")
-    st.caption("Phase 2.12 — package search, preview, copy, and JSON/CSV/Markdown download export")
+    st.caption("Phase 2.13 — package search/export plus lightweight backend status panel")
     update_workstation_status(WORKSTATION_LINKS_JSON, "master_dashboard", {"status": PHASE_STATUS, "phase": PHASE, "last_seen": datetime.now().isoformat(timespec="seconds")})
     with st.sidebar:
         st.header("Dashboard settings")
         language = st.radio("Dashboard language note", ["Bangla", "English"], index=0)
         st.caption("Naz Lab default: Bangla-first. Regional default: Rangpur/Nilphamari/North Bengal.")
-        st.success("Phase 2.12 stable")
-    tabs = st.tabs(["Status", "Links", "Workstations", "Outputs", "Job Queue", "Package Search", "Launch", "Roadmap"])
+        st.success("Phase 2.13 stable")
+    tabs = st.tabs(["Status", "Links", "Workstations", "Outputs", "Job Queue", "Backend Status", "Package Search", "Launch", "Roadmap"])
     with tabs[0]: render_status(language)
     with tabs[1]: render_links()
     with tabs[2]: render_workstations()
     with tabs[3]: render_outputs()
     with tabs[4]: render_jobs()
-    with tabs[5]: render_package_search()
-    with tabs[6]: render_launch()
-    with tabs[7]: render_roadmap(language)
+    with tabs[5]: render_backend_status()
+    with tabs[6]: render_package_search()
+    with tabs[7]: render_launch()
+    with tabs[8]: render_roadmap(language)
 
 
 if __name__ == "__main__":
