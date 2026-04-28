@@ -1,6 +1,6 @@
 # Naz Lab Backend Adapters
 
-Status: Backend Adapter Skeletons 1.0 + Generic TTS Adapter 1.0
+Status: Backend Adapter Skeletons 1.0 + Generic TTS Adapter 1.0 + Image Placeholder Adapter 1.0
 
 This folder contains lightweight backend adapter entry points for future Naz Lab generation backends.
 
@@ -19,6 +19,7 @@ The current backend adapter layer is for:
 - reusable backend package templates
 - template-based backend package creation
 - first generic non-cloning TTS audio generation
+- placeholder image output generation for pipeline testing
 
 ## Current files
 
@@ -28,6 +29,7 @@ The current backend adapter layer is for:
 - `generic_tts_adapter.py` — validates a voice package and prints a future generic TTS execution plan.
 - `generic_tts_gtts_adapter.py` — generates generic non-cloning MP3 audio from a validated voice package using gTTS.
 - `image_adapter.py` — validates an image package/job and prints a future image generation plan.
+- `image_placeholder_adapter.py` — creates a placeholder PNG from a validated image package/job.
 - `video_adapter.py` — validates a video package and prints a future video/reel execution plan.
 - `portrait_adapter.py` — validates a portrait package and prints a future portrait backend execution plan.
 
@@ -116,6 +118,18 @@ Validate a future image package/job:
 python backend_adapters/image_adapter.py /content/drive/MyDrive/NazLab/job_queue/image_jobs/example.json
 ```
 
+Generate placeholder image output:
+
+```bash
+python backend_adapters/image_placeholder_adapter.py /content/drive/MyDrive/NazLab/job_queue/image_jobs/example.json
+```
+
+Expected result:
+
+```text
+A JSON response showing ok=true, status=completed, and image_output_path for the generated placeholder PNG.
+```
+
 Validate a future video package:
 
 ```bash
@@ -142,11 +156,12 @@ Completed in Skeletons 1.0:
 8. Backend package templates.
 9. Backend template creator/helper.
 10. Generic gTTS backend adapter for non-cloning MP3 generation.
+11. Image placeholder adapter for package-to-output validation.
 
 Recommended next:
 
-1. Test generic gTTS adapter in Colab.
-2. If test passes, choose either TTS quality improvement or image prompt-to-output backend.
+1. Test image placeholder adapter in Colab.
+2. If test passes, choose either real image backend runbook or video assembly placeholder backend.
 3. Add real backend runbooks only when a real backend is selected for testing.
 
 ## Safety requirement
@@ -158,6 +173,8 @@ Future adapters must block reference-based generation unless the package metadat
 - `no_misleading_identity_claim: true` for portrait/face workflows
 
 Generic gTTS adapter must not clone voices and must block reference clone mode.
+
+Image placeholder adapter must not claim to create final AI artwork.
 
 ## Bangla-first requirement
 
