@@ -20,6 +20,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from master_dashboard.naz_lab_facebook_panel import render_facebook_panel  # noqa: E402
 from master_dashboard.naz_lab_image_panel import render_image_panel  # noqa: E402
+from master_dashboard.naz_lab_nav import render_nav  # noqa: E402
 from master_dashboard.naz_lab_review_panel import render_review_panel  # noqa: E402
 from master_dashboard.naz_lab_text_panel import render_text_panel  # noqa: E402
 from master_dashboard.naz_lab_voice_panel import render_voice_panel  # noqa: E402
@@ -109,116 +110,102 @@ def render_css() -> None:
             font-size: 1.04rem;
           }
 
-          /* Reliable Streamlit tab styling.
-             Main menu = first-level .stTabs.
-             Submenu = nested .stTabs inside another .stTabs. */
-
-          .stTabs > div[data-baseweb="tab-list"] {
-            background: linear-gradient(135deg, #111827 0%, #1f2937 100%) !important;
-            border: 1px solid #334155 !important;
-            border-radius: 18px !important;
-            padding: 0.45rem !important;
-            gap: 0.50rem !important;
-            margin: 0.55rem 0 1.05rem 0 !important;
-            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22) !important;
+          .naz-main-menu-label,
+          .naz-sub-menu-label {
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin: 0.65rem 0 0.25rem 0.1rem;
           }
 
-          .stTabs > div[data-baseweb="tab-list"] button[data-baseweb="tab"],
-          .stTabs > div[data-baseweb="tab-list"] button[role="tab"] {
-            background: #0f172a !important;
+          .naz-main-menu-label { color: #93c5fd; }
+          .naz-sub-menu-label { color: #5eead4; }
+
+          .naz-main-menu {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+            align-items: center;
+            background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+            border: 1px solid #334155;
+            border-radius: 18px;
+            padding: 0.55rem;
+            margin: 0 0 1.15rem 0;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+          }
+
+          .naz-sub-menu {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+            align-items: center;
+            background: linear-gradient(135deg, #ecfeff 0%, #dbeafe 100%);
+            border: 1px solid #7dd3fc;
+            border-radius: 16px;
+            padding: 0.45rem;
+            margin: 0.55rem 0 1.0rem 0;
+            box-shadow: 0 8px 18px rgba(14, 116, 144, 0.13);
+          }
+
+          .naz-menu-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none !important;
+            border-radius: 12px;
+            font-weight: 800;
+            line-height: 1;
+            white-space: nowrap;
+            transition: all 0.16s ease;
+          }
+
+          .naz-main-menu .naz-menu-pill {
             color: #e5e7eb !important;
-            border: 1px solid #334155 !important;
-            border-radius: 12px !important;
-            padding: 0.55rem 1rem !important;
-            margin: 0 !important;
-            font-weight: 700 !important;
-            min-height: 42px !important;
-            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02) !important;
+            background: #0f172a;
+            border: 1px solid #334155;
+            padding: 0.72rem 0.95rem;
+            min-height: 42px;
           }
 
-          .stTabs > div[data-baseweb="tab-list"] button[data-baseweb="tab"] p,
-          .stTabs > div[data-baseweb="tab-list"] button[role="tab"] p {
-            color: inherit !important;
-            font-weight: 700 !important;
-          }
-
-          .stTabs > div[data-baseweb="tab-list"] button[data-baseweb="tab"]:hover,
-          .stTabs > div[data-baseweb="tab-list"] button[role="tab"]:hover {
-            background: #1e293b !important;
+          .naz-main-menu .naz-menu-pill:hover {
+            background: #1e293b;
             color: #ffffff !important;
-            border-color: #64748b !important;
+            border-color: #64748b;
           }
 
-          .stTabs > div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"],
-          .stTabs > div[data-baseweb="tab-list"] button[role="tab"][aria-selected="true"] {
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+          .naz-main-menu .naz-menu-pill.active {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
             color: #ffffff !important;
-            border-color: #60a5fa !important;
-            box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.28), 0 8px 20px rgba(37, 99, 235, 0.20) !important;
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.28), 0 8px 20px rgba(37, 99, 235, 0.20);
           }
 
-          .stTabs > div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] p,
-          .stTabs > div[data-baseweb="tab-list"] button[role="tab"][aria-selected="true"] p {
-            color: #ffffff !important;
-          }
-
-          /* Main menu to content separation */
-          .stTabs > div[data-baseweb="tab-panel"] {
-            border-top: 1px solid #1f2937 !important;
-            padding-top: 0.9rem !important;
-          }
-
-          /* Nested/submenu overrides */
-          .stTabs .stTabs > div[data-baseweb="tab-list"] {
-            background: linear-gradient(135deg, #ecfeff 0%, #dbeafe 100%) !important;
-            border: 1px solid #7dd3fc !important;
-            border-radius: 16px !important;
-            padding: 0.40rem !important;
-            gap: 0.40rem !important;
-            margin: 0.6rem 0 0.95rem 0 !important;
-            box-shadow: 0 8px 18px rgba(14, 116, 144, 0.13) !important;
-          }
-
-          .stTabs .stTabs > div[data-baseweb="tab-list"] button[data-baseweb="tab"],
-          .stTabs .stTabs > div[data-baseweb="tab-list"] button[role="tab"] {
-            background: #f8fafc !important;
+          .naz-sub-menu .naz-menu-pill {
             color: #0f766e !important;
-            border: 1px solid #99f6e4 !important;
-            border-radius: 10px !important;
-            padding: 0.48rem 0.9rem !important;
-            min-height: 38px !important;
-            font-weight: 700 !important;
+            background: #f8fafc;
+            border: 1px solid #99f6e4;
+            padding: 0.62rem 0.85rem;
+            min-height: 38px;
           }
 
-          .stTabs .stTabs > div[data-baseweb="tab-list"] button[data-baseweb="tab"] p,
-          .stTabs .stTabs > div[data-baseweb="tab-list"] button[role="tab"] p {
-            color: inherit !important;
-            font-weight: 700 !important;
-          }
-
-          .stTabs .stTabs > div[data-baseweb="tab-list"] button[data-baseweb="tab"]:hover,
-          .stTabs .stTabs > div[data-baseweb="tab-list"] button[role="tab"]:hover {
-            background: #ccfbf1 !important;
+          .naz-sub-menu .naz-menu-pill:hover {
+            background: #ccfbf1;
             color: #115e59 !important;
-            border-color: #2dd4bf !important;
+            border-color: #2dd4bf;
           }
 
-          .stTabs .stTabs > div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"],
-          .stTabs .stTabs > div[data-baseweb="tab-list"] button[role="tab"][aria-selected="true"] {
-            background: linear-gradient(135deg, #14b8a6 0%, #0f766e 100%) !important;
+          .naz-sub-menu .naz-menu-pill.active {
+            background: linear-gradient(135deg, #14b8a6 0%, #0f766e 100%);
             color: #ffffff !important;
-            border-color: #14b8a6 !important;
-            box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.22), 0 6px 16px rgba(15, 118, 110, 0.18) !important;
+            border-color: #14b8a6;
+            box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.22), 0 6px 16px rgba(15, 118, 110, 0.18);
           }
 
-          .stTabs .stTabs > div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] p,
-          .stTabs .stTabs > div[data-baseweb="tab-list"] button[role="tab"][aria-selected="true"] p {
-            color: #ffffff !important;
-          }
-
-          .stTabs .stTabs > div[data-baseweb="tab-panel"] {
-            border-top: 1px solid #bae6fd !important;
-            padding-top: 0.85rem !important;
+          .naz-section-body {
+            border-top: 1px solid #1f2937;
+            padding-top: 1rem;
+            margin-top: 0.4rem;
           }
 
           h2, h3 {
@@ -352,25 +339,28 @@ def main() -> None:
     render_css()
     render_header()
     render_status_strip()
-    tabs = st.tabs(["Home", "Text", "Voice", "Image", "Video", "Facebook Post", "Files", "Health / Logs", "Runbook"])
-    with tabs[0]:
+    options = ["Home", "Text", "Voice", "Image", "Video", "Facebook Post", "Files", "Health / Logs", "Runbook"]
+    selected = render_nav(options, key="main", variant="main")
+    st.markdown('<div class="naz-section-body">', unsafe_allow_html=True)
+    if selected == "Home":
         render_home()
-    with tabs[1]:
+    elif selected == "Text":
         render_text_panel()
-    with tabs[2]:
+    elif selected == "Voice":
         render_voice_panel()
-    with tabs[3]:
+    elif selected == "Image":
         render_image_panel()
-    with tabs[4]:
+    elif selected == "Video":
         render_video()
-    with tabs[5]:
+    elif selected == "Facebook Post":
         render_facebook_panel()
-    with tabs[6]:
+    elif selected == "Files":
         render_files()
-    with tabs[7]:
+    elif selected == "Health / Logs":
         render_health_logs()
-    with tabs[8]:
+    elif selected == "Runbook":
         render_runbook()
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
