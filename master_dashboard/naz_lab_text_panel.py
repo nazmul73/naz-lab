@@ -1,13 +1,12 @@
 """Reusable Text Workstation panel for the Naz Lab dashboard.
 
-This panel is the official Text Builder UI. It imports the shared generation
-backend directly, so the official dashboard no longer depends on monkeypatching
-legacy `text_workstation.app_phase110` at startup.
+Official Text Builder UI. It uses shared helpers and the shared Ollama
+text-generation backend directly. It does not import legacy
+`text_workstation.app_phase110`.
 """
 
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +18,6 @@ from shared.chat_autosave import append_chat_turn, ensure_chat_session
 from shared.drive_paths import CHAT_OUTPUTS, IMAGE_JOBS, IMAGE_PROMPTS, SCRIPT_OUTPUTS, TEXT_METADATA, TEXT_OUTPUTS
 from shared.job_queue_schema import read_json
 from shared.model_policy import (
-    ALLOWED_TEXT_MODELS,
     BLOCKED_TEXT_MODELS,
     MINIMUM_CPU_TEXT_MODEL,
     RECOMMENDED_TEXT_MODEL,
@@ -31,7 +29,7 @@ from shared.model_policy import (
 from shared.ollama_persistence import ensure_ollama_persistence
 from shared.ollama_text_generation import call_ollama, generation_policy_status, user_requested_bangla
 from shared.text_pipeline import create_image_job_from_text, persist_text_result_and_optional_image_job
-from text_workstation.app_phase110 import (
+from shared.text_workstation_helpers import (
     MODE_CONFIG,
     ensure_dirs as ensure_text_dirs,
     installed_model_names,
@@ -46,21 +44,17 @@ TEXT_EXTENSIONS = {".txt", ".md", ".json", ".jsonl"}
 JSON_EXTENSIONS = {".json", ".jsonl"}
 OUTPUT_AREA_BASE_KEY = "naz_text_output_area"
 TEMPLATE_CHECKBOX_KEY = "naz_text_template_first"
-AVAILABLE_MODELS = filter_allowed_text_models(ALLOWED_TEXT_MODELS)
+AVAILABLE_MODELS = filter_allowed_text_models()
 
 MODE_POLICY: dict[str, dict[str, Any]] = {
-    "General Chat": {"internal_mode": "General Chat", "auto_save": False, "output_dir": CHAT_OUTPUTS, "template_default": False, "image_job": False},
-    "Free Writer": {"internal_mode": "Free Writer", "auto_save": False, "output_dir": TEXT_OUTPUTS, "template_default": False, "image_job": True},
-    "Story Writer": {"internal_mode": "Story Writer", "auto_save": True, "output_dir": TEXT_OUTPUTS, "template_default": True, "image_job": True},
-    "Viral Script Writer": {"internal_mode": "Viral Script Writer", "auto_save": True, "output_dir": SCRIPT_OUTPUTS, "template_default": True, "image_job": True},
-    "Caption Writer": {"internal_mode": "Caption Writer", "auto_save": False, "output_dir": TEXT_OUTPUTS, "template_default": True, "image_job": True},
-    "Prompt Improver": {"internal_mode": "Prompt Improver", "auto_save": False, "output_dir": IMAGE_PROMPTS, "template_default": True, "image_job": True},
-    "YouTube Script": {"internal_mode": "YouTube Script", "auto_save": False, "output_dir": SCRIPT_OUTPUTS, "template_default": True, "image_job": True},
+    "General Chat": {"internal_mode": "General Chat", "auto_save": False, "template_default": False},
+    "Free Writer": {"internal_mode": "Free Writer", "auto_save": False, "template_default": False},
+    "Story Writer": {"internal_mode": "Story Writer", "auto_save": True, "template_default": True},
+    "Viral Script Writer": {"internal_mode": "Viral Script Writer", "auto_save": True, "template_default": True},
+    "Caption Writer": {"internal_mode": "Caption Writer", "auto_save": False, "template_default": True},
+    "Prompt Improver": {"internal_mode": "Prompt Improver", "auto_save": False, "template_default": True},
+    "YouTube Script": {"internal_mode": "YouTube Script", "auto_save": False, "template_default": True},
 }
-
-
-def now_stamp() -> str:
-    return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 
 def count_files(path: Path) -> int:
@@ -197,10 +191,6 @@ def render_pending_messages() -> None:
         st.session_state.naz_text_pending_success = ""
 
 
-def persist_generated_text(**kwargs: Any) -> dict[str, str]:
-    return persist_text_result_and_optional_image_job(**kwargs)
-
-
 def auto_save_chat_turn(*, user_message: str, assistant_message: str, mode: str, language: str, model: str, engine_status: str, extra: dict[str, Any] | None = None) -> None:
     try:
         session = append_chat_turn(
@@ -254,7 +244,7 @@ def render_builder() -> None:
     send_image = b3.button("Send to Image Job", use_container_width=True, key="naz_text_send_image")
 
     enriched_topic = topic if style == "Default" else f"Style preset: {style}\n\n{topic}"
-    st.caption("Prompt Improver auto-exports image jobs. Text metadata is saved for every generation. Shared generation backend is used directly.")
+    st.caption("Prompt Improver auto-exports image jobs. Text metadata is saved for every generation. Legacy app_phase110 is not used.")
 
     if generate:
         if not topic.strip():
@@ -302,7 +292,7 @@ def render_builder() -> None:
             saved_path = save_text_output(effective_mode, project, effective_language, enriched_topic, result, engine_status)
             st.session_state.naz_text_saved_path = str(saved_path)
 
-        pipeline_result = persist_generated_text(
+        pipeline_result = persist_text_result_and_optional_image_job(
             mode=effective_mode,
             project=project,
             language=effective_language,
@@ -361,7 +351,7 @@ def render_builder() -> None:
         else:
             saved_path = save_text_output(save_mode, save_project, save_language, save_topic, current_output, st.session_state.naz_text_engine_status or "manual_save")
             st.session_state.naz_text_saved_path = str(saved_path)
-            pipeline_result = persist_generated_text(mode=save_mode, project=save_project, language=save_language, topic=save_topic, prompt=save_topic, model=save_model, engine_status=st.session_state.naz_text_engine_status or "manual_save", output_text=current_output, output_text_path=saved_path, auto_image_job_for_prompt_improver=False, extra={"manual_save": True})
+            pipeline_result = persist_text_result_and_optional_image_job(mode=save_mode, project=save_project, language=save_language, topic=save_topic, prompt=save_topic, model=save_model, engine_status=st.session_state.naz_text_engine_status or "manual_save", output_text=current_output, output_text_path=saved_path, auto_image_job_for_prompt_improver=False, extra={"manual_save": True})
             st.session_state.naz_text_last_metadata_path = pipeline_result.get("metadata_path", "")
             st.success(f"Saved: {saved_path}")
 
@@ -420,6 +410,8 @@ def render_status() -> None:
     c4.metric("Ollama persistence", "ok" if persistence_status.get("ok") else "check")
     st.json({
         "generation_backend": "shared.ollama_text_generation.call_ollama",
+        "helper_backend": "shared.text_workstation_helpers",
+        "legacy_app_phase110_active": False,
         "generation_policy": generation_policy_status(),
         "recommended_text_model": RECOMMENDED_TEXT_MODEL,
         "minimum_cpu_text_model": MINIMUM_CPU_TEXT_MODEL,
