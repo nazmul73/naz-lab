@@ -1,6 +1,29 @@
 __pycache__/
 *.pyc
 .env
+.env.*
 .venv/
 .DS_Store
+.ipynb_checkpoints/
+
+# Runtime logs
+*.log
+ollama*.log
+streamlit*.log
+*_runtime.log
+
+# Local/Colab runtime artifacts
+cloudflared
+cloudflared-linux-amd64
+*.lock
+node_modules/
+.npm/
+.streamlit/
+
+# Generated temp/cache files
+.cache/
+.tmp/
+tmp/
+
+# Local notebooks and checkpoints
 .ipynb_checkpoints/
