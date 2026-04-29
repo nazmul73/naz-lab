@@ -3,6 +3,7 @@
 Backend-ready Text Builder panel with:
 - approved model policy only: gemma2:2b, qwen2.5:1.5b, qwen2.5:3b
 - casual chat detection
+- Drive-backed incremental chat autosave
 - metadata sidecar save
 - Prompt Improver automatic Image Job JSON handoff
 - Drive-backed Ollama persistence status
@@ -16,6 +17,7 @@ from typing import Any
 import streamlit as st
 
 from master_dashboard.naz_lab_nav import render_nav
+from shared.chat_autosave import append_chat_turn, ensure_chat_session
 from shared.drive_paths import CHAT_OUTPUTS, IMAGE_JOBS, IMAGE_PROMPTS, SCRIPT_OUTPUTS, TEXT_METADATA, TEXT_OUTPUTS
 from shared.job_queue_schema import read_json
 from shared.model_policy import (
@@ -43,8 +45,8 @@ from text_workstation.app_phase110 import (
     user_requested_bangla,
 )
 
-TEXT_EXTENSIONS = {".txt", ".md", ".json"}
-JSON_EXTENSIONS = {".json"}
+TEXT_EXTENSIONS = {".txt", ".md", ".json", ".jsonl"}
+JSON_EXTENSIONS = {".json", ".jsonl"}
 OUTPUT_AREA_BASE_KEY = "naz_text_output_area"
 TEMPLATE_CHECKBOX_KEY = "naz_text_template_first"
 AVAILABLE_MODELS = filter_allowed_text_models(ALLOWED_TEXT_MODELS)
@@ -164,11 +166,17 @@ def init_state() -> None:
         "naz_text_pending_success": "",
         "naz_text_pending_warning": "",
         "naz_text_last_selected_mode": "Free Writer",
+        "naz_text_chat_autosave_session_id": "",
+        "naz_text_last_chat_autosave_path": "",
         TEMPLATE_CHECKBOX_KEY: False,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
+    if not st.session_state.naz_text_chat_autosave_session_id:
+        session = ensure_chat_session()
+        st.session_state.naz_text_chat_autosave_session_id = session["session_id"]
+        st.session_state.naz_text_last_chat_autosave_path = session["jsonl_path"]
 
 
 def sync_template_default_for_mode(mode: str) -> None:
@@ -232,10 +240,29 @@ def persist_generated_text(
     )
 
 
+def auto_save_chat_turn(*, user_message: str, assistant_message: str, mode: str, language: str, model: str, engine_status: str, extra: dict[str, Any] | None = None) -> None:
+    try:
+        session = append_chat_turn(
+            session_id=st.session_state.naz_text_chat_autosave_session_id,
+            user_message=user_message,
+            assistant_message=assistant_message,
+            mode=mode,
+            language=language,
+            model=model,
+            engine_status=engine_status,
+            extra=extra,
+        )
+        st.session_state.naz_text_chat_autosave_session_id = session["session_id"]
+        st.session_state.naz_text_last_chat_autosave_path = session["jsonl_path"]
+    except Exception as exc:
+        st.session_state.naz_text_pending_warning = (st.session_state.naz_text_pending_warning + "\n" if st.session_state.naz_text_pending_warning else "") + f"Chat autosave failed: {exc}"
+
+
 def render_builder() -> None:
     ensure_text_dirs()
     init_state()
     st.markdown("### Text Builder")
+    st.caption(f"Chat autosave session: {st.session_state.naz_text_chat_autosave_session_id}")
     mode_options = ["General Chat", "Free Writer", "Story Writer", "Viral Script Writer", "Caption Writer", "Prompt Improver", "YouTube Script"]
     c1, c2, c3 = st.columns(3)
     with c1:
@@ -268,7 +295,7 @@ def render_builder() -> None:
 
     enriched_topic = topic if style == "Default" else f"Style preset: {style}\n\n{topic}"
     auto_save = bool(policy.get("auto_save", False))
-    st.caption("Prompt Improver auto-exports image jobs. Text metadata is saved for every generation. Weak Bangla models are blocked by policy.")
+    st.caption("Prompt Improver auto-exports image jobs. Text metadata is saved for every generation. General Chat is incrementally auto-saved to Drive.")
 
     if generate:
         if not topic.strip():
@@ -326,6 +353,16 @@ def render_builder() -> None:
         st.session_state.naz_text_last_metadata_path = pipeline_result.get("metadata_path", "")
         if pipeline_result.get("image_job_path"):
             st.session_state.naz_text_last_job_path = pipeline_result["image_job_path"]
+        if effective_mode == "General Chat":
+            auto_save_chat_turn(
+                user_message=enriched_topic,
+                assistant_message=result,
+                mode=effective_mode,
+                language=effective_language,
+                model=model,
+                engine_status=engine_status,
+                extra={"selected_mode": mode, "reason": effective_reason},
+            )
 
         status_parts = ["Generated and displayed.", f"Metadata saved: {st.session_state.naz_text_last_metadata_path}"]
         if saved_path:
@@ -334,6 +371,8 @@ def render_builder() -> None:
             status_parts.append("Not text auto-saved; press Save current output only if needed.")
         if st.session_state.naz_text_last_job_path:
             status_parts.append(f"Auto image job created: {st.session_state.naz_text_last_job_path}")
+        if st.session_state.naz_text_last_chat_autosave_path and effective_mode == "General Chat":
+            status_parts.append(f"Chat autosaved: {st.session_state.naz_text_last_chat_autosave_path}")
         st.session_state.naz_text_pending_success = "\n".join(status_parts)
         if warnings:
             st.session_state.naz_text_pending_warning = "\n".join(warnings)
@@ -351,6 +390,8 @@ def render_builder() -> None:
         st.info(f"Last metadata: {st.session_state.naz_text_last_metadata_path}")
     if st.session_state.naz_text_last_job_path:
         st.info(f"Last image job: {st.session_state.naz_text_last_job_path}")
+    if st.session_state.naz_text_last_chat_autosave_path:
+        st.info(f"Chat autosave file: {st.session_state.naz_text_last_chat_autosave_path}")
 
     save_mode = st.session_state.naz_text_last_mode or internal_mode
     save_project = st.session_state.naz_text_last_project or project
@@ -408,8 +449,11 @@ def render_library_section(folder: Path, ext: set[str], label: str) -> None:
         st.dataframe(rows, use_container_width=True, hide_index=True)
         selected = st.selectbox("Preview file", [row["Path"] for row in rows], key=f"text_library_{folder.name}_{label}")
         selected_path = Path(selected)
-        if selected_path.suffix.lower() == ".json":
-            st.json(safe_json(selected_path, {}))
+        if selected_path.suffix.lower() in JSON_EXTENSIONS:
+            if selected_path.suffix.lower() == ".jsonl":
+                st.text_area("JSONL preview", safe_text(selected_path), height=320, key=f"preview_{folder.name}_{label}")
+            else:
+                st.json(safe_json(selected_path, {}))
         else:
             st.text_area("Preview", safe_text(selected_path), height=320, key=f"preview_{folder.name}_{label}")
     else:
@@ -418,9 +462,10 @@ def render_library_section(folder: Path, ext: set[str], label: str) -> None:
 
 def render_library() -> None:
     st.markdown("### Text Output Library")
-    selected = render_nav(["Chat outputs", "Text outputs", "Scripts", "Image prompts", "Image jobs", "Text metadata"], key="text_library_sub", variant="sub")
+    selected = render_nav(["Chat outputs", "Chat sessions", "Text outputs", "Scripts", "Image prompts", "Image jobs", "Text metadata"], key="text_library_sub", variant="sub")
     mapping = {
         "Chat outputs": (CHAT_OUTPUTS, TEXT_EXTENSIONS),
+        "Chat sessions": (CHAT_OUTPUTS / "sessions", TEXT_EXTENSIONS),
         "Text outputs": (TEXT_OUTPUTS, TEXT_EXTENSIONS),
         "Scripts": (SCRIPT_OUTPUTS, TEXT_EXTENSIONS),
         "Image prompts": (IMAGE_PROMPTS, TEXT_EXTENSIONS),
@@ -449,6 +494,7 @@ def render_status() -> None:
         "selected_model": model,
         "installed_models": names,
         "chat_outputs": str(CHAT_OUTPUTS),
+        "chat_sessions": str(CHAT_OUTPUTS / "sessions"),
         "text_outputs": str(TEXT_OUTPUTS),
         "script_outputs": str(SCRIPT_OUTPUTS),
         "image_prompts": str(IMAGE_PROMPTS),
@@ -459,6 +505,7 @@ def render_status() -> None:
         "mode_policy": MODE_POLICY,
         "backend_modes": list(MODE_CONFIG.keys()),
         "casual_chat_detection": "enabled",
+        "chat_incremental_autosave": "enabled",
         "prompt_improver_auto_image_job": "enabled",
         "manual_image_job_schema": "1.20",
         "ollama_persistence": persistence_status,
