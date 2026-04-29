@@ -11,6 +11,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 REPO_DIR = Path("/content/naz-lab")
@@ -61,11 +62,21 @@ COMPILE_TARGETS = [
 
 
 def safe_mkdir(path: Path) -> None:
-    if path.exists() or path.is_symlink():
-        print(f"OK exists: {path}")
-        return
-    path.mkdir(parents=True, exist_ok=True)
-    print(f"Created: {path}")
+    """Create a directory without crashing on Drive symlink/file conflicts."""
+    try:
+        if path.exists() or path.is_symlink():
+            if path.is_dir() or path.is_symlink():
+                print(f"OK exists: {path}")
+                return
+            backup = path.with_name(f"{path.name}_file_backup_{int(time.time())}")
+            path.rename(backup)
+            print(f"Backed up file conflict: {path} -> {backup}")
+        path.mkdir(parents=True, exist_ok=True)
+        print(f"Created: {path}")
+    except FileExistsError:
+        print(f"OK already exists or Drive conflict tolerated: {path}")
+    except Exception as exc:
+        print(f"WARNING could not create {path}: {type(exc).__name__}: {exc}")
 
 
 def ensure_drive_folders() -> None:
@@ -75,8 +86,8 @@ def ensure_drive_folders() -> None:
 
 def ensure_ollama_env() -> dict[str, str | bool]:
     os.environ["OLLAMA_MODELS"] = str(DRIVE_OLLAMA_MODELS)
-    DRIVE_OLLAMA_MODELS.mkdir(parents=True, exist_ok=True)
-    LOCAL_OLLAMA_MODELS.parent.mkdir(parents=True, exist_ok=True)
+    safe_mkdir(DRIVE_OLLAMA_MODELS)
+    safe_mkdir(LOCAL_OLLAMA_MODELS.parent)
     if LOCAL_OLLAMA_MODELS.is_symlink():
         return {"ok": True, "mode": "already_symlinked", "target": str(LOCAL_OLLAMA_MODELS.resolve())}
     if LOCAL_OLLAMA_MODELS.exists():
