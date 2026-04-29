@@ -26,6 +26,7 @@ from final_package.package_backend import (
     list_packages,
     package_preview,
 )
+from master_dashboard.naz_lab_nav import render_nav
 from shared.job_queue_schema import read_json
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
@@ -148,10 +149,10 @@ def render_review_panel() -> None:
     st.markdown("## Review Package Workflow")
     st.caption("Contextual package/review actions inside Naz Lab. This is not a separate Complete Package tab.")
     render_package_summary()
-    tabs = st.tabs(["Create", "Preview / Approve / Export", "Approved"])
-    with tabs[0]:
+    selected = render_nav(["Create", "Preview / Approve / Export", "Approved"], key="review_sub", variant="sub")
+    if selected == "Create":
         render_quick_package_builder()
-    with tabs[1]:
+    elif selected == "Preview / Approve / Export":
         render_preview_approve_export()
-    with tabs[2]:
+    elif selected == "Approved":
         render_approved_list()
