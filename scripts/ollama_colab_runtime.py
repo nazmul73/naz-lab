@@ -14,8 +14,24 @@ from pathlib import Path
 
 OLLAMA_MODELS = Path("/content/drive/MyDrive/NazLab/models/ollama")
 OLLAMA_LOG = Path("/content/ollama_naz_lab.log")
-OLLAMA_TAGS_URL = "http://localhost:11434/api/tags"
 MODELS_TO_PULL = ["gemma2:2b", "qwen2.5:1.5b"]
+
+
+def safe_mkdir(path: Path) -> None:
+    try:
+        if path.exists() or path.is_symlink():
+            if path.is_dir() or path.is_symlink():
+                print("OK exists:", path)
+                return
+            backup = path.with_name(f"{path.name}_file_backup_{int(time.time())}")
+            path.rename(backup)
+            print("Backed up file conflict:", path, "->", backup)
+        path.mkdir(parents=True, exist_ok=True)
+        print("Created:", path)
+    except FileExistsError:
+        print("OK already exists or Drive race tolerated:", path)
+    except Exception as exc:
+        print("WARNING could not create", path, type(exc).__name__, exc)
 
 
 def run(command: list[str] | str, *, shell: bool = False, timeout: int | None = None) -> subprocess.CompletedProcess[str]:
@@ -68,7 +84,7 @@ def wait_for_ollama_ready(seconds: int = 60) -> bool:
 def start_ollama(ollama_bin: str | None) -> bool:
     if not ollama_bin:
         return False
-    OLLAMA_MODELS.mkdir(parents=True, exist_ok=True)
+    safe_mkdir(OLLAMA_MODELS)
     os.environ["OLLAMA_MODELS"] = str(OLLAMA_MODELS)
     run("pkill -f 'ollama serve' || true", shell=True)
     log_handle = OLLAMA_LOG.open("w")
@@ -88,7 +104,7 @@ def pull_models(ollama_bin: str | None) -> None:
 
 
 def main() -> None:
-    OLLAMA_MODELS.mkdir(parents=True, exist_ok=True)
+    safe_mkdir(OLLAMA_MODELS)
     os.environ["OLLAMA_MODELS"] = str(OLLAMA_MODELS)
     ollama_bin = install_ollama_if_needed()
     if start_ollama(ollama_bin):
