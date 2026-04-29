@@ -28,6 +28,7 @@ from text_workstation.app_phase110 import (
 
 TEXT_EXTENSIONS = {".txt", ".md", ".json"}
 JSON_EXTENSIONS = {".json"}
+AUTO_SAVE_MODES = {"Story Writer", "Viral Script Writer"}
 
 
 def count_files(path: Path) -> int:
@@ -72,6 +73,10 @@ def init_state() -> None:
         "naz_text_saved_path": "",
         "naz_text_engine_status": "",
         "naz_text_last_job_path": "",
+        "naz_text_last_mode": "",
+        "naz_text_last_project": "",
+        "naz_text_last_language": "",
+        "naz_text_last_topic": "",
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -106,6 +111,8 @@ def render_builder() -> None:
     internal_mode = "Free Writer" if mode in ["General Chat", "YouTube Script"] else mode
     enriched_topic = topic if style == "Default" else f"Style preset: {style}\n\n{topic}"
 
+    st.caption("Generate করলে output নিচে দেখা যাবে। Story Writer ও Viral Script Writer auto-save হবে; অন্য mode-এ প্রয়োজন হলে Save চাপুন।")
+
     if generate:
         if template_first and user_requested_bangla(enriched_topic, language):
             result = template_output(internal_mode, enriched_topic)
@@ -123,11 +130,19 @@ def render_builder() -> None:
                 result = template_output(internal_mode, enriched_topic)
                 engine_status = f"template_after_error:{type(exc).__name__}"
                 st.warning(f"Model generation failed. Safe template output was used. Error: {exc}")
-        saved_path = save_text_output(internal_mode, project, language, enriched_topic, result, engine_status)
         st.session_state.naz_text_output = result
         st.session_state.naz_text_engine_status = engine_status
-        st.session_state.naz_text_saved_path = str(saved_path)
-        st.success(f"Generated and saved: {saved_path}")
+        st.session_state.naz_text_last_mode = internal_mode
+        st.session_state.naz_text_last_project = project
+        st.session_state.naz_text_last_language = language
+        st.session_state.naz_text_last_topic = enriched_topic
+        st.session_state.naz_text_saved_path = ""
+        if internal_mode in AUTO_SAVE_MODES:
+            saved_path = save_text_output(internal_mode, project, language, enriched_topic, result, engine_status)
+            st.session_state.naz_text_saved_path = str(saved_path)
+            st.success(f"Generated, displayed, and auto-saved for workflow: {saved_path}")
+        else:
+            st.success("Generated. Output is displayed below. Not auto-saved; press Save current output only if needed.")
 
     output_text = st.text_area("Output", value=st.session_state.naz_text_output, height=360, key="naz_text_output_area")
     st.session_state.naz_text_output = output_text
@@ -138,11 +153,16 @@ def render_builder() -> None:
     if st.session_state.naz_text_last_job_path:
         st.info(f"Last image job: {st.session_state.naz_text_last_job_path}")
 
+    save_mode = st.session_state.naz_text_last_mode or internal_mode
+    save_project = st.session_state.naz_text_last_project or project
+    save_language = st.session_state.naz_text_last_language or language
+    save_topic = st.session_state.naz_text_last_topic or enriched_topic
+
     if save:
         if not output_text.strip():
             st.error("No output to save.")
         else:
-            saved_path = save_text_output(internal_mode, project, language, enriched_topic, output_text, st.session_state.naz_text_engine_status or "manual_save")
+            saved_path = save_text_output(save_mode, save_project, save_language, save_topic, output_text, st.session_state.naz_text_engine_status or "manual_save")
             st.session_state.naz_text_saved_path = str(saved_path)
             st.success(f"Saved: {saved_path}")
 
@@ -151,8 +171,8 @@ def render_builder() -> None:
             st.error("No output to send.")
         else:
             source = Path(st.session_state.naz_text_saved_path) if st.session_state.naz_text_saved_path else None
-            image_prompt = output_text if internal_mode == "Prompt Improver" else template_prompt(enriched_topic + "\n" + output_text[:500])
-            job_path = create_image_job(project, internal_mode, enriched_topic, image_prompt, source)
+            image_prompt = output_text if save_mode == "Prompt Improver" else template_prompt(save_topic + "\n" + output_text[:500])
+            job_path = create_image_job(save_project, save_mode, save_topic, image_prompt, source)
             st.session_state.naz_text_last_job_path = str(job_path)
             st.success(f"Image job created: {job_path}")
             st.json(safe_json(job_path, {}))
@@ -194,7 +214,7 @@ def render_status() -> None:
     c1.metric("Phase", "Text merged")
     c2.metric("Selected model installed", "yes" if model_installed(model) else "no")
     c3.metric("Installed models", len(names))
-    st.json({"recommended_cpu_model": CPU_RECOMMENDED_MODEL, "selected_model": model, "installed_models": names, "text_outputs": str(TEXT_OUTPUTS), "script_outputs": str(SCRIPT_OUTPUTS), "image_prompts": str(IMAGE_PROMPTS), "image_jobs": str(IMAGE_JOBS), "bangla_safe_mode": "available/default on"})
+    st.json({"recommended_cpu_model": CPU_RECOMMENDED_MODEL, "selected_model": model, "installed_models": names, "text_outputs": str(TEXT_OUTPUTS), "script_outputs": str(SCRIPT_OUTPUTS), "image_prompts": str(IMAGE_PROMPTS), "image_jobs": str(IMAGE_JOBS), "bangla_safe_mode": "available/default on", "auto_save_modes": sorted(AUTO_SAVE_MODES)})
 
 
 def render_text_panel() -> None:
