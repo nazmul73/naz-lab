@@ -5,7 +5,7 @@ This folder contains project-level guidance for Naz Lab.
 ## Current marker
 
 ```text
-Naz Lab v1.6+ — Stable unified dashboard with remaining priority work completed repo-side
+Naz Lab v1.6+ — Stable unified dashboard with multi-target Facebook support repo-side
 Naz Lab is now the primary dashboard and testing/control surface
 Text Workstation controls — MERGED + PASS
 Voice job/output workflow — MERGED + PASS
@@ -13,6 +13,7 @@ Voice pluggable engine config — READY
 Image Workstation controls — MERGED + PASS
 Contextual Review Package workflow — MERGED + PASS
 Facebook Post / Social Gate controls — MERGED + PASS
+Facebook multi-target pages/profiles/accounts config — READY
 Package-to-social-job bridge — READY
 No Complete Package tab — PASS
 Main Hub runtime — PASS
@@ -65,7 +66,7 @@ master_dashboard/naz_lab_review_panel.py
 Facebook Post panel inside Naz Lab:
 master_dashboard/naz_lab_facebook_panel.py
 
-Package-to-social bridge backend:
+Package-to-social and multi-target Facebook backend:
 social_agent/facebook_graph_backend.py
 
 All-in-one Colab launcher:
@@ -112,6 +113,9 @@ Commit: e4ff3acbf76472a517c33d777ce56d142264bdcd
 
 docs/video_workstation_deferred_plan.md
 Commit: a851f84a2d0b9f8a8b9f598f90f90e8ebda4e888
+
+docs/facebook_multi_target_ready.md
+Commit: 60d38f8c8d469e721361fb72bfbe362ae8bf46c3
 ```
 
 ## Legacy app policy
@@ -137,6 +141,7 @@ Voice engine config inside Naz Lab — READY
 Image controls inside Naz Lab — PASS
 Review package workflow inside Naz Lab — PASS
 Facebook Post / Social Gate inside Naz Lab — PASS
+Facebook multi-target config inside Naz Lab — READY
 Package-to-social-job bridge — READY
 Phase 3.1 Real Image Backend — COMPLETE + Colab GPU PASS
 Package preview/approve/export — PASS
@@ -145,7 +150,7 @@ Social Gate dry-run / blocked-post logging — PASS
 
 ## v1.6+ practical-use rule
 
-Naz Lab v1.6+ supports practical content planning, text generation, voice job management, image generation control, contextual review packages, preview, approval, export, approved package to Facebook/social handoff, and safe/manual-gated Facebook posting flow from one dashboard.
+Naz Lab v1.6+ supports practical content planning, text generation, voice job management, image generation control, contextual review packages, preview, approval, export, approved package to Facebook/social handoff, multi-target Facebook page/profile/account management, and safe/manual-gated Facebook posting flow from one dashboard.
 
 Included now:
 
@@ -165,6 +170,9 @@ Included now:
 - package preview/approve/export
 - approved package handoff preview in Facebook Post
 - package-to-social-job bridge
+- multi-target Facebook pages/profiles/accounts config
+- target-specific package bridge
+- manual gate target override
 - safe Facebook config
 - manual gate and social post log
 - files/output browser
@@ -185,7 +193,7 @@ Not included now:
 ## Remaining work
 
 ```text
-Run combined Colab verification after v1.6+ changes
+Run combined Colab verification after multi-target Facebook update
 Select real TTS engine if needed
 Add NAZLAB_BASE_PATH environment override for local/Mac path support
 Create SageMaker launcher only after actual ASL/SageMaker runtime is available
