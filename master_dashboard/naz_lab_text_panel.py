@@ -1,12 +1,13 @@
 """Reusable Text Workstation panel for the Naz Lab dashboard.
 
-Official Text Builder UI. It uses shared helpers and the shared Ollama
-text-generation backend directly. It does not import legacy
-`text_workstation.app_phase110`.
+Working Plan v2.0 Text panel. Uses shared helpers and shared Ollama backend;
+legacy text_workstation.app_phase110 is not imported.
 """
 
 from __future__ import annotations
 
+import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -15,36 +16,20 @@ import streamlit as st
 
 from master_dashboard.naz_lab_nav import render_nav
 from shared.chat_autosave import append_chat_turn, ensure_chat_session
-from shared.drive_paths import CHAT_OUTPUTS, IMAGE_JOBS, IMAGE_PROMPTS, SCRIPT_OUTPUTS, TEXT_METADATA, TEXT_OUTPUTS
-from shared.job_queue_schema import read_json
-from shared.model_policy import (
-    BLOCKED_TEXT_MODELS,
-    MINIMUM_CPU_TEXT_MODEL,
-    RECOMMENDED_TEXT_MODEL,
-    blocked_model_reason,
-    filter_allowed_text_models,
-    model_policy_status,
-    normalize_text_model,
-)
+from shared.drive_paths import CHAT_OUTPUTS, IMAGE_JOBS, SCRIPT_OUTPUTS, TEXT_METADATA, TEXT_OUTPUTS, VOICE_JOBS
+from shared.job_queue_schema import make_job_id, read_json, write_json
+from shared.model_policy import BLOCKED_TEXT_MODELS, MINIMUM_CPU_TEXT_MODEL, RECOMMENDED_TEXT_MODEL, blocked_model_reason, filter_allowed_text_models, model_policy_status, normalize_text_model
 from shared.ollama_persistence import ensure_ollama_persistence
 from shared.ollama_text_generation import call_ollama, generation_policy_status, user_requested_bangla
 from shared.text_pipeline import create_image_job_from_text, persist_text_result_and_optional_image_job
-from shared.text_workstation_helpers import (
-    MODE_CONFIG,
-    ensure_dirs as ensure_text_dirs,
-    installed_model_names,
-    model_installed,
-    needs_safe_bangla,
-    save_text_output,
-    template_output,
-    template_prompt,
-)
+from shared.text_workstation_helpers import MODE_CONFIG, ensure_dirs as ensure_text_dirs, installed_model_names, model_installed, needs_safe_bangla, save_text_output, template_output, template_prompt
 
 TEXT_EXTENSIONS = {".txt", ".md", ".json", ".jsonl"}
 JSON_EXTENSIONS = {".json", ".jsonl"}
 OUTPUT_AREA_BASE_KEY = "naz_text_output_area"
 TEMPLATE_CHECKBOX_KEY = "naz_text_template_first"
 AVAILABLE_MODELS = filter_allowed_text_models()
+PACKAGE_DRAFTS = Path("/content/drive/MyDrive/NazLab/final_packages/drafts")
 
 MODE_POLICY: dict[str, dict[str, Any]] = {
     "General Chat": {"internal_mode": "General Chat", "auto_save": False, "template_default": False},
@@ -55,6 +40,10 @@ MODE_POLICY: dict[str, dict[str, Any]] = {
     "Prompt Improver": {"internal_mode": "Prompt Improver", "auto_save": False, "template_default": True},
     "YouTube Script": {"internal_mode": "YouTube Script", "auto_save": False, "template_default": True},
 }
+
+
+def now_iso() -> str:
+    return datetime.now().isoformat(timespec="seconds")
 
 
 def count_files(path: Path) -> int:
@@ -141,6 +130,8 @@ def init_state() -> None:
         "naz_text_last_metadata_path": "",
         "naz_text_engine_status": "",
         "naz_text_last_job_path": "",
+        "naz_text_last_voice_job_path": "",
+        "naz_text_last_package_draft_path": "",
         "naz_text_last_mode": "",
         "naz_text_last_project": "",
         "naz_text_last_language": "",
@@ -193,20 +184,67 @@ def render_pending_messages() -> None:
 
 def auto_save_chat_turn(*, user_message: str, assistant_message: str, mode: str, language: str, model: str, engine_status: str, extra: dict[str, Any] | None = None) -> None:
     try:
-        session = append_chat_turn(
-            session_id=st.session_state.naz_text_chat_autosave_session_id,
-            user_message=user_message,
-            assistant_message=assistant_message,
-            mode=mode,
-            language=language,
-            model=model,
-            engine_status=engine_status,
-            extra=extra,
-        )
+        session = append_chat_turn(session_id=st.session_state.naz_text_chat_autosave_session_id, user_message=user_message, assistant_message=assistant_message, mode=mode, language=language, model=model, engine_status=engine_status, extra=extra)
         st.session_state.naz_text_chat_autosave_session_id = session["session_id"]
         st.session_state.naz_text_last_chat_autosave_path = session["jsonl_path"]
     except Exception as exc:
         st.session_state.naz_text_pending_warning = f"Chat autosave failed: {exc}"
+
+
+def create_voice_job(*, project: str, mode: str, language: str, topic: str, output_text: str, source_text_path: str = "") -> Path:
+    VOICE_JOBS.mkdir(parents=True, exist_ok=True)
+    job_id = make_job_id("voice")
+    path = VOICE_JOBS / f"{job_id}.json"
+    record = {
+        "job_id": job_id,
+        "schema_version": "working-plan-v2.0",
+        "source_workstation": "text_workstation",
+        "target_workstation": "voice_workstation",
+        "source_mode": mode,
+        "project": project,
+        "language": language,
+        "topic": topic,
+        "status": "queued",
+        "review_status": "pending",
+        "created_at": now_iso(),
+        "updated_at": now_iso(),
+        "source_text_path": source_text_path,
+        "input_payload": {"text": output_text, "voice_preset": "default", "requires_reference_audio_consent": True},
+        "output_path": "",
+        "errors": [],
+        "history": [{"at": now_iso(), "event": "created", "by": "text_workstation"}],
+    }
+    write_json(path, record)
+    return path
+
+
+def create_package_draft(*, project: str, mode: str, language: str, topic: str, output_text: str, source_text_path: str = "", metadata_path: str = "", image_job_path: str = "", voice_job_path: str = "") -> Path:
+    PACKAGE_DRAFTS.mkdir(parents=True, exist_ok=True)
+    draft_id = make_job_id("package")
+    path = PACKAGE_DRAFTS / f"{draft_id}.json"
+    record = {
+        "package_id": draft_id,
+        "schema_version": "working-plan-v2.0",
+        "status": "draft",
+        "review_status": "pending",
+        "created_at": now_iso(),
+        "updated_at": now_iso(),
+        "project": project,
+        "mode": mode,
+        "language": language,
+        "topic": topic,
+        "content": output_text,
+        "source_text_path": source_text_path,
+        "metadata_path": metadata_path,
+        "image_job_path": image_job_path,
+        "voice_job_path": voice_job_path,
+        "manual_gate": True,
+        "facebook_posting_enabled": False,
+        "video_generation_enabled": False,
+        "notes": "Contextual package draft. No Complete Package tab per Working Plan v2.0.",
+    }
+    write_json(path, record)
+    return path
 
 
 def render_builder() -> None:
@@ -242,6 +280,9 @@ def render_builder() -> None:
     generate = b1.button("Generate", type="primary", use_container_width=True, key="naz_text_generate")
     save = b2.button("Save current output", use_container_width=True, key="naz_text_save")
     send_image = b3.button("Send to Image Job", use_container_width=True, key="naz_text_send_image")
+    v1, v2 = st.columns(2)
+    send_voice = v1.button("Send to Voice Job", use_container_width=True, key="naz_text_send_voice")
+    package_draft = v2.button("Create Package Draft", use_container_width=True, key="naz_text_package_draft")
 
     enriched_topic = topic if style == "Default" else f"Style preset: {style}\n\n{topic}"
     st.caption("Prompt Improver auto-exports image jobs. Text metadata is saved for every generation. Legacy app_phase110 is not used.")
@@ -254,7 +295,6 @@ def render_builder() -> None:
         effective_mode, effective_language, effective_reason = resolve_effective_mode_language(mode, language, enriched_topic)
         if effective_reason == "casual_chat_detected" and mode != "General Chat":
             warnings.append("Short conversational input detected; handled as General Chat instead of content template.")
-
         if template_first and user_requested_bangla(enriched_topic, effective_language):
             result = fallback_output(effective_mode, enriched_topic, effective_language)
             engine_status = "naz_lab_template_first"
@@ -286,29 +326,18 @@ def render_builder() -> None:
         st.session_state.naz_text_saved_path = ""
         st.session_state.naz_text_last_metadata_path = ""
         st.session_state.naz_text_last_job_path = ""
+        st.session_state.naz_text_last_voice_job_path = ""
+        st.session_state.naz_text_last_package_draft_path = ""
 
         saved_path: str | Path | None = None
         if bool(MODE_POLICY.get(mode, {}).get("auto_save", False)):
             saved_path = save_text_output(effective_mode, project, effective_language, enriched_topic, result, engine_status)
             st.session_state.naz_text_saved_path = str(saved_path)
 
-        pipeline_result = persist_text_result_and_optional_image_job(
-            mode=effective_mode,
-            project=project,
-            language=effective_language,
-            topic=enriched_topic,
-            prompt=enriched_topic,
-            model=model,
-            engine_status=engine_status,
-            output_text=result,
-            output_text_path=saved_path,
-            auto_image_job_for_prompt_improver=True,
-            extra={"selected_mode": mode, "style": style, "length": length, "template_first": template_first},
-        )
+        pipeline_result = persist_text_result_and_optional_image_job(mode=effective_mode, project=project, language=effective_language, topic=enriched_topic, prompt=enriched_topic, model=model, engine_status=engine_status, output_text=result, output_text_path=saved_path, auto_image_job_for_prompt_improver=True, extra={"selected_mode": mode, "style": style, "length": length, "template_first": template_first})
         st.session_state.naz_text_last_metadata_path = pipeline_result.get("metadata_path", "")
         if pipeline_result.get("image_job_path"):
             st.session_state.naz_text_last_job_path = pipeline_result["image_job_path"]
-
         if effective_mode == "General Chat":
             auto_save_chat_turn(user_message=enriched_topic, assistant_message=result, mode=effective_mode, language=effective_language, model=model, engine_status=engine_status, extra={"selected_mode": mode, "reason": effective_reason})
 
@@ -317,8 +346,6 @@ def render_builder() -> None:
             parts.append(f"Auto-saved for workflow: {saved_path}")
         if st.session_state.naz_text_last_job_path:
             parts.append(f"Auto image job created: {st.session_state.naz_text_last_job_path}")
-        if st.session_state.naz_text_last_chat_autosave_path and effective_mode == "General Chat":
-            parts.append(f"Chat autosaved: {st.session_state.naz_text_last_chat_autosave_path}")
         st.session_state.naz_text_pending_success = "\n".join(parts)
         if warnings:
             st.session_state.naz_text_pending_warning = "\n".join(warnings)
@@ -333,6 +360,8 @@ def render_builder() -> None:
         ("Last saved", st.session_state.naz_text_saved_path),
         ("Last metadata", st.session_state.naz_text_last_metadata_path),
         ("Last image job", st.session_state.naz_text_last_job_path),
+        ("Last voice job", st.session_state.naz_text_last_voice_job_path),
+        ("Last package draft", st.session_state.naz_text_last_package_draft_path),
         ("Chat autosave file", st.session_state.naz_text_last_chat_autosave_path),
     ]:
         if value:
@@ -366,6 +395,24 @@ def render_builder() -> None:
             st.success(f"Image job created: {job_path}")
             st.json(safe_json(job_path, {}))
 
+    if send_voice:
+        if not current_output.strip():
+            st.error("No output to send.")
+        else:
+            job_path = create_voice_job(project=save_project, mode=save_mode, language=save_language, topic=save_topic, output_text=current_output, source_text_path=st.session_state.naz_text_saved_path)
+            st.session_state.naz_text_last_voice_job_path = str(job_path)
+            st.success(f"Voice job created: {job_path}")
+            st.json(safe_json(job_path, {}))
+
+    if package_draft:
+        if not current_output.strip():
+            st.error("No output to package.")
+        else:
+            draft_path = create_package_draft(project=save_project, mode=save_mode, language=save_language, topic=save_topic, output_text=current_output, source_text_path=st.session_state.naz_text_saved_path, metadata_path=st.session_state.naz_text_last_metadata_path, image_job_path=st.session_state.naz_text_last_job_path, voice_job_path=st.session_state.naz_text_last_voice_job_path)
+            st.session_state.naz_text_last_package_draft_path = str(draft_path)
+            st.success(f"Package draft created: {draft_path}")
+            st.json(safe_json(draft_path, {}))
+
 
 def render_library_section(folder: Path, ext: set[str], label: str) -> None:
     st.markdown(f"### {label}")
@@ -384,15 +431,16 @@ def render_library_section(folder: Path, ext: set[str], label: str) -> None:
 
 def render_library() -> None:
     st.markdown("### Text Output Library")
-    selected = render_nav(["Chat outputs", "Chat sessions", "Text outputs", "Scripts", "Image prompts", "Image jobs", "Text metadata"], key="text_library_sub", variant="sub")
+    selected = render_nav(["Chat outputs", "Chat sessions", "Text outputs", "Scripts", "Image jobs", "Voice jobs", "Text metadata", "Package drafts"], key="text_library_sub", variant="sub")
     mapping = {
         "Chat outputs": (CHAT_OUTPUTS, TEXT_EXTENSIONS),
         "Chat sessions": (CHAT_OUTPUTS / "sessions", TEXT_EXTENSIONS),
         "Text outputs": (TEXT_OUTPUTS, TEXT_EXTENSIONS),
         "Scripts": (SCRIPT_OUTPUTS, TEXT_EXTENSIONS),
-        "Image prompts": (IMAGE_PROMPTS, TEXT_EXTENSIONS),
         "Image jobs": (IMAGE_JOBS, JSON_EXTENSIONS),
+        "Voice jobs": (VOICE_JOBS, JSON_EXTENSIONS),
         "Text metadata": (TEXT_METADATA, JSON_EXTENSIONS),
+        "Package drafts": (PACKAGE_DRAFTS, JSON_EXTENSIONS),
     }
     folder, ext = mapping[selected]
     render_library_section(folder, ext, selected)
@@ -422,27 +470,30 @@ def render_status() -> None:
         "chat_sessions": str(CHAT_OUTPUTS / "sessions"),
         "text_outputs": str(TEXT_OUTPUTS),
         "script_outputs": str(SCRIPT_OUTPUTS),
-        "image_prompts": str(IMAGE_PROMPTS),
         "image_jobs": str(IMAGE_JOBS),
+        "voice_jobs": str(VOICE_JOBS),
         "text_metadata": str(TEXT_METADATA),
+        "package_drafts": str(PACKAGE_DRAFTS),
         "model_policy": model_policy_status(),
         "mode_policy": MODE_POLICY,
         "casual_chat_detection": "enabled",
         "chat_incremental_autosave": "enabled",
         "prompt_improver_auto_image_job": "enabled",
+        "send_to_voice_job": "enabled",
+        "create_package_draft": "enabled",
         "ollama_persistence": persistence_status,
     })
 
 
 def render_text_panel() -> None:
     st.subheader("Text Workstation")
-    st.write("Generate scripts, stories, captions, free writing, chat replies, and image prompts directly from Naz Lab.")
+    st.write("Generate scripts, stories, captions, free writing, chat replies, image jobs, voice jobs, and contextual package drafts directly from Naz Lab.")
     col_a, col_b, col_c, col_d, col_e, col_f = st.columns(6)
     col_a.metric("Chat outputs", count_files(CHAT_OUTPUTS))
     col_b.metric("Text outputs", count_files(TEXT_OUTPUTS))
     col_c.metric("Script outputs", count_files(SCRIPT_OUTPUTS))
-    col_d.metric("Image prompts", count_files(IMAGE_PROMPTS))
-    col_e.metric("Image jobs", count_files(IMAGE_JOBS))
+    col_d.metric("Image jobs", count_files(IMAGE_JOBS))
+    col_e.metric("Voice jobs", count_files(VOICE_JOBS))
     col_f.metric("Text metadata", count_files(TEXT_METADATA))
     selected = render_nav(["Create", "Library", "Backend Status"], key="text_sub", variant="sub")
     if selected == "Create":
