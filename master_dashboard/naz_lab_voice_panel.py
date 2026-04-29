@@ -6,6 +6,7 @@ from pathlib import Path
 
 import streamlit as st
 
+from master_dashboard.naz_lab_nav import render_nav
 from voice_workstation.voice_backend import (
     attach_audio_to_voice_job,
     create_voice_job,
@@ -123,16 +124,16 @@ def render_attach_audio() -> None:
 def render_voice_panel() -> None:
     st.subheader("Voice / Text-to-Voice")
     st.write("Create text-to-voice jobs, inspect audio outputs, attach existing audio files, and configure a future TTS engine from inside Naz Lab.")
-    tabs = st.tabs(["Runtime", "Engine Config", "Create Job", "Jobs", "Outputs", "Attach Audio"])
-    with tabs[0]:
+    selected = render_nav(["Runtime", "Engine Config", "Create Job", "Jobs", "Outputs", "Attach Audio"], key="voice_sub", variant="sub")
+    if selected == "Runtime":
         render_runtime()
-    with tabs[1]:
+    elif selected == "Engine Config":
         render_engine_config()
-    with tabs[2]:
+    elif selected == "Create Job":
         render_create_job()
-    with tabs[3]:
+    elif selected == "Jobs":
         render_jobs()
-    with tabs[4]:
+    elif selected == "Outputs":
         render_outputs()
-    with tabs[5]:
+    elif selected == "Attach Audio":
         render_attach_audio()
