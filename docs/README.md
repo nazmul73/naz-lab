@@ -10,9 +10,16 @@ Text Workstation Phase 1.10 — PASS
 Dashboard Phase 2.17 — PASS
 Dashboard Phase 2.18 — PASS
 Dashboard Phase 2.19 — PASS
-Unified Dashboard Phase 2.20 — repo-side complete; runtime test pending
+Unified Dashboard Phase 2.20 — runtime PASS through Main Hub flow
+Main Hub runtime — PASS
+Official wrapper runtime — PASS
+All-in-one Colab launcher runtime — PASS
 Real Image Backend Phase 3.1 — PASS on Colab GPU
-Final Content Package Flow 1-18 — repo-side complete; runtime test pending
+Final Content Package Flow 1-18 — runtime PASS
+Manual Prompt Package — PASS
+Auto Package — PASS
+Reference Image Package — PASS
+Package preview/approve/export — PASS
 Recommended CPU model — qwen2.5:1.5b
 Emergency CPU fallback — qwen2.5:0.5b
 GPU image backend — Diffusers / Stable Diffusion
@@ -49,6 +56,13 @@ All-in-one Colab launcher:
 launchers/naz_lab_all_in_one_colab.py
 ```
 
+## Runtime PASS marker
+
+```text
+docs/final_package_runtime_pass.md
+Commit: 5602b853f00a20a2c815a5d8226aefd428e96593
+```
+
 ## Legacy app policy
 
 ```text
@@ -72,9 +86,14 @@ Old dashboard phase file policy: DONE
 
 ```text
 Backend 1-20 — COMPLETE
-Frontend 1-20 — COMPLETE repo-side
+Frontend 1-20 — COMPLETE
+Main Hub runtime — PASS
+Official wrapper runtime — PASS
+All-in-one launcher runtime — PASS
 Phase 3.1 Real Image Backend — COMPLETE + Colab GPU PASS
-Final Content Package Flow 1-18 — COMPLETE repo-side
+Final Content Package Flow 1-18 — COMPLETE + runtime PASS
+Manual/Auto/Reference Package flows — PASS
+Package preview/approve/export — PASS
 ```
 
 ## v1 practical-use rule
@@ -105,15 +124,12 @@ Not included now:
 - automatic Facebook posting without manual approval
 - unauthorized voice/face cloning
 
-## Runtime tests still pending
+## Remaining optional work
 
 ```text
-Dashboard Phase 2.20 runtime test
-Dashboard Phase 2.22 runtime test
-master_dashboard/app_official.py runtime test
-launchers/naz_lab_all_in_one_colab.py runtime test
-Auto Package end-to-end runtime test
-Manual Prompt Package runtime test
-Reference Image Package runtime test
-Final package export/approve runtime verification
+Legacy app.py wrapper cleanup or keep-as-fallback decision
+Social Agent dry-run with final approved package
+Voice Workstation future backend
+Portrait Workstation future backend
+Video Workstation deferred after v1
 ```
