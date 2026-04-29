@@ -82,6 +82,60 @@ def get_mode_policy(mode: str) -> dict[str, Any]:
     return MODE_POLICY.get(mode, MODE_POLICY["Free Writer"])
 
 
+def has_bangla(text: str) -> bool:
+    return any("\u0980" <= ch <= "\u09FF" for ch in text)
+
+
+def looks_like_casual_chat(text: str) -> bool:
+    clean = " ".join(text.strip().lower().split())
+    if not clean:
+        return False
+    chat_phrases = {
+        "hi", "hello", "hey", "how are you", "how are you?", "who are you", "who are you?",
+        "what are you", "what are you?", "thanks", "thank you", "ok", "okay", "test",
+        "তুমি কেমন আছ", "তুমি কেমন আছো", "কেমন আছ", "কেমন আছো", "হাই", "হ্যালো",
+    }
+    if clean in chat_phrases:
+        return True
+    word_count = len(clean.replace("?", "").replace("।", "").split())
+    return word_count <= 6 and (clean.endswith("?") or clean.endswith("？") or clean.endswith("।"))
+
+
+def resolve_effective_mode_language(selected_mode: str, internal_mode: str, language: str, topic: str) -> tuple[str, str, str]:
+    """Return mode/language that better matches the actual user input.
+
+    If the user types a short conversational message such as "how are you?",
+    treat it as chat even when the selected mode is Free Writer. If input is
+    English-only, do not force Bangla fallback just because the UI language
+    selector is still Bangla.
+    """
+    clean = topic.strip()
+    effective_mode = internal_mode
+    reason = "selected_mode"
+    if selected_mode in ["General Chat", "Free Writer"] and looks_like_casual_chat(clean):
+        effective_mode = "General Chat"
+        reason = "casual_chat_detected"
+    if not has_bangla(clean) and language != "English" and effective_mode in ["General Chat", "Free Writer"]:
+        effective_language = "English"
+    else:
+        effective_language = language
+    return effective_mode, effective_language, reason
+
+
+def fallback_output(mode: str, topic: str, language: str) -> str:
+    clean = " ".join(topic.strip().split())
+    if mode == "General Chat" and not has_bangla(clean):
+        lower = clean.lower().strip(" ?!.")
+        if lower in ["hi", "hello", "hey"]:
+            return "Hi! How can I help you today?"
+        if lower == "how are you":
+            return "I'm doing well, thanks for asking. How can I help you today?"
+        if lower in ["who are you", "what are you"]:
+            return "I'm Naz Lab's AI assistant inside this dashboard. I can help with text, scripts, prompts, image jobs, voice jobs, and content packages."
+        return f"I understand: {clean}\n\nHow would you like me to help with this?"
+    return template_output(mode, topic)
+
+
 def init_state() -> None:
     defaults = {
         "naz_text_output": "",
@@ -174,32 +228,35 @@ def render_builder() -> None:
             st.error("Topic / input is required.")
             return
         warnings: list[str] = []
-        if template_first and user_requested_bangla(enriched_topic, language):
-            result = template_output(internal_mode, enriched_topic)
+        effective_mode, effective_language, effective_reason = resolve_effective_mode_language(mode, internal_mode, language, enriched_topic)
+        if effective_reason == "casual_chat_detected" and mode != "General Chat":
+            warnings.append("Short conversational input detected; handled as General Chat instead of content template.")
+        if template_first and user_requested_bangla(enriched_topic, effective_language):
+            result = fallback_output(effective_mode, enriched_topic, effective_language)
             engine_status = "naz_lab_template_first"
         else:
             try:
                 with st.spinner(f"Generating with {model}..."):
-                    result = call_ollama(enriched_topic, model, internal_mode, language, length, bangla_safe_mode)
+                    result = call_ollama(enriched_topic, model, effective_mode, effective_language, length, bangla_safe_mode)
                 engine_status = f"ollama:{model}"
-                if needs_safe_bangla(enriched_topic, language, result, bangla_safe_mode):
-                    result = template_output(internal_mode, enriched_topic)
-                    engine_status = f"bangla_safe_template_after_low_quality_model:{model}"
-                    warnings.append("Model output failed Bangla quality guard. Safe Bangla template was used.")
+                if needs_safe_bangla(enriched_topic, effective_language, result, bangla_safe_mode):
+                    result = fallback_output(effective_mode, enriched_topic, effective_language)
+                    engine_status = f"fallback_after_low_quality_model:{model}"
+                    warnings.append("Model output failed quality guard. Safe fallback was used.")
             except Exception as exc:
-                result = template_output(internal_mode, enriched_topic)
-                engine_status = f"template_after_error:{type(exc).__name__}"
-                warnings.append(f"Model generation failed. Safe template output was used. Error: {exc}")
+                result = fallback_output(effective_mode, enriched_topic, effective_language)
+                engine_status = f"fallback_after_error:{type(exc).__name__}"
+                warnings.append(f"Model generation failed. Safe fallback was used. Error: {exc}")
 
         set_generated_output(result)
         st.session_state.naz_text_engine_status = engine_status
-        st.session_state.naz_text_last_mode = internal_mode
+        st.session_state.naz_text_last_mode = effective_mode
         st.session_state.naz_text_last_project = project
-        st.session_state.naz_text_last_language = language
+        st.session_state.naz_text_last_language = effective_language
         st.session_state.naz_text_last_topic = enriched_topic
         st.session_state.naz_text_saved_path = ""
         if auto_save:
-            saved_path = save_text_output(internal_mode, project, language, enriched_topic, result, engine_status)
+            saved_path = save_text_output(effective_mode, project, effective_language, enriched_topic, result, engine_status)
             st.session_state.naz_text_saved_path = str(saved_path)
             st.session_state.naz_text_pending_success = f"Generated, displayed, and auto-saved for workflow: {saved_path}"
         else:
@@ -282,7 +339,7 @@ def render_status() -> None:
     c1.metric("Phase", "Text merged")
     c2.metric("Selected model installed", "yes" if model_installed(model) else "no")
     c3.metric("Installed models", len(names))
-    st.json({"recommended_cpu_model": CPU_RECOMMENDED_MODEL, "selected_model": model, "installed_models": names, "chat_outputs": str(CHAT_OUTPUTS), "text_outputs": str(TEXT_OUTPUTS), "script_outputs": str(SCRIPT_OUTPUTS), "image_prompts": str(IMAGE_PROMPTS), "image_jobs": str(IMAGE_JOBS), "bangla_safe_mode": "available/default on", "mode_policy": MODE_POLICY, "backend_modes": list(MODE_CONFIG.keys())})
+    st.json({"recommended_cpu_model": CPU_RECOMMENDED_MODEL, "selected_model": model, "installed_models": names, "chat_outputs": str(CHAT_OUTPUTS), "text_outputs": str(TEXT_OUTPUTS), "script_outputs": str(SCRIPT_OUTPUTS), "image_prompts": str(IMAGE_PROMPTS), "image_jobs": str(IMAGE_JOBS), "bangla_safe_mode": "available/default on", "mode_policy": MODE_POLICY, "backend_modes": list(MODE_CONFIG.keys()), "casual_chat_detection": "enabled"})
 
 
 def render_text_panel() -> None:
