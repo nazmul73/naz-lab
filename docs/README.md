@@ -5,17 +5,23 @@ This folder contains project-level guidance for Naz Lab.
 ## Current marker
 
 ```text
-Naz Lab v1.6 — Stable unified dashboard PASS
+Naz Lab v1.6+ — Stable unified dashboard with remaining priority work completed repo-side
 Naz Lab is now the primary dashboard and testing/control surface
 Text Workstation controls — MERGED + PASS
 Voice job/output workflow — MERGED + PASS
+Voice pluggable engine config — READY
 Image Workstation controls — MERGED + PASS
 Contextual Review Package workflow — MERGED + PASS
 Facebook Post / Social Gate controls — MERGED + PASS
+Package-to-social-job bridge — READY
 No Complete Package tab — PASS
 Main Hub runtime — PASS
 Official wrapper runtime — PASS
 All-in-one Colab launcher runtime — PASS
+Final all-in-one launcher stable marker — READY
+MacBook/local control runbook — READY
+SageMaker migration plan — READY
+Video Workstation deferred plan — READY
 Real Image Backend Phase 3.1 — PASS on Colab GPU
 Recommended CPU model — qwen2.5:1.5b
 Emergency CPU fallback — qwen2.5:0.5b
@@ -26,7 +32,7 @@ Image Job JSON queue handoff — READY
 Shared Job Queue Schema — READY
 Real Facebook posting — DISABLED / manual-gated
 Video generation — Locked / Deferred
-Real TTS engine — Pending connection
+Real TTS engine — Optional / pending final engine selection
 ```
 
 ## Official app map
@@ -44,6 +50,9 @@ master_dashboard/app_main.py
 Text panel inside Naz Lab:
 master_dashboard/naz_lab_text_panel.py
 
+Voice backend:
+voice_workstation/voice_backend.py
+
 Voice panel inside Naz Lab:
 master_dashboard/naz_lab_voice_panel.py
 
@@ -55,6 +64,9 @@ master_dashboard/naz_lab_review_panel.py
 
 Facebook Post panel inside Naz Lab:
 master_dashboard/naz_lab_facebook_panel.py
+
+Package-to-social bridge backend:
+social_agent/facebook_graph_backend.py
 
 All-in-one Colab launcher:
 launchers/naz_lab_all_in_one_colab.py
@@ -74,7 +86,7 @@ Health / Logs
 Runbook
 ```
 
-## Runtime PASS markers
+## Runtime PASS / ready markers
 
 ```text
 docs/final_package_runtime_pass.md
@@ -88,6 +100,18 @@ Commit: 66976862098c27da94212b9baa011b7a060194f4
 
 docs/naz_lab_dashboard_v1_6_stable_pass.md
 Commit: 5b709e5e563f8d43c8a4d39c46445ad51566170d
+
+docs/final_all_in_one_launcher_stable_marker.md
+Commit: da4fec360c329e872054f11b9fa94465ad7aec39
+
+docs/macbook_local_control_runbook.md
+Commit: 240713740d9f2e68fd90bed40fc5f3cae36c4349
+
+docs/sagemaker_migration_plan.md
+Commit: e4ff3acbf76472a517c33d777ce56d142264bdcd
+
+docs/video_workstation_deferred_plan.md
+Commit: a851f84a2d0b9f8a8b9f598f90f90e8ebda4e888
 ```
 
 ## Legacy app policy
@@ -109,17 +133,19 @@ Official wrapper runtime — PASS
 All-in-one launcher runtime — PASS
 Text controls inside Naz Lab — PASS
 Voice job/output workflow inside Naz Lab — PASS
+Voice engine config inside Naz Lab — READY
 Image controls inside Naz Lab — PASS
 Review package workflow inside Naz Lab — PASS
 Facebook Post / Social Gate inside Naz Lab — PASS
+Package-to-social-job bridge — READY
 Phase 3.1 Real Image Backend — COMPLETE + Colab GPU PASS
 Package preview/approve/export — PASS
 Social Gate dry-run / blocked-post logging — PASS
 ```
 
-## v1.6 practical-use rule
+## v1.6+ practical-use rule
 
-Naz Lab v1.6 supports practical content planning, text generation, voice job management, image generation control, contextual review packages, preview, approval, export, and safe/manual-gated Facebook handoff from one dashboard.
+Naz Lab v1.6+ supports practical content planning, text generation, voice job management, image generation control, contextual review packages, preview, approval, export, approved package to Facebook/social handoff, and safe/manual-gated Facebook posting flow from one dashboard.
 
 Included now:
 
@@ -133,14 +159,19 @@ Included now:
 - Drive-backed voice job JSON creation
 - voice output viewer
 - attach existing audio to voice job
+- pluggable voice engine config
 - contextual review package builder inside Home
 - manual/auto/reference package modes
 - package preview/approve/export
 - approved package handoff preview in Facebook Post
+- package-to-social-job bridge
 - safe Facebook config
 - manual gate and social post log
 - files/output browser
 - health/log viewer
+- MacBook/local runbook
+- SageMaker migration plan
+- video deferred plan
 
 Not included now:
 
@@ -148,16 +179,15 @@ Not included now:
 - rendered MP4 assembly
 - image-to-video generation
 - automatic Facebook posting without manual approval
-- real TTS generation engine connection
+- built-in real TTS engine execution without final engine selection
 - unauthorized voice/face cloning
 
 ## Remaining work
 
 ```text
-Package-to-social-job bridge polish
-Real TTS engine connection if final engine is selected
-Final all-in-one launcher stable marker
-MacBook/local control runbook
-SageMaker migration plan
-Video Workstation deferred until other tools are fully stable
+Run combined Colab verification after v1.6+ changes
+Select real TTS engine if needed
+Add NAZLAB_BASE_PATH environment override for local/Mac path support
+Create SageMaker launcher only after actual ASL/SageMaker runtime is available
+Video Workstation implementation deferred until other tools are fully stable
 ```
