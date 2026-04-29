@@ -2,17 +2,18 @@
 
 Safety model:
 - No automatic posting by default.
-- Requires approved job record from social_review/approved_jobs.json.
+- Requires approved social job record from social_review/approved_jobs.json.
 - Requires explicit manual confirmation flag in config.
 - Token/page config is loaded from Drive config file, not hardcoded.
 
-This module is implementation-ready for future API testing, but safe by default.
+Also includes a safe bridge from approved review packages to social jobs.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from final_package.package_backend import APPROVED_PACKAGES_JSON, package_preview  # noqa: E402
 from shared.drive_paths import BASE_PATH, CONFIG_DIR, LOGS_DIR  # noqa: E402
 from shared.job_queue_schema import read_json, write_json  # noqa: E402
 
@@ -56,6 +58,8 @@ def ensure_config() -> dict[str, Any]:
         write_json(FACEBOOK_CONFIG_JSON, DEFAULT_CONFIG)
     if not SOCIAL_POST_LOG_JSON.exists():
         write_json(SOCIAL_POST_LOG_JSON, {"items": []})
+    if not APPROVED_JOBS_JSON.exists():
+        write_json(APPROVED_JOBS_JSON, {"items": []})
     config = read_json(FACEBOOK_CONFIG_JSON, DEFAULT_CONFIG)
     if not isinstance(config, dict):
         config = DEFAULT_CONFIG.copy()
@@ -64,13 +68,87 @@ def ensure_config() -> dict[str, Any]:
 
 
 def approved_items() -> list[dict[str, Any]]:
+    ensure_config()
     data = read_json(APPROVED_JOBS_JSON, {"items": []})
     if isinstance(data, dict) and isinstance(data.get("items"), list):
         return [item for item in data["items"] if isinstance(item, dict)]
     return []
 
 
+def approved_package_items() -> list[dict[str, Any]]:
+    data = read_json(APPROVED_PACKAGES_JSON, {"items": []}) if APPROVED_PACKAGES_JSON.exists() else {"items": []}
+    if isinstance(data, dict) and isinstance(data.get("items"), list):
+        return [item for item in data["items"] if isinstance(item, dict)]
+    return []
+
+
+def compose_social_text_from_package(record: dict[str, Any]) -> str:
+    caption = str(record.get("caption_text", "") or "").strip()
+    topic = str(record.get("topic", "") or "").strip()
+    prompt = str(record.get("manual_prompt", "") or "").strip()
+    project = str(record.get("project", "Naz Lab") or "Naz Lab").strip()
+    parts = []
+    if caption:
+        parts.append(caption)
+    elif topic:
+        parts.append(topic)
+    if prompt:
+        parts.append(prompt)
+    if not parts:
+        parts.append(project)
+    return "\n\n".join(parts).strip()
+
+
+def bridge_package_to_social_job(package_path: str | Path, *, note: str = "") -> dict[str, Any]:
+    ensure_config()
+    preview = package_preview(package_path)
+    record = preview.get("record", {}) if isinstance(preview, dict) else {}
+    if not isinstance(record, dict) or not record.get("package_id"):
+        return {"ok": False, "reason": "invalid package record", "package_path": str(package_path)}
+    if record.get("review_status") != "approved" and record.get("status") not in ["approved", "exported"]:
+        return {"ok": False, "reason": "package is not approved", "package_id": record.get("package_id"), "package_path": str(package_path)}
+    review_id = f"pkg_social_{uuid.uuid4().hex[:10]}"
+    job_id = str(record.get("package_id"))
+    message = compose_social_text_from_package(record)
+    item = {
+        "review_id": review_id,
+        "job_id": job_id,
+        "source_type": "review_package",
+        "package_id": record.get("package_id", ""),
+        "package_path": str(package_path),
+        "project": record.get("project", ""),
+        "topic": record.get("topic", ""),
+        "prompt_preview": str(record.get("manual_prompt", ""))[:1000],
+        "message_preview": message[:1500],
+        "image_path": record.get("generated_image_path", ""),
+        "review_status": "approved",
+        "created_at": now_iso(),
+        "updated_at": now_iso(),
+        "note": note,
+    }
+    data = read_json(APPROVED_JOBS_JSON, {"items": []})
+    items = data.get("items", []) if isinstance(data, dict) else []
+    if not isinstance(items, list):
+        items = []
+    items = [existing for existing in items if existing.get("package_id") != record.get("package_id")]
+    items.insert(0, item)
+    write_json(APPROVED_JOBS_JSON, {"updated_at": now_iso(), "items": items[:500]})
+    log_event({"event": "package_bridged_to_social_job", "review_id": review_id, "package_id": record.get("package_id"), "package_path": str(package_path)})
+    return {"ok": True, "review_id": review_id, "job_id": job_id, "package_id": record.get("package_id"), "approved_jobs_path": str(APPROVED_JOBS_JSON)}
+
+
+def bridge_latest_approved_packages(limit: int = 20) -> dict[str, Any]:
+    results = []
+    for item in approved_package_items()[:limit]:
+        package_path = item.get("package_path")
+        if package_path:
+            results.append(bridge_package_to_social_job(package_path, note="bulk bridge from approved package list"))
+    return {"ok": True, "bridged": results, "count": len(results)}
+
+
 def compose_post_message(item: dict[str, Any]) -> str:
+    if item.get("message_preview"):
+        return str(item.get("message_preview", "")).strip()
     topic = item.get("topic", "")
     prompt = item.get("prompt_preview", "")
     project = item.get("project", "Naz Lab")
@@ -130,4 +208,4 @@ def gated_post_to_facebook(review_id: str, *, manual_confirm: bool = False) -> d
 
 
 if __name__ == "__main__":
-    print(json.dumps({"config": ensure_config(), "approved_count": len(approved_items()), "note": "Use gated_post_to_facebook(review_id, manual_confirm=True) only after manual approval."}, ensure_ascii=False, indent=2))
+    print(json.dumps({"config": ensure_config(), "approved_count": len(approved_items()), "approved_jobs_path": str(APPROVED_JOBS_JSON)}, ensure_ascii=False, indent=2))
