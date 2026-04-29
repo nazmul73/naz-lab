@@ -1,2 +1,8 @@
+# Image Workstation lightweight planning/runtime
 streamlit
-pillow
+requests
+Pillow
+watchdog
+
+# Heavy image generation backends are intentionally not installed by default.
+# Add backend-specific requirements only when real image generation is enabled.
