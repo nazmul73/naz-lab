@@ -1,19 +1,17 @@
 """Reusable Text Workstation panel for the Naz Lab dashboard.
 
-Backend-ready Text Builder panel with:
-- approved model policy only: gemma2:2b, qwen2.5:1.5b, qwen2.5:3b
-- casual chat detection
-- Drive-backed incremental chat autosave
-- metadata sidecar save
-- Prompt Improver automatic Image Job JSON handoff
-- Drive-backed Ollama persistence status
+This panel is the official Text Builder UI. It imports the shared generation
+backend directly, so the official dashboard no longer depends on monkeypatching
+legacy `text_workstation.app_phase110` at startup.
 """
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import requests
 import streamlit as st
 
 from master_dashboard.naz_lab_nav import render_nav
@@ -31,10 +29,10 @@ from shared.model_policy import (
     normalize_text_model,
 )
 from shared.ollama_persistence import ensure_ollama_persistence
+from shared.ollama_text_generation import call_ollama, generation_policy_status, user_requested_bangla
 from shared.text_pipeline import create_image_job_from_text, persist_text_result_and_optional_image_job
 from text_workstation.app_phase110 import (
     MODE_CONFIG,
-    call_ollama,
     ensure_dirs as ensure_text_dirs,
     installed_model_names,
     model_installed,
@@ -42,7 +40,6 @@ from text_workstation.app_phase110 import (
     save_text_output,
     template_output,
     template_prompt,
-    user_requested_bangla,
 )
 
 TEXT_EXTENSIONS = {".txt", ".md", ".json", ".jsonl"}
@@ -50,7 +47,6 @@ JSON_EXTENSIONS = {".json", ".jsonl"}
 OUTPUT_AREA_BASE_KEY = "naz_text_output_area"
 TEMPLATE_CHECKBOX_KEY = "naz_text_template_first"
 AVAILABLE_MODELS = filter_allowed_text_models(ALLOWED_TEXT_MODELS)
-CPU_RECOMMENDED_MODEL = MINIMUM_CPU_TEXT_MODEL
 
 MODE_POLICY: dict[str, dict[str, Any]] = {
     "General Chat": {"internal_mode": "General Chat", "auto_save": False, "output_dir": CHAT_OUTPUTS, "template_default": False, "image_job": False},
@@ -63,13 +59,17 @@ MODE_POLICY: dict[str, dict[str, Any]] = {
 }
 
 
+def now_stamp() -> str:
+    return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+
 def count_files(path: Path) -> int:
     if not path.exists():
         return 0
     return sum(1 for item in path.rglob("*") if item.is_file())
 
 
-def latest_files(path: Path, extensions: set[str] | None = None, limit: int = 50) -> list[Path]:
+def latest_files(path: Path, extensions: set[str] | None = None, limit: int = 60) -> list[Path]:
     if not path.exists():
         return []
     files = [item for item in path.rglob("*") if item.is_file()]
@@ -85,22 +85,15 @@ def safe_json(path: Path, default: Any) -> Any:
         return {"error": str(exc), "path": str(path)}
 
 
-def safe_text(path: Path, limit: int = 7000) -> str:
+def safe_text(path: Path, limit: int = 9000) -> str:
     try:
         return path.read_text(encoding="utf-8", errors="ignore")[:limit]
     except Exception as exc:
         return f"Could not read {path}: {exc}"
 
 
-def file_rows(path: Path, extensions: set[str] | None = None, limit: int = 50) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    for item in latest_files(path, extensions=extensions, limit=limit):
-        rows.append({"Name": item.name, "Path": str(item), "Size KB": round(item.stat().st_size / 1024, 1)})
-    return rows
-
-
-def get_mode_policy(mode: str) -> dict[str, Any]:
-    return MODE_POLICY.get(mode, MODE_POLICY["Free Writer"])
+def file_rows(path: Path, extensions: set[str] | None = None, limit: int = 60) -> list[dict[str, Any]]:
+    return [{"Name": item.name, "Path": str(item), "Size KB": round(item.stat().st_size / 1024, 1)} for item in latest_files(path, extensions, limit)]
 
 
 def has_bangla(text: str) -> bool:
@@ -111,25 +104,21 @@ def looks_like_casual_chat(text: str) -> bool:
     clean = " ".join(text.strip().lower().split())
     if not clean:
         return False
-    chat_phrases = {
-        "hi", "hello", "hey", "how are you", "how are you?", "who are you", "who are you?",
-        "what are you", "what are you?", "thanks", "thank you", "ok", "okay", "test",
-        "তুমি কেমন আছ", "তুমি কেমন আছো", "কেমন আছ", "কেমন আছো", "হাই", "হ্যালো",
-    }
-    if clean in chat_phrases:
+    phrases = {"hi", "hello", "hey", "how are you", "how are you?", "who are you", "who are you?", "what are you", "what are you?", "thanks", "thank you", "ok", "okay", "test", "হাই", "হ্যালো", "কেমন আছ", "কেমন আছো", "তুমি কেমন আছ", "তুমি কেমন আছো"}
+    if clean in phrases:
         return True
     word_count = len(clean.replace("?", "").replace("।", "").split())
-    return word_count <= 6 and (clean.endswith("?") or clean.endswith("？") or clean.endswith("।"))
+    return word_count <= 6 and (clean.endswith("?") or clean.endswith("।"))
 
 
-def resolve_effective_mode_language(selected_mode: str, internal_mode: str, language: str, topic: str) -> tuple[str, str, str]:
-    clean = topic.strip()
-    effective_mode = internal_mode
+def resolve_effective_mode_language(selected_mode: str, language: str, topic: str) -> tuple[str, str, str]:
+    policy = MODE_POLICY.get(selected_mode, MODE_POLICY["Free Writer"])
+    effective_mode = str(policy["internal_mode"])
     reason = "selected_mode"
-    if selected_mode in ["General Chat", "Free Writer"] and looks_like_casual_chat(clean):
+    if selected_mode in ["General Chat", "Free Writer"] and looks_like_casual_chat(topic):
         effective_mode = "General Chat"
         reason = "casual_chat_detected"
-    if not has_bangla(clean) and language != "English" and effective_mode in ["General Chat", "Free Writer"]:
+    if effective_mode in ["General Chat", "Free Writer"] and not has_bangla(topic):
         effective_language = "English"
     else:
         effective_language = language
@@ -180,10 +169,9 @@ def init_state() -> None:
 
 
 def sync_template_default_for_mode(mode: str) -> None:
-    last_mode = st.session_state.get("naz_text_last_selected_mode")
-    if last_mode != mode:
+    if st.session_state.get("naz_text_last_selected_mode") != mode:
         st.session_state["naz_text_last_selected_mode"] = mode
-        st.session_state[TEMPLATE_CHECKBOX_KEY] = bool(get_mode_policy(mode).get("template_default", False))
+        st.session_state[TEMPLATE_CHECKBOX_KEY] = bool(MODE_POLICY.get(mode, {}).get("template_default", False))
 
 
 def output_area_key() -> str:
@@ -197,10 +185,7 @@ def set_generated_output(result: str) -> None:
 
 
 def get_current_output() -> str:
-    widget_key = output_area_key()
-    widget_value = st.session_state.get(widget_key, "")
-    state_value = st.session_state.get("naz_text_output", "")
-    return str(widget_value or state_value or "")
+    return str(st.session_state.get(output_area_key(), "") or st.session_state.get("naz_text_output", ""))
 
 
 def render_pending_messages() -> None:
@@ -212,32 +197,8 @@ def render_pending_messages() -> None:
         st.session_state.naz_text_pending_success = ""
 
 
-def persist_generated_text(
-    *,
-    mode: str,
-    project: str,
-    language: str,
-    topic: str,
-    model: str,
-    engine_status: str,
-    result: str,
-    saved_path: str | Path | None,
-    auto_image_job_for_prompt_improver: bool,
-    extra: dict[str, Any] | None = None,
-) -> dict[str, str]:
-    return persist_text_result_and_optional_image_job(
-        mode=mode,
-        project=project,
-        language=language,
-        topic=topic,
-        prompt=topic,
-        model=model,
-        engine_status=engine_status,
-        output_text=result,
-        output_text_path=saved_path,
-        auto_image_job_for_prompt_improver=auto_image_job_for_prompt_improver,
-        extra=extra or {},
-    )
+def persist_generated_text(**kwargs: Any) -> dict[str, str]:
+    return persist_text_result_and_optional_image_job(**kwargs)
 
 
 def auto_save_chat_turn(*, user_message: str, assistant_message: str, mode: str, language: str, model: str, engine_status: str, extra: dict[str, Any] | None = None) -> None:
@@ -255,7 +216,7 @@ def auto_save_chat_turn(*, user_message: str, assistant_message: str, mode: str,
         st.session_state.naz_text_chat_autosave_session_id = session["session_id"]
         st.session_state.naz_text_last_chat_autosave_path = session["jsonl_path"]
     except Exception as exc:
-        st.session_state.naz_text_pending_warning = (st.session_state.naz_text_pending_warning + "\n" if st.session_state.naz_text_pending_warning else "") + f"Chat autosave failed: {exc}"
+        st.session_state.naz_text_pending_warning = f"Chat autosave failed: {exc}"
 
 
 def render_builder() -> None:
@@ -263,7 +224,8 @@ def render_builder() -> None:
     init_state()
     st.markdown("### Text Builder")
     st.caption(f"Chat autosave session: {st.session_state.naz_text_chat_autosave_session_id}")
-    mode_options = ["General Chat", "Free Writer", "Story Writer", "Viral Script Writer", "Caption Writer", "Prompt Improver", "YouTube Script"]
+
+    mode_options = list(MODE_POLICY.keys())
     c1, c2, c3 = st.columns(3)
     with c1:
         project = st.selectbox("Project", ["General Bangla", "True Noir Tales", "ToolFlow", "Custom"], index=0, key="naz_text_project")
@@ -282,8 +244,6 @@ def render_builder() -> None:
         st.warning(blocked_model_reason(model))
         model = safe_model
 
-    policy = get_mode_policy(mode)
-    internal_mode = str(policy["internal_mode"])
     topic = st.text_area("Topic / input", value="", height=135, key="naz_text_topic", placeholder="Write or paste your topic/input here...")
     style = st.selectbox("Style preset", ["Default", "Simple Bangla", "True Noir Tales", "ToolFlow", "Custom"], index=0, key="naz_text_style")
     template_first = st.checkbox("Template-first / structured fallback", key=TEMPLATE_CHECKBOX_KEY, help="General Chat/Free Writer default OFF. Structured modes default ON.")
@@ -294,17 +254,17 @@ def render_builder() -> None:
     send_image = b3.button("Send to Image Job", use_container_width=True, key="naz_text_send_image")
 
     enriched_topic = topic if style == "Default" else f"Style preset: {style}\n\n{topic}"
-    auto_save = bool(policy.get("auto_save", False))
-    st.caption("Prompt Improver auto-exports image jobs. Text metadata is saved for every generation. General Chat is incrementally auto-saved to Drive.")
+    st.caption("Prompt Improver auto-exports image jobs. Text metadata is saved for every generation. Shared generation backend is used directly.")
 
     if generate:
         if not topic.strip():
             st.error("Topic / input is required.")
             return
         warnings: list[str] = []
-        effective_mode, effective_language, effective_reason = resolve_effective_mode_language(mode, internal_mode, language, enriched_topic)
+        effective_mode, effective_language, effective_reason = resolve_effective_mode_language(mode, language, enriched_topic)
         if effective_reason == "casual_chat_detected" and mode != "General Chat":
             warnings.append("Short conversational input detected; handled as General Chat instead of content template.")
+
         if template_first and user_requested_bangla(enriched_topic, effective_language):
             result = fallback_output(effective_mode, enriched_topic, effective_language)
             engine_status = "naz_lab_template_first"
@@ -312,11 +272,15 @@ def render_builder() -> None:
             try:
                 with st.spinner(f"Generating with {model}..."):
                     result = call_ollama(enriched_topic, model, effective_mode, effective_language, length, bangla_safe_mode)
-                engine_status = f"ollama:{model}"
+                engine_status = f"ollama_shared:{model}"
                 if needs_safe_bangla(enriched_topic, effective_language, result, bangla_safe_mode):
                     result = fallback_output(effective_mode, enriched_topic, effective_language)
                     engine_status = f"fallback_after_low_quality_model:{model}"
                     warnings.append("Model output failed quality guard. Safe fallback was used.")
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as exc:
+                result = fallback_output(effective_mode, enriched_topic, effective_language)
+                engine_status = f"fallback_after_ollama_error:{type(exc).__name__}"
+                warnings.append(f"Ollama generation failed. Safe fallback was used. Error: {exc}")
             except Exception as exc:
                 result = fallback_output(effective_mode, enriched_topic, effective_language)
                 engine_status = f"fallback_after_error:{type(exc).__name__}"
@@ -334,7 +298,7 @@ def render_builder() -> None:
         st.session_state.naz_text_last_job_path = ""
 
         saved_path: str | Path | None = None
-        if auto_save:
+        if bool(MODE_POLICY.get(mode, {}).get("auto_save", False)):
             saved_path = save_text_output(effective_mode, project, effective_language, enriched_topic, result, engine_status)
             st.session_state.naz_text_saved_path = str(saved_path)
 
@@ -343,37 +307,29 @@ def render_builder() -> None:
             project=project,
             language=effective_language,
             topic=enriched_topic,
+            prompt=enriched_topic,
             model=model,
             engine_status=engine_status,
-            result=result,
-            saved_path=saved_path,
+            output_text=result,
+            output_text_path=saved_path,
             auto_image_job_for_prompt_improver=True,
-            extra={"selected_mode": mode, "style": style, "length": length, "template_first": template_first, "auto_save": auto_save},
+            extra={"selected_mode": mode, "style": style, "length": length, "template_first": template_first},
         )
         st.session_state.naz_text_last_metadata_path = pipeline_result.get("metadata_path", "")
         if pipeline_result.get("image_job_path"):
             st.session_state.naz_text_last_job_path = pipeline_result["image_job_path"]
-        if effective_mode == "General Chat":
-            auto_save_chat_turn(
-                user_message=enriched_topic,
-                assistant_message=result,
-                mode=effective_mode,
-                language=effective_language,
-                model=model,
-                engine_status=engine_status,
-                extra={"selected_mode": mode, "reason": effective_reason},
-            )
 
-        status_parts = ["Generated and displayed.", f"Metadata saved: {st.session_state.naz_text_last_metadata_path}"]
+        if effective_mode == "General Chat":
+            auto_save_chat_turn(user_message=enriched_topic, assistant_message=result, mode=effective_mode, language=effective_language, model=model, engine_status=engine_status, extra={"selected_mode": mode, "reason": effective_reason})
+
+        parts = ["Generated and displayed.", f"Metadata saved: {st.session_state.naz_text_last_metadata_path}"]
         if saved_path:
-            status_parts.append(f"Auto-saved for workflow: {saved_path}")
-        else:
-            status_parts.append("Not text auto-saved; press Save current output only if needed.")
+            parts.append(f"Auto-saved for workflow: {saved_path}")
         if st.session_state.naz_text_last_job_path:
-            status_parts.append(f"Auto image job created: {st.session_state.naz_text_last_job_path}")
+            parts.append(f"Auto image job created: {st.session_state.naz_text_last_job_path}")
         if st.session_state.naz_text_last_chat_autosave_path and effective_mode == "General Chat":
-            status_parts.append(f"Chat autosaved: {st.session_state.naz_text_last_chat_autosave_path}")
-        st.session_state.naz_text_pending_success = "\n".join(status_parts)
+            parts.append(f"Chat autosaved: {st.session_state.naz_text_last_chat_autosave_path}")
+        st.session_state.naz_text_pending_success = "\n".join(parts)
         if warnings:
             st.session_state.naz_text_pending_warning = "\n".join(warnings)
         st.rerun()
@@ -382,18 +338,17 @@ def render_builder() -> None:
     output_text = st.text_area("Output", height=360, key=output_area_key())
     st.session_state.naz_text_output = output_text
 
-    if st.session_state.naz_text_engine_status:
-        st.caption(f"Engine status: {st.session_state.naz_text_engine_status}")
-    if st.session_state.naz_text_saved_path:
-        st.success(f"Last saved: {st.session_state.naz_text_saved_path}")
-    if st.session_state.naz_text_last_metadata_path:
-        st.info(f"Last metadata: {st.session_state.naz_text_last_metadata_path}")
-    if st.session_state.naz_text_last_job_path:
-        st.info(f"Last image job: {st.session_state.naz_text_last_job_path}")
-    if st.session_state.naz_text_last_chat_autosave_path:
-        st.info(f"Chat autosave file: {st.session_state.naz_text_last_chat_autosave_path}")
+    for label, value in [
+        ("Engine status", st.session_state.naz_text_engine_status),
+        ("Last saved", st.session_state.naz_text_saved_path),
+        ("Last metadata", st.session_state.naz_text_last_metadata_path),
+        ("Last image job", st.session_state.naz_text_last_job_path),
+        ("Chat autosave file", st.session_state.naz_text_last_chat_autosave_path),
+    ]:
+        if value:
+            st.info(f"{label}: {value}")
 
-    save_mode = st.session_state.naz_text_last_mode or internal_mode
+    save_mode = st.session_state.naz_text_last_mode or MODE_POLICY.get(mode, MODE_POLICY["Free Writer"])["internal_mode"]
     save_project = st.session_state.naz_text_last_project or project
     save_language = st.session_state.naz_text_last_language or language
     save_topic = st.session_state.naz_text_last_topic or enriched_topic
@@ -406,21 +361,9 @@ def render_builder() -> None:
         else:
             saved_path = save_text_output(save_mode, save_project, save_language, save_topic, current_output, st.session_state.naz_text_engine_status or "manual_save")
             st.session_state.naz_text_saved_path = str(saved_path)
-            pipeline_result = persist_generated_text(
-                mode=save_mode,
-                project=save_project,
-                language=save_language,
-                topic=save_topic,
-                model=save_model,
-                engine_status=st.session_state.naz_text_engine_status or "manual_save",
-                result=current_output,
-                saved_path=saved_path,
-                auto_image_job_for_prompt_improver=False,
-                extra={"manual_save": True},
-            )
+            pipeline_result = persist_generated_text(mode=save_mode, project=save_project, language=save_language, topic=save_topic, prompt=save_topic, model=save_model, engine_status=st.session_state.naz_text_engine_status or "manual_save", output_text=current_output, output_text_path=saved_path, auto_image_job_for_prompt_improver=False, extra={"manual_save": True})
             st.session_state.naz_text_last_metadata_path = pipeline_result.get("metadata_path", "")
             st.success(f"Saved: {saved_path}")
-            st.info(f"Metadata saved: {st.session_state.naz_text_last_metadata_path}")
 
     if send_image:
         if not current_output.strip():
@@ -428,15 +371,7 @@ def render_builder() -> None:
         else:
             source = Path(st.session_state.naz_text_saved_path) if st.session_state.naz_text_saved_path else None
             image_prompt = current_output if save_mode == "Prompt Improver" else template_prompt(save_topic + "\n" + current_output[:500])
-            job_path = create_image_job_from_text(
-                project=save_project,
-                mode=save_mode,
-                topic=save_topic,
-                output_text=image_prompt,
-                source_text_path=source,
-                metadata_path=st.session_state.naz_text_last_metadata_path,
-                auto_export=False,
-            )
+            job_path = create_image_job_from_text(project=save_project, mode=save_mode, topic=save_topic, output_text=image_prompt, source_text_path=source, metadata_path=st.session_state.naz_text_last_metadata_path, auto_export=False)
             st.session_state.naz_text_last_job_path = str(job_path)
             st.success(f"Image job created: {job_path}")
             st.json(safe_json(job_path, {}))
@@ -449,11 +384,8 @@ def render_library_section(folder: Path, ext: set[str], label: str) -> None:
         st.dataframe(rows, use_container_width=True, hide_index=True)
         selected = st.selectbox("Preview file", [row["Path"] for row in rows], key=f"text_library_{folder.name}_{label}")
         selected_path = Path(selected)
-        if selected_path.suffix.lower() in JSON_EXTENSIONS:
-            if selected_path.suffix.lower() == ".jsonl":
-                st.text_area("JSONL preview", safe_text(selected_path), height=320, key=f"preview_{folder.name}_{label}")
-            else:
-                st.json(safe_json(selected_path, {}))
+        if selected_path.suffix.lower() == ".json":
+            st.json(safe_json(selected_path, {}))
         else:
             st.text_area("Preview", safe_text(selected_path), height=320, key=f"preview_{folder.name}_{label}")
     else:
@@ -487,34 +419,32 @@ def render_status() -> None:
     c3.metric("Installed models", len(names))
     c4.metric("Ollama persistence", "ok" if persistence_status.get("ok") else "check")
     st.json({
+        "generation_backend": "shared.ollama_text_generation.call_ollama",
+        "generation_policy": generation_policy_status(),
         "recommended_text_model": RECOMMENDED_TEXT_MODEL,
         "minimum_cpu_text_model": MINIMUM_CPU_TEXT_MODEL,
         "allowed_text_models": AVAILABLE_MODELS,
         "blocked_text_models": BLOCKED_TEXT_MODELS,
         "selected_model": model,
         "installed_models": names,
-        "chat_outputs": str(CHAT_OUTPUTS),
         "chat_sessions": str(CHAT_OUTPUTS / "sessions"),
         "text_outputs": str(TEXT_OUTPUTS),
         "script_outputs": str(SCRIPT_OUTPUTS),
         "image_prompts": str(IMAGE_PROMPTS),
         "image_jobs": str(IMAGE_JOBS),
         "text_metadata": str(TEXT_METADATA),
-        "bangla_safe_mode": "available/default on",
         "model_policy": model_policy_status(),
         "mode_policy": MODE_POLICY,
-        "backend_modes": list(MODE_CONFIG.keys()),
         "casual_chat_detection": "enabled",
         "chat_incremental_autosave": "enabled",
         "prompt_improver_auto_image_job": "enabled",
-        "manual_image_job_schema": "1.20",
         "ollama_persistence": persistence_status,
     })
 
 
 def render_text_panel() -> None:
     st.subheader("Text Workstation")
-    st.write("Generate scripts, stories, captions, free writing, chat replies, and image prompts directly from Naz Lab. Save outputs, metadata, and image queue jobs from one place.")
+    st.write("Generate scripts, stories, captions, free writing, chat replies, and image prompts directly from Naz Lab.")
     col_a, col_b, col_c, col_d, col_e, col_f = st.columns(6)
     col_a.metric("Chat outputs", count_files(CHAT_OUTPUTS))
     col_b.metric("Text outputs", count_files(TEXT_OUTPUTS))
@@ -527,5 +457,5 @@ def render_text_panel() -> None:
         render_builder()
     elif selected == "Library":
         render_library()
-    elif selected == "Backend Status":
+    else:
         render_status()
