@@ -20,6 +20,7 @@ Manual Prompt Package — PASS
 Auto Package — PASS
 Reference Image Package — PASS
 Package preview/approve/export — PASS
+Social Gate dry-run / blocked-post logging — PASS
 Recommended CPU model — qwen2.5:1.5b
 Emergency CPU fallback — qwen2.5:0.5b
 GPU image backend — Diffusers / Stable Diffusion
@@ -52,15 +53,21 @@ master_dashboard/app_phase221.py
 Unified frontend dashboard:
 master_dashboard/app_phase220.py
 
+Social Gate dashboard:
+master_dashboard/app_phase219.py
+
 All-in-one Colab launcher:
 launchers/naz_lab_all_in_one_colab.py
 ```
 
-## Runtime PASS marker
+## Runtime PASS markers
 
 ```text
 docs/final_package_runtime_pass.md
 Commit: 5602b853f00a20a2c815a5d8226aefd428e96593
+
+docs/social_gate_dry_run_pass.md
+Commit: 4dbd53b154475a5af07b93d3076f39780e873eee
 ```
 
 ## Legacy app policy
@@ -94,11 +101,12 @@ Phase 3.1 Real Image Backend — COMPLETE + Colab GPU PASS
 Final Content Package Flow 1-18 — COMPLETE + runtime PASS
 Manual/Auto/Reference Package flows — PASS
 Package preview/approve/export — PASS
+Social Gate dry-run / blocked-post logging — PASS
 ```
 
 ## v1 practical-use rule
 
-Naz Lab v1 supports practical content planning, image generation, packaging, preview, approval, and export.
+Naz Lab v1 supports practical content planning, image generation, packaging, preview, approval, export, and safe/manual-gated social handoff.
 
 Included now:
 
@@ -115,6 +123,7 @@ Included now:
 - Dashboard preview/search/export
 - backend health/model health
 - social review and manual-gated Facebook dry-run path
+- blocked-post logging when Facebook backend remains disabled
 
 Not included now:
 
@@ -128,7 +137,6 @@ Not included now:
 
 ```text
 Legacy app.py wrapper cleanup or keep-as-fallback decision
-Social Agent dry-run with final approved package
 Voice Workstation future backend
 Portrait Workstation future backend
 Video Workstation deferred after v1
