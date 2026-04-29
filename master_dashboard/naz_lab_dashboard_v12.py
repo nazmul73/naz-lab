@@ -1,8 +1,8 @@
-"""Naz Lab dashboard v1.5.
+"""Naz Lab dashboard v1.6.
 
-Single app command center with Text, Image, contextual Review Package, and
-Facebook Post controls merged. Other workstations remain visible and will be
-merged module-by-module. No tab named Complete Package is used.
+Single app command center with Text, Voice job workflow, Image, contextual
+Review Package, and Facebook Post controls merged. No tab named Complete
+Package is used.
 """
 
 from __future__ import annotations
@@ -22,6 +22,7 @@ from master_dashboard.naz_lab_facebook_panel import render_facebook_panel  # noq
 from master_dashboard.naz_lab_image_panel import render_image_panel  # noqa: E402
 from master_dashboard.naz_lab_review_panel import render_review_panel  # noqa: E402
 from master_dashboard.naz_lab_text_panel import render_text_panel  # noqa: E402
+from master_dashboard.naz_lab_voice_panel import render_voice_panel  # noqa: E402
 from shared.drive_paths import (  # noqa: E402
     BASE_PATH,
     CONFIG_DIR,
@@ -37,8 +38,8 @@ from shared.drive_paths import (  # noqa: E402
 from shared.job_queue_schema import read_json  # noqa: E402
 from shared.json_utils import update_workstation_status  # noqa: E402
 
-PHASE = "naz-lab-dashboard-1.5"
-STATUS = "text-image-review-facebook-workflows-merged"
+PHASE = "naz-lab-dashboard-1.6"
+STATUS = "text-voice-image-review-facebook-workflows-merged"
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".ogg", ".flac"}
 JSON_EXTENSIONS = {".json"}
@@ -107,11 +108,11 @@ def render_header() -> None:
 def render_status_strip() -> None:
     cols = st.columns(6)
     cols[0].metric("Text", "MERGED")
-    cols[1].metric("Voice", "READY")
+    cols[1].metric("Voice", "JOB READY")
     cols[2].metric("Image", "MERGED")
     cols[3].metric("Review", "MERGED")
     cols[4].metric("Facebook", "MERGED")
-    cols[5].metric("System", "v1.5")
+    cols[5].metric("System", "v1.6")
 
 
 def render_home() -> None:
@@ -120,8 +121,8 @@ def render_home() -> None:
     c1, c2, c3 = st.columns(3)
     with c1:
         st.markdown("### Create")
-        st.success("Text Workstation controls are inside Naz Lab.")
-        st.write("Use Text to generate scripts, stories, captions, prompts, and image jobs.")
+        st.success("Text and Voice job workflows are inside Naz Lab.")
+        st.write("Use Text to create content and Voice to create text-to-voice jobs or attach audio outputs.")
     with c2:
         st.markdown("### Visuals")
         st.success("Image Workstation controls are inside Naz Lab.")
@@ -132,23 +133,6 @@ def render_home() -> None:
         st.write("Create review packages, approve/export, then prepare Facebook handoff safely.")
     st.divider()
     render_review_panel()
-
-
-def render_voice() -> None:
-    st.subheader("Voice / Text-to-Voice")
-    st.write("Voice is represented in Naz Lab. Connect the completed voice backend before marking runtime PASS.")
-    c1, c2 = st.columns(2)
-    c1.metric("Voice jobs", count_files(VOICE_JOBS))
-    c2.metric("Voice outputs", count_files(VOICE_OUTPUTS))
-    text = st.text_area("Text for voice generation", height=140, placeholder="Paste narration text here...")
-    preset = st.selectbox("Voice preset", ["Default", "Bangla narration", "English narration", "Custom"])
-    st.button("Save voice job draft", disabled=True, help="Voice backend connection step pending.")
-    st.caption(f"Draft length: {len(text)} characters | Preset: {preset}")
-    rows = file_rows(VOICE_OUTPUTS, AUDIO_EXTENSIONS)
-    if rows:
-        st.dataframe(rows, use_container_width=True, hide_index=True)
-        selected = st.selectbox("Open audio output", [row["Path"] for row in rows])
-        st.audio(selected)
 
 
 def render_video() -> None:
@@ -203,9 +187,9 @@ def render_runbook() -> None:
     st.subheader("Runbook")
     st.code(
         """Naz Lab is the main command center.
-Text, Image, Review, and Facebook Post controls are merged into this dashboard.
+Text, Voice job workflow, Image, Review, and Facebook Post controls are merged into this dashboard.
 No tab named Complete Package.
-Next: connect Voice backend when its final path is confirmed.
+Voice real TTS engine is pending connection; Drive-backed voice jobs and audio attachment are ready.
 Video generation stays deferred.
 Real Facebook posting stays disabled/manual-gated.
 """,
@@ -214,6 +198,7 @@ Real Facebook posting stays disabled/manual-gated.
     for rule in [
         "Use the all-in-one launcher as the official entrypoint.",
         "Use Text tab for generation, saving, and Image Job handoff.",
+        "Use Voice tab for text-to-voice jobs and audio output attachment.",
         "Use Image tab for runtime checks, queue generation, gallery, metadata, and job validation.",
         "Use Home review workflow for package create, preview, approve, and export.",
         "Use Facebook Post tab for approved package handoff, safe config, manual gate, and social log.",
@@ -235,7 +220,7 @@ def main() -> None:
     with tabs[1]:
         render_text_panel()
     with tabs[2]:
-        render_voice()
+        render_voice_panel()
     with tabs[3]:
         render_image_panel()
     with tabs[4]:
