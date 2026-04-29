@@ -1,1 +1,8 @@
+# Voice Workstation lightweight planning/runtime
 streamlit
+requests
+Pillow
+watchdog
+
+# Heavy TTS backends are intentionally not installed by default in Colab launcher.
+# Add optional voice backend requirements later when real TTS is enabled.
