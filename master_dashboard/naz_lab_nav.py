@@ -1,36 +1,56 @@
-"""Button-based navigation helpers for Naz Lab.
+"""HTML pill navigation helpers for Naz Lab.
 
 Streamlit's native st.tabs can be difficult to style consistently across
-runtime versions. These helpers use session-state + buttons, giving visible
-separation without relying on tab underline CSS.
+runtime versions. These helpers use query-parameter links, giving reliable
+visible menu separation without relying on tab underline CSS.
 """
 
 from __future__ import annotations
 
+from html import escape
+from urllib.parse import urlencode
+
 import streamlit as st
 
 
+def _query_dict() -> dict[str, str]:
+    params: dict[str, str] = {}
+    try:
+        for key, value in st.query_params.items():
+            if isinstance(value, list):
+                params[key] = str(value[0]) if value else ""
+            else:
+                params[key] = str(value)
+    except Exception:
+        params = {}
+    return params
+
+
+def _href_for(key: str, option: str) -> str:
+    params = _query_dict()
+    params[key] = option
+    return "?" + urlencode(params)
+
+
 def render_nav(options: list[str], *, key: str, variant: str = "main") -> str:
-    """Render a button-based navigation row and return the selected option."""
+    """Render a reliable HTML pill navigation row and return the selected option."""
     if not options:
         return ""
-    if key not in st.session_state or st.session_state[key] not in options:
-        st.session_state[key] = options[0]
+    params = _query_dict()
+    selected = params.get(key, options[0])
+    if selected not in options:
+        selected = options[0]
 
-    if variant == "main":
-        st.markdown('<div class="naz-main-menu-label">MAIN MENU</div>', unsafe_allow_html=True)
-        st.markdown('<div class="naz-main-menu-wrap">', unsafe_allow_html=True)
-    else:
-        st.markdown('<div class="naz-sub-menu-label">SECTION MENU</div>', unsafe_allow_html=True)
-        st.markdown('<div class="naz-sub-menu-wrap">', unsafe_allow_html=True)
-
-    cols = st.columns(len(options), gap="small")
-    for index, option in enumerate(options):
-        selected = st.session_state[key] == option
-        with cols[index]:
-            button_type = "primary" if selected else "secondary"
-            if st.button(option, key=f"{key}_{option}", use_container_width=True, type=button_type):
-                st.session_state[key] = option
-                st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-    return st.session_state[key]
+    label = "MAIN MENU" if variant == "main" else "SECTION MENU"
+    css_class = "naz-main-menu" if variant == "main" else "naz-sub-menu"
+    items = []
+    for option in options:
+        active = " active" if option == selected else ""
+        href = _href_for(key, option)
+        items.append(f'<a class="naz-menu-pill{active}" href="{escape(href)}">{escape(option)}</a>')
+    st.markdown(
+        f'<div class="{css_class}-label">{label}</div>'
+        f'<nav class="{css_class}" aria-label="{label}">' + "".join(items) + "</nav>",
+        unsafe_allow_html=True,
+    )
+    return selected
