@@ -7,7 +7,6 @@ default.
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 import streamlit as st
@@ -15,10 +14,11 @@ import streamlit as st
 from final_package.package_backend import APPROVED_PACKAGES_JSON, list_packages, package_preview
 from shared.job_queue_schema import read_json, write_json
 from social_agent.facebook_graph_backend import (
-    APPROVED_JOBS_JSON,
     FACEBOOK_CONFIG_JSON,
     SOCIAL_POST_LOG_JSON,
     approved_items,
+    bridge_latest_approved_packages,
+    bridge_package_to_social_job,
     ensure_config,
     gated_post_to_facebook,
 )
@@ -102,7 +102,16 @@ def render_package_handoff() -> None:
     prompt = str(record.get("manual_prompt", "")) if isinstance(record, dict) else ""
     message_preview = f"{caption}\n\n{prompt}".strip()
     st.text_area("Draft post text preview", value=message_preview, height=220, key="facebook_package_message_preview")
-    st.caption("This is a preview source. The current social backend posts from approved social jobs; package-to-social-job bridge is the next polish step.")
+    col_a, col_b = st.columns(2)
+    with col_a:
+        if st.button("Bridge selected package to social job", type="primary", key="bridge_selected_package"):
+            result = bridge_package_to_social_job(selected, note="bridged from Naz Lab Facebook Post tab")
+            st.json(result)
+    with col_b:
+        if st.button("Bridge latest approved packages", key="bridge_latest_packages"):
+            result = bridge_latest_approved_packages()
+            st.json(result)
+    st.caption("After bridging, open Manual Gate and run the safe gated attempt. With Facebook disabled, the expected result is a safe blocked-post log.")
 
 
 def render_manual_gate() -> None:
@@ -110,7 +119,7 @@ def render_manual_gate() -> None:
     items = social_items()
     st.metric("Approved social jobs", len(items))
     if not items:
-        st.info("No approved social jobs found. Package-to-social-job bridge will be added next; for now, this confirms the safe gate state.")
+        st.info("No approved social jobs found. Bridge an approved package from the Approved Package tab first.")
         return
     rows = [
         {
@@ -118,7 +127,8 @@ def render_manual_gate() -> None:
             "Job ID": item.get("job_id", ""),
             "Project": item.get("project", ""),
             "Topic": item.get("topic", ""),
-            "Path": item.get("job_path", ""),
+            "Package": item.get("package_id", ""),
+            "Image": item.get("image_path", ""),
         }
         for item in items
     ]
@@ -140,7 +150,7 @@ def render_social_log() -> None:
 
 def render_facebook_panel() -> None:
     st.subheader("Facebook Post / Social Gate")
-    st.write("Prepare Facebook-ready content, inspect approved packages, and run safe manual-gated dry-run/post attempts from Naz Lab. Real posting remains disabled/manual-gated by default.")
+    st.write("Prepare Facebook-ready content, inspect approved packages, bridge them to social jobs, and run safe manual-gated dry-run/post attempts from Naz Lab. Real posting remains disabled/manual-gated by default.")
     render_summary()
     tabs = st.tabs(["Approved Package", "Safe Config", "Manual Gate", "Social Log"])
     with tabs[0]:
