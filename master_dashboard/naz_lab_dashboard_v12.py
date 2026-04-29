@@ -1,8 +1,8 @@
-"""Naz Lab dashboard v1.3.
+"""Naz Lab dashboard v1.4.
 
-Single app command center with Text and Image controls merged. Other
-workstations remain visible and will be merged module-by-module. No tab named
-Complete Package is used.
+Single app command center with Text, Image, and contextual Review Package
+workflow merged. Other workstations remain visible and will be merged
+module-by-module. No tab named Complete Package is used.
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from master_dashboard.naz_lab_image_panel import render_image_panel  # noqa: E402
+from master_dashboard.naz_lab_review_panel import render_review_panel, render_package_summary  # noqa: E402
 from master_dashboard.naz_lab_text_panel import render_text_panel  # noqa: E402
 from shared.drive_paths import (  # noqa: E402
     BASE_PATH,
@@ -35,8 +36,8 @@ from shared.drive_paths import (  # noqa: E402
 from shared.job_queue_schema import read_json  # noqa: E402
 from shared.json_utils import update_workstation_status  # noqa: E402
 
-PHASE = "naz-lab-dashboard-1.3"
-STATUS = "text-and-image-workstations-merged"
+PHASE = "naz-lab-dashboard-1.4"
+STATUS = "text-image-review-workflows-merged"
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".ogg", ".flac"}
 JSON_EXTENSIONS = {".json"}
@@ -95,7 +96,7 @@ def render_header() -> None:
         """
         <div class="naz-hero">
           <h1>Naz Lab</h1>
-          <p>Unified AI workstation command center for text, voice, image, video planning, Facebook handoff, files, and system health.</p>
+          <p>Unified AI workstation command center for text, voice, image, video planning, Facebook handoff, review packages, files, and system health.</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -107,9 +108,9 @@ def render_status_strip() -> None:
     cols[0].metric("Text", "MERGED")
     cols[1].metric("Voice", "READY")
     cols[2].metric("Image", "MERGED")
-    cols[3].metric("Video", "DEFERRED")
+    cols[3].metric("Review", "MERGED")
     cols[4].metric("Facebook", "GATED")
-    cols[5].metric("System", "v1.3")
+    cols[5].metric("System", "v1.4")
 
 
 def render_home() -> None:
@@ -125,9 +126,11 @@ def render_home() -> None:
         st.success("Image Workstation controls are inside Naz Lab.")
         st.write("Use Image for runtime checks, queue generation, gallery, metadata, and job validation.")
     with c3:
-        st.markdown("### Publish")
-        st.warning("Facebook posting remains disabled/manual-gated.")
-        st.write("No tab named Complete Package is used; package actions will be merged into the workflow context.")
+        st.markdown("### Review")
+        st.success("Review package workflow is inside Naz Lab.")
+        st.write("Create, preview, approve, and export packages without a Complete Package tab.")
+    st.divider()
+    render_review_panel()
 
 
 def render_voice() -> None:
@@ -159,7 +162,7 @@ def render_video() -> None:
 
 def render_facebook_post() -> None:
     st.subheader("Facebook Post / Social Gate")
-    st.write("Real Facebook posting remains disabled by default. Safe config and logs are visible here.")
+    st.write("Real Facebook posting remains disabled by default. Safe config and logs are visible here. Approved packages from Home are the future handoff source.")
     config_path = CONFIG_DIR / "facebook_graph_config.json"
     log_path = LOGS_DIR / "social_post_log.json"
     config = safe_json(config_path, {}) if config_path.exists() else {}
@@ -167,6 +170,8 @@ def render_facebook_post() -> None:
     c1, c2 = st.columns(2)
     c1.metric("Config", "found" if config_path.exists() else "missing")
     c2.metric("Log entries", len(log.get("items", [])) if isinstance(log, dict) and isinstance(log.get("items"), list) else 0)
+    st.markdown("### Review package status")
+    render_package_summary()
     st.markdown("### Safe config")
     st.json(config)
     st.markdown("### Social post log")
@@ -184,7 +189,7 @@ def render_files() -> None:
         ("Video outputs", VIDEO_OUTPUTS, JSON_EXTENSIONS),
         ("Config", CONFIG_DIR, JSON_EXTENSIONS),
         ("Logs", LOGS_DIR, JSON_EXTENSIONS | {".log", ".txt"}),
-        ("Final packages", BASE_PATH / "final_packages", JSON_EXTENSIONS),
+        ("Review packages", BASE_PATH / "final_packages", JSON_EXTENSIONS),
     ]
     rows = [{"Area": label, "Path": str(path), "Files": count_files(path), "Status": "ready" if path.exists() else "missing"} for label, path, _ in areas]
     st.dataframe(rows, use_container_width=True, hide_index=True)
@@ -215,9 +220,9 @@ def render_runbook() -> None:
     st.subheader("Runbook")
     st.code(
         """Naz Lab is the main command center.
-Text and Image controls are merged into this dashboard.
-Next: merge contextual package/review actions, then Facebook Post controls.
+Text, Image, and contextual Review Package controls are merged into this dashboard.
 No tab named Complete Package.
+Next: merge Facebook Post controls and approved-package handoff.
 Video generation stays deferred.
 Real Facebook posting stays disabled/manual-gated.
 """,
@@ -227,7 +232,8 @@ Real Facebook posting stays disabled/manual-gated.
         "Use the all-in-one launcher as the official entrypoint.",
         "Use Text tab for generation, saving, and Image Job handoff.",
         "Use Image tab for runtime checks, queue generation, gallery, metadata, and job validation.",
-        "Keep phase apps as fallback backends until each module is fully merged.",
+        "Use Home review workflow for package create, preview, approve, and export.",
+        "Do not add a tab named Complete Package.",
         "Keep real Facebook posting disabled/manual-gated.",
         "Keep video generation locked/deferred for now.",
     ]:
