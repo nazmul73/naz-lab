@@ -23,6 +23,7 @@ from shared.job_queue_schema import read_json
 
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".ogg", ".flac"}
 REFERENCE_AUDIO_DIR = VOICE_OUTPUTS / "reference_audio"
+REFERENCE_AUDIO_CONSENT_TEXT = "I confirm this reference audio is user-provided or explicitly authorized for this Naz Lab workflow."
 
 
 def now_stamp() -> str:
@@ -129,9 +130,14 @@ def render_outputs() -> None:
 def render_attach_audio() -> None:
     st.markdown("### Attach / Upload Reference Audio")
     st.caption("Reference audio upload করলে ফাইল Drive-এ reference_audio folder-এ থাকবে এবং voice job-এ attach করা যাবে।")
+    st.warning("Reference audio must be user-provided or explicitly authorized. Unauthorized private, public-figure, creator, celebrity, or hidden-recording audio must not be uploaded or attached.")
     uploaded = st.file_uploader("Upload reference audio", type=["mp3", "wav", "m4a", "ogg", "flac"], key="voice_reference_audio_upload")
+    consent = st.checkbox(REFERENCE_AUDIO_CONSENT_TEXT, value=False, key="voice_reference_audio_consent")
     if uploaded is not None:
         if st.button("Save uploaded reference audio", type="primary", key="save_reference_audio"):
+            if not consent:
+                st.error("Reference audio authorization confirmation is required before saving this file.")
+                return
             saved = save_uploaded_audio(uploaded)
             st.success(f"Reference audio saved: {saved}")
             st.audio(str(saved))
@@ -156,7 +162,11 @@ def render_attach_audio() -> None:
         return
     job_path = st.selectbox("Voice job", [str(path) for path in jobs], key="voice_attach_job")
     audio_path = st.selectbox("Audio output/reference", [str(path) for path in attachable], key="voice_attach_audio")
+    attach_consent = st.checkbox(REFERENCE_AUDIO_CONSENT_TEXT, value=False, key="voice_attach_audio_consent")
     if st.button("Attach audio to job", key="voice_attach_button"):
+        if Path(audio_path).is_relative_to(REFERENCE_AUDIO_DIR) and not attach_consent:
+            st.error("Reference audio authorization confirmation is required before attaching this reference audio.")
+            return
         result = attach_audio_to_voice_job(job_path, audio_path)
         st.json(result)
 
