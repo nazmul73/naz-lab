@@ -18,6 +18,7 @@ from image_workstation.real_image_backend_phase31 import (
     process_real_image_job,
     runtime_status,
 )
+from master_dashboard.naz_lab_nav import render_nav
 from shared.drive_paths import IMAGE_JOBS, IMAGE_OUTPUTS
 from shared.job_queue_schema import read_json, summarize_job_file, validate_job_record
 
@@ -146,16 +147,16 @@ def render_reference_note() -> None:
 def render_image_panel() -> None:
     st.subheader("Image Generation")
     st.write("Create, inspect, generate, and review image jobs from inside Naz Lab. Heavy image generation requires Colab GPU and remains manually controlled.")
-    tabs = st.tabs(["Runtime", "Generate", "Gallery", "Metadata", "Job Preview", "Reference"])
-    with tabs[0]:
+    selected = render_nav(["Runtime", "Generate", "Gallery", "Metadata", "Job Preview", "Reference"], key="image_sub", variant="sub")
+    if selected == "Runtime":
         render_runtime()
-    with tabs[1]:
+    elif selected == "Generate":
         render_generate()
-    with tabs[2]:
+    elif selected == "Gallery":
         render_gallery()
-    with tabs[3]:
+    elif selected == "Metadata":
         render_metadata()
-    with tabs[4]:
+    elif selected == "Job Preview":
         render_job_preview()
-    with tabs[5]:
+    elif selected == "Reference":
         render_reference_note()
