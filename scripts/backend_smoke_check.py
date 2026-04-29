@@ -2,7 +2,10 @@
 
 This script avoids installing system software. It validates Drive folders,
 Python imports, Text Builder model policy, Ollama visibility when already
-installed, and py_compile status for key backend/dashboard modules.
+installed, and py_compile status for official backend/dashboard modules.
+
+Legacy text_workstation/app_phase110.py is intentionally not part of official
+runtime validation.
 """
 
 from __future__ import annotations
@@ -52,12 +55,14 @@ COMPILE_TARGETS = [
     REPO_DIR / "master_dashboard" / "naz_lab_facebook_panel.py",
     REPO_DIR / "master_dashboard" / "app_main.py",
     REPO_DIR / "master_dashboard" / "app_official.py",
-    REPO_DIR / "text_workstation" / "app_phase110.py",
     REPO_DIR / "voice_workstation" / "voice_backend.py",
     REPO_DIR / "social_agent" / "facebook_graph_backend.py",
     REPO_DIR / "shared" / "model_policy.py",
     REPO_DIR / "shared" / "ollama_persistence.py",
+    REPO_DIR / "shared" / "ollama_text_generation.py",
+    REPO_DIR / "shared" / "text_workstation_helpers.py",
     REPO_DIR / "shared" / "text_pipeline.py",
+    REPO_DIR / "scripts" / "ollama_colab_runtime.py",
 ]
 
 
@@ -121,6 +126,14 @@ def print_model_policy() -> None:
     print("MODEL POLICY:", model_policy_status())
 
 
+def print_backend_policy() -> None:
+    print("BACKEND POLICY:", {
+        "generation_backend": "shared.ollama_text_generation.call_ollama",
+        "helper_backend": "shared.text_workstation_helpers",
+        "legacy_app_phase110_active": False,
+    })
+
+
 def print_ollama_status() -> None:
     ollama_path = shutil.which("ollama")
     print("OLLAMA_BINARY:", ollama_path or "not found")
@@ -134,6 +147,7 @@ def main() -> None:
     ensure_drive_folders()
     print("OLLAMA_ENV:", ensure_ollama_env())
     print_model_policy()
+    print_backend_policy()
     print_ollama_status()
     py_compile_targets()
     print("NAZ LAB BACKEND SMOKE CHECK READY")
