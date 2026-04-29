@@ -1,4 +1,12 @@
-"""Reusable Text Workstation panel for the Naz Lab dashboard."""
+"""Reusable Text Workstation panel for the Naz Lab dashboard.
+
+Backend-ready Text Builder panel with:
+- approved model policy only: gemma2:2b, qwen2.5:1.5b, qwen2.5:3b
+- casual chat detection
+- metadata sidecar save
+- Prompt Improver automatic Image Job JSON handoff
+- Drive-backed Ollama persistence status
+"""
 
 from __future__ import annotations
 
@@ -10,11 +18,19 @@ import streamlit as st
 from master_dashboard.naz_lab_nav import render_nav
 from shared.drive_paths import CHAT_OUTPUTS, IMAGE_JOBS, IMAGE_PROMPTS, SCRIPT_OUTPUTS, TEXT_METADATA, TEXT_OUTPUTS
 from shared.job_queue_schema import read_json
+from shared.model_policy import (
+    ALLOWED_TEXT_MODELS,
+    BLOCKED_TEXT_MODELS,
+    MINIMUM_CPU_TEXT_MODEL,
+    RECOMMENDED_TEXT_MODEL,
+    blocked_model_reason,
+    filter_allowed_text_models,
+    model_policy_status,
+    normalize_text_model,
+)
 from shared.ollama_persistence import ensure_ollama_persistence
 from shared.text_pipeline import create_image_job_from_text, persist_text_result_and_optional_image_job
 from text_workstation.app_phase110 import (
-    AVAILABLE_MODELS,
-    CPU_RECOMMENDED_MODEL,
     MODE_CONFIG,
     call_ollama,
     ensure_dirs as ensure_text_dirs,
@@ -31,6 +47,8 @@ TEXT_EXTENSIONS = {".txt", ".md", ".json"}
 JSON_EXTENSIONS = {".json"}
 OUTPUT_AREA_BASE_KEY = "naz_text_output_area"
 TEMPLATE_CHECKBOX_KEY = "naz_text_template_first"
+AVAILABLE_MODELS = filter_allowed_text_models(ALLOWED_TEXT_MODELS)
+CPU_RECOMMENDED_MODEL = MINIMUM_CPU_TEXT_MODEL
 
 MODE_POLICY: dict[str, dict[str, Any]] = {
     "General Chat": {"internal_mode": "General Chat", "auto_save": False, "output_dir": CHAT_OUTPUTS, "template_default": False, "image_job": False},
@@ -73,7 +91,7 @@ def safe_text(path: Path, limit: int = 7000) -> str:
 
 
 def file_rows(path: Path, extensions: set[str] | None = None, limit: int = 50) -> list[dict[str, Any]]:
-    rows = []
+    rows: list[dict[str, Any]] = []
     for item in latest_files(path, extensions=extensions, limit=limit):
         rows.append({"Name": item.name, "Path": str(item), "Size KB": round(item.stat().st_size / 1024, 1)})
     return rows
@@ -103,7 +121,6 @@ def looks_like_casual_chat(text: str) -> bool:
 
 
 def resolve_effective_mode_language(selected_mode: str, internal_mode: str, language: str, topic: str) -> tuple[str, str, str]:
-    """Return mode/language that better matches the actual user input."""
     clean = topic.strip()
     effective_mode = internal_mode
     reason = "selected_mode"
@@ -143,7 +160,7 @@ def init_state() -> None:
         "naz_text_last_project": "",
         "naz_text_last_language": "",
         "naz_text_last_topic": "",
-        "naz_text_last_model": "",
+        "naz_text_last_model": RECOMMENDED_TEXT_MODEL,
         "naz_text_pending_success": "",
         "naz_text_pending_warning": "",
         "naz_text_last_selected_mode": "Free Writer",
@@ -219,11 +236,12 @@ def render_builder() -> None:
     ensure_text_dirs()
     init_state()
     st.markdown("### Text Builder")
-    c1, c2, c3 = st.columns(3)
     mode_options = ["General Chat", "Free Writer", "Story Writer", "Viral Script Writer", "Caption Writer", "Prompt Improver", "YouTube Script"]
+    c1, c2, c3 = st.columns(3)
     with c1:
         project = st.selectbox("Project", ["General Bangla", "True Noir Tales", "ToolFlow", "Custom"], index=0, key="naz_text_project")
-        mode = st.selectbox("Mode", mode_options, index=mode_options.index(st.session_state.get("naz_text_last_selected_mode", "Free Writer")) if st.session_state.get("naz_text_last_selected_mode", "Free Writer") in mode_options else 1, key="naz_text_mode")
+        last = st.session_state.get("naz_text_last_selected_mode", "Free Writer")
+        mode = st.selectbox("Mode", mode_options, index=mode_options.index(last) if last in mode_options else 1, key="naz_text_mode")
     sync_template_default_for_mode(mode)
     with c2:
         language = st.selectbox("Language", ["Bangla", "English", "Mixed Bangla-English"], index=0, key="naz_text_language")
@@ -232,9 +250,13 @@ def render_builder() -> None:
         length = st.selectbox("Length", ["Short", "Medium", "Long"], index=1, key="naz_text_length")
         bangla_safe_mode = st.checkbox("Bangla Safe Mode", value=True, key="naz_text_safe")
 
+    safe_model = normalize_text_model(model)
+    if safe_model != model:
+        st.warning(blocked_model_reason(model))
+        model = safe_model
+
     policy = get_mode_policy(mode)
     internal_mode = str(policy["internal_mode"])
-
     topic = st.text_area("Topic / input", value="", height=135, key="naz_text_topic", placeholder="Write or paste your topic/input here...")
     style = st.selectbox("Style preset", ["Default", "Simple Bangla", "True Noir Tales", "ToolFlow", "Custom"], index=0, key="naz_text_style")
     template_first = st.checkbox("Template-first / structured fallback", key=TEMPLATE_CHECKBOX_KEY, help="General Chat/Free Writer default OFF. Structured modes default ON.")
@@ -246,7 +268,7 @@ def render_builder() -> None:
 
     enriched_topic = topic if style == "Default" else f"Style preset: {style}\n\n{topic}"
     auto_save = bool(policy.get("auto_save", False))
-    st.caption("Generate করলে output নিচে দেখা যাবে। Story Writer ও Viral Script Writer auto-save হবে; অন্য mode-এ প্রয়োজন হলে Save চাপুন। Prompt Improver image job auto-export করবে।")
+    st.caption("Prompt Improver auto-exports image jobs. Text metadata is saved for every generation. Weak Bangla models are blocked by policy.")
 
     if generate:
         if not topic.strip():
@@ -415,12 +437,15 @@ def render_status() -> None:
     names = installed_model_names()
     persistence_status = ensure_ollama_persistence()
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Phase", "Text pipeline")
+    c1.metric("Phase", "Text backend ready")
     c2.metric("Selected model installed", "yes" if model_installed(model) else "no")
     c3.metric("Installed models", len(names))
     c4.metric("Ollama persistence", "ok" if persistence_status.get("ok") else "check")
     st.json({
-        "recommended_cpu_model": CPU_RECOMMENDED_MODEL,
+        "recommended_text_model": RECOMMENDED_TEXT_MODEL,
+        "minimum_cpu_text_model": MINIMUM_CPU_TEXT_MODEL,
+        "allowed_text_models": AVAILABLE_MODELS,
+        "blocked_text_models": BLOCKED_TEXT_MODELS,
         "selected_model": model,
         "installed_models": names,
         "chat_outputs": str(CHAT_OUTPUTS),
@@ -430,6 +455,7 @@ def render_status() -> None:
         "image_jobs": str(IMAGE_JOBS),
         "text_metadata": str(TEXT_METADATA),
         "bangla_safe_mode": "available/default on",
+        "model_policy": model_policy_status(),
         "mode_policy": MODE_POLICY,
         "backend_modes": list(MODE_CONFIG.keys()),
         "casual_chat_detection": "enabled",
