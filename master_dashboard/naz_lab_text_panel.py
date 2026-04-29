@@ -104,7 +104,6 @@ def init_state() -> None:
 
 
 def sync_template_default_for_mode(mode: str) -> None:
-    """Reset template checkbox when mode changes so defaults stay correct."""
     last_mode = st.session_state.get("naz_text_last_selected_mode")
     if last_mode != mode:
         st.session_state["naz_text_last_selected_mode"] = mode
@@ -157,7 +156,7 @@ def render_builder() -> None:
     policy = get_mode_policy(mode)
     internal_mode = str(policy["internal_mode"])
 
-    topic = st.text_area("Topic / input", value="একজন ছোট ব্যবসায়ী AI tools ব্যবহার করে প্রতিদিনের content planning সহজ করে ফেলল।", height=135, key="naz_text_topic")
+    topic = st.text_area("Topic / input", value="", height=135, key="naz_text_topic", placeholder="Write or paste your topic/input here...")
     style = st.selectbox("Style preset", ["Default", "Simple Bangla", "True Noir Tales", "ToolFlow", "Custom"], index=0, key="naz_text_style")
     template_first = st.checkbox("Template-first / structured fallback", key=TEMPLATE_CHECKBOX_KEY, help="General Chat/Free Writer default OFF. Structured modes default ON.")
 
@@ -171,6 +170,9 @@ def render_builder() -> None:
     st.caption("Generate করলে output নিচে দেখা যাবে। Story Writer ও Viral Script Writer auto-save হবে; অন্য mode-এ প্রয়োজন হলে Save চাপুন।")
 
     if generate:
+        if not topic.strip():
+            st.error("Topic / input is required.")
+            return
         warnings: list[str] = []
         if template_first and user_requested_bangla(enriched_topic, language):
             result = template_output(internal_mode, enriched_topic)
