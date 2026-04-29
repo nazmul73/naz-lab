@@ -1,1 +1,8 @@
+# Video Workstation planning/runtime
 streamlit
+requests
+Pillow
+watchdog
+
+# Heavy video backends such as moviepy or GPU render libraries are intentionally not installed by default.
+# Add them later only when real video generation is enabled.
