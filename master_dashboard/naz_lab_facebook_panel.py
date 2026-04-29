@@ -12,6 +12,7 @@ from typing import Any
 import streamlit as st
 
 from final_package.package_backend import APPROVED_PACKAGES_JSON, list_packages, package_preview
+from master_dashboard.naz_lab_nav import render_nav
 from shared.job_queue_schema import read_json, write_json
 from social_agent.facebook_graph_backend import (
     FACEBOOK_CONFIG_JSON,
@@ -196,12 +197,12 @@ def render_facebook_panel() -> None:
     st.subheader("Facebook Post / Social Gate")
     st.write("Prepare Facebook-ready content, manage multiple pages/profiles, bridge approved packages to selected targets, and run safe manual-gated dry-run/post attempts from Naz Lab. Real posting remains disabled/manual-gated by default.")
     render_summary()
-    tabs = st.tabs(["Approved Package", "Targets / Safe Config", "Manual Gate", "Social Log"])
-    with tabs[0]:
+    selected = render_nav(["Approved Package", "Targets / Safe Config", "Manual Gate", "Social Log"], key="facebook_sub", variant="sub")
+    if selected == "Approved Package":
         render_package_handoff()
-    with tabs[1]:
+    elif selected == "Targets / Safe Config":
         render_safe_config()
-    with tabs[2]:
+    elif selected == "Manual Gate":
         render_manual_gate()
-    with tabs[3]:
+    elif selected == "Social Log":
         render_social_log()
