@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
 
 from master_dashboard.naz_lab_nav import render_nav
+from shared.drive_paths import VOICE_OUTPUTS
 from voice_workstation.voice_backend import (
     attach_audio_to_voice_job,
     create_voice_job,
@@ -20,6 +22,26 @@ from voice_workstation.voice_backend import (
 from shared.job_queue_schema import read_json
 
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".ogg", ".flac"}
+REFERENCE_AUDIO_DIR = VOICE_OUTPUTS / "reference_audio"
+
+
+def now_stamp() -> str:
+    return datetime.now().strftime("%Y%m%d_%H%M%S")
+
+
+def save_uploaded_audio(uploaded_file) -> Path:
+    REFERENCE_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+    suffix = Path(uploaded_file.name).suffix.lower()
+    safe_name = "".join(ch if ch.isalnum() or ch in ["_", "-", "."] else "_" for ch in uploaded_file.name)
+    path = REFERENCE_AUDIO_DIR / f"ref_audio_{now_stamp()}_{safe_name}"
+    path.write_bytes(uploaded_file.getbuffer())
+    return path
+
+
+def list_reference_audio() -> list[Path]:
+    if not REFERENCE_AUDIO_DIR.exists():
+        return []
+    return sorted([p for p in REFERENCE_AUDIO_DIR.rglob("*") if p.is_file() and p.suffix.lower() in AUDIO_EXTENSIONS], key=lambda p: p.stat().st_mtime, reverse=True)
 
 
 def render_runtime() -> None:
@@ -105,17 +127,35 @@ def render_outputs() -> None:
 
 
 def render_attach_audio() -> None:
-    st.markdown("### Attach existing audio to voice job")
+    st.markdown("### Attach / Upload Reference Audio")
+    st.caption("Reference audio upload করলে ফাইল Drive-এ reference_audio folder-এ থাকবে এবং voice job-এ attach করা যাবে।")
+    uploaded = st.file_uploader("Upload reference audio", type=["mp3", "wav", "m4a", "ogg", "flac"], key="voice_reference_audio_upload")
+    if uploaded is not None:
+        if st.button("Save uploaded reference audio", type="primary", key="save_reference_audio"):
+            saved = save_uploaded_audio(uploaded)
+            st.success(f"Reference audio saved: {saved}")
+            st.audio(str(saved))
+
+    refs = list_reference_audio()
+    if refs:
+        st.markdown("#### Reference audio library")
+        ref_rows = [{"Name": p.name, "Path": str(p), "Size KB": round(p.stat().st_size / 1024, 1)} for p in refs]
+        st.dataframe(ref_rows, use_container_width=True, hide_index=True)
+        ref_selected = Path(st.selectbox("Preview reference audio", [str(p) for p in refs], key="voice_ref_audio_preview"))
+        st.audio(str(ref_selected))
+
     jobs = list_voice_jobs()
     outputs = list_voice_outputs()
+    attachable = sorted(set(outputs + refs), key=lambda p: p.stat().st_mtime, reverse=True)
+    st.markdown("#### Attach audio to voice job")
     if not jobs:
         st.info("Create a voice job first.")
         return
-    if not outputs:
-        st.info("No audio outputs found to attach.")
+    if not attachable:
+        st.info("No audio outputs or reference audio found to attach.")
         return
     job_path = st.selectbox("Voice job", [str(path) for path in jobs], key="voice_attach_job")
-    audio_path = st.selectbox("Audio output", [str(path) for path in outputs], key="voice_attach_audio")
+    audio_path = st.selectbox("Audio output/reference", [str(path) for path in attachable], key="voice_attach_audio")
     if st.button("Attach audio to job", key="voice_attach_button"):
         result = attach_audio_to_voice_job(job_path, audio_path)
         st.json(result)
