@@ -29,6 +29,7 @@ from text_workstation.app_phase110 import (
 TEXT_EXTENSIONS = {".txt", ".md", ".json"}
 JSON_EXTENSIONS = {".json"}
 OUTPUT_AREA_BASE_KEY = "naz_text_output_area"
+TEMPLATE_CHECKBOX_KEY = "naz_text_template_first"
 
 MODE_POLICY: dict[str, dict[str, Any]] = {
     "General Chat": {"internal_mode": "General Chat", "auto_save": False, "output_dir": CHAT_OUTPUTS, "template_default": False, "image_job": False},
@@ -77,6 +78,10 @@ def file_rows(path: Path, extensions: set[str] | None = None, limit: int = 50) -
     return rows
 
 
+def get_mode_policy(mode: str) -> dict[str, Any]:
+    return MODE_POLICY.get(mode, MODE_POLICY["Free Writer"])
+
+
 def init_state() -> None:
     defaults = {
         "naz_text_output": "",
@@ -90,10 +95,20 @@ def init_state() -> None:
         "naz_text_last_topic": "",
         "naz_text_pending_success": "",
         "naz_text_pending_warning": "",
+        "naz_text_last_selected_mode": "Free Writer",
+        TEMPLATE_CHECKBOX_KEY: False,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
+
+
+def sync_template_default_for_mode(mode: str) -> None:
+    """Reset template checkbox when mode changes so defaults stay correct."""
+    last_mode = st.session_state.get("naz_text_last_selected_mode")
+    if last_mode != mode:
+        st.session_state["naz_text_last_selected_mode"] = mode
+        st.session_state[TEMPLATE_CHECKBOX_KEY] = bool(get_mode_policy(mode).get("template_default", False))
 
 
 def output_area_key() -> str:
@@ -113,10 +128,6 @@ def get_current_output() -> str:
     return str(widget_value or state_value or "")
 
 
-def get_mode_policy(mode: str) -> dict[str, Any]:
-    return MODE_POLICY.get(mode, MODE_POLICY["Free Writer"])
-
-
 def render_pending_messages() -> None:
     if st.session_state.naz_text_pending_warning:
         st.warning(st.session_state.naz_text_pending_warning)
@@ -131,10 +142,11 @@ def render_builder() -> None:
     init_state()
     st.markdown("### Text Builder")
     c1, c2, c3 = st.columns(3)
+    mode_options = ["General Chat", "Free Writer", "Story Writer", "Viral Script Writer", "Caption Writer", "Prompt Improver", "YouTube Script"]
     with c1:
         project = st.selectbox("Project", ["General Bangla", "True Noir Tales", "ToolFlow", "Custom"], index=0, key="naz_text_project")
-        mode_options = ["General Chat", "Free Writer", "Story Writer", "Viral Script Writer", "Caption Writer", "Prompt Improver", "YouTube Script"]
-        mode = st.selectbox("Mode", mode_options, index=1, key="naz_text_mode")
+        mode = st.selectbox("Mode", mode_options, index=mode_options.index(st.session_state.get("naz_text_last_selected_mode", "Free Writer")) if st.session_state.get("naz_text_last_selected_mode", "Free Writer") in mode_options else 1, key="naz_text_mode")
+    sync_template_default_for_mode(mode)
     with c2:
         language = st.selectbox("Language", ["Bangla", "English", "Mixed Bangla-English"], index=0, key="naz_text_language")
         model = st.selectbox("Model", AVAILABLE_MODELS, index=0, key="naz_text_model")
@@ -144,11 +156,10 @@ def render_builder() -> None:
 
     policy = get_mode_policy(mode)
     internal_mode = str(policy["internal_mode"])
-    default_template = bool(policy.get("template_default", False))
 
     topic = st.text_area("Topic / input", value="একজন ছোট ব্যবসায়ী AI tools ব্যবহার করে প্রতিদিনের content planning সহজ করে ফেলল।", height=135, key="naz_text_topic")
     style = st.selectbox("Style preset", ["Default", "Simple Bangla", "True Noir Tales", "ToolFlow", "Custom"], index=0, key="naz_text_style")
-    template_first = st.checkbox("Template-first / structured fallback", value=default_template, key="naz_text_template_first")
+    template_first = st.checkbox("Template-first / structured fallback", key=TEMPLATE_CHECKBOX_KEY, help="General Chat/Free Writer default OFF. Structured modes default ON.")
 
     b1, b2, b3 = st.columns(3)
     generate = b1.button("Generate", type="primary", use_container_width=True, key="naz_text_generate")
@@ -269,7 +280,7 @@ def render_status() -> None:
     c1.metric("Phase", "Text merged")
     c2.metric("Selected model installed", "yes" if model_installed(model) else "no")
     c3.metric("Installed models", len(names))
-    st.json({"recommended_cpu_model": CPU_RECOMMENDED_MODEL, "selected_model": model, "installed_models": names, "chat_outputs": str(CHAT_OUTPUTS), "text_outputs": str(TEXT_OUTPUTS), "script_outputs": str(SCRIPT_OUTPUTS), "image_prompts": str(IMAGE_PROMPTS), "image_jobs": str(IMAGE_JOBS), "bangla_safe_mode": "available/default on", "mode_policy": MODE_POLICY})
+    st.json({"recommended_cpu_model": CPU_RECOMMENDED_MODEL, "selected_model": model, "installed_models": names, "chat_outputs": str(CHAT_OUTPUTS), "text_outputs": str(TEXT_OUTPUTS), "script_outputs": str(SCRIPT_OUTPUTS), "image_prompts": str(IMAGE_PROMPTS), "image_jobs": str(IMAGE_JOBS), "bangla_safe_mode": "available/default on", "mode_policy": MODE_POLICY, "backend_modes": list(MODE_CONFIG.keys())})
 
 
 def render_text_panel() -> None:
