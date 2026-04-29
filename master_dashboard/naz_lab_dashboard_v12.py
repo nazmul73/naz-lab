@@ -94,6 +94,7 @@ def render_css() -> None:
             color: white;
             margin-bottom: 1.1rem;
             box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+            overflow: hidden;
           }
 
           .naz-hero h1 {
@@ -108,89 +109,116 @@ def render_css() -> None:
             font-size: 1.04rem;
           }
 
-          /* MAIN MENU BAR */
-          div[data-testid="stTabs"] > div[data-baseweb="tabs"] > div[role="tablist"] {
-            background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
-            border: 1px solid #334155;
-            border-radius: 18px;
-            padding: 0.45rem;
-            gap: 0.50rem;
-            margin-bottom: 1rem;
-            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+          /* Reliable Streamlit tab styling.
+             Main menu = first-level .stTabs.
+             Submenu = nested .stTabs inside another .stTabs. */
+
+          .stTabs > div[data-baseweb="tab-list"] {
+            background: linear-gradient(135deg, #111827 0%, #1f2937 100%) !important;
+            border: 1px solid #334155 !important;
+            border-radius: 18px !important;
+            padding: 0.45rem !important;
+            gap: 0.50rem !important;
+            margin: 0.55rem 0 1.05rem 0 !important;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22) !important;
           }
 
-          div[data-testid="stTabs"] > div[data-baseweb="tabs"] > div[role="tablist"] button[role="tab"] {
-            background: #0f172a;
-            color: #e5e7eb;
-            border: 1px solid #334155;
-            border-radius: 12px;
-            padding: 0.55rem 1rem;
-            margin: 0;
-            font-weight: 600;
-            min-height: 42px;
-            transition: all 0.18s ease;
+          .stTabs > div[data-baseweb="tab-list"] button[data-baseweb="tab"],
+          .stTabs > div[data-baseweb="tab-list"] button[role="tab"] {
+            background: #0f172a !important;
+            color: #e5e7eb !important;
+            border: 1px solid #334155 !important;
+            border-radius: 12px !important;
+            padding: 0.55rem 1rem !important;
+            margin: 0 !important;
+            font-weight: 700 !important;
+            min-height: 42px !important;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02) !important;
           }
 
-          div[data-testid="stTabs"] > div[data-baseweb="tabs"] > div[role="tablist"] button[role="tab"]:hover {
-            background: #1e293b;
-            color: #ffffff;
-            border-color: #475569;
+          .stTabs > div[data-baseweb="tab-list"] button[data-baseweb="tab"] p,
+          .stTabs > div[data-baseweb="tab-list"] button[role="tab"] p {
+            color: inherit !important;
+            font-weight: 700 !important;
           }
 
-          div[data-testid="stTabs"] > div[data-baseweb="tabs"] > div[role="tablist"] button[role="tab"][aria-selected="true"] {
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-            color: #ffffff;
-            border-color: #60a5fa;
-            box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.25);
+          .stTabs > div[data-baseweb="tab-list"] button[data-baseweb="tab"]:hover,
+          .stTabs > div[data-baseweb="tab-list"] button[role="tab"]:hover {
+            background: #1e293b !important;
+            color: #ffffff !important;
+            border-color: #64748b !important;
           }
 
-          /* main menu body separation */
-          div[data-testid="stTabs"] > div[data-baseweb="tabs"] > div[role="tabpanel"] {
-            border-top: 1px solid #1f2937;
-            padding-top: 0.85rem;
+          .stTabs > div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"],
+          .stTabs > div[data-baseweb="tab-list"] button[role="tab"][aria-selected="true"] {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+            color: #ffffff !important;
+            border-color: #60a5fa !important;
+            box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.28), 0 8px 20px rgba(37, 99, 235, 0.20) !important;
           }
 
-          /* INNER / SUB MENU BAR */
-          div[data-testid="stTabs"] div[data-testid="stTabs"] > div[data-baseweb="tabs"] > div[role="tablist"] {
-            background: linear-gradient(135deg, #ecfeff 0%, #e0f2fe 100%);
-            border: 1px solid #bae6fd;
-            border-radius: 16px;
-            padding: 0.40rem;
-            gap: 0.40rem;
-            margin-top: 0.25rem;
-            margin-bottom: 0.9rem;
-            box-shadow: 0 6px 16px rgba(14, 116, 144, 0.08);
+          .stTabs > div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] p,
+          .stTabs > div[data-baseweb="tab-list"] button[role="tab"][aria-selected="true"] p {
+            color: #ffffff !important;
           }
 
-          div[data-testid="stTabs"] div[data-testid="stTabs"] > div[data-baseweb="tabs"] > div[role="tablist"] button[role="tab"] {
-            background: #f8fafc;
-            color: #0f766e;
-            border: 1px solid #cbd5e1;
-            border-radius: 10px;
-            padding: 0.48rem 0.9rem;
-            margin: 0;
-            font-weight: 600;
-            min-height: 38px;
-            transition: all 0.18s ease;
+          /* Main menu to content separation */
+          .stTabs > div[data-baseweb="tab-panel"] {
+            border-top: 1px solid #1f2937 !important;
+            padding-top: 0.9rem !important;
           }
 
-          div[data-testid="stTabs"] div[data-testid="stTabs"] > div[data-baseweb="tabs"] > div[role="tablist"] button[role="tab"]:hover {
-            background: #ccfbf1;
-            color: #115e59;
-            border-color: #5eead4;
+          /* Nested/submenu overrides */
+          .stTabs .stTabs > div[data-baseweb="tab-list"] {
+            background: linear-gradient(135deg, #ecfeff 0%, #dbeafe 100%) !important;
+            border: 1px solid #7dd3fc !important;
+            border-radius: 16px !important;
+            padding: 0.40rem !important;
+            gap: 0.40rem !important;
+            margin: 0.6rem 0 0.95rem 0 !important;
+            box-shadow: 0 8px 18px rgba(14, 116, 144, 0.13) !important;
           }
 
-          div[data-testid="stTabs"] div[data-testid="stTabs"] > div[data-baseweb="tabs"] > div[role="tablist"] button[role="tab"][aria-selected="true"] {
-            background: linear-gradient(135deg, #14b8a6 0%, #0f766e 100%);
-            color: #ffffff;
-            border-color: #14b8a6;
-            box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.18);
+          .stTabs .stTabs > div[data-baseweb="tab-list"] button[data-baseweb="tab"],
+          .stTabs .stTabs > div[data-baseweb="tab-list"] button[role="tab"] {
+            background: #f8fafc !important;
+            color: #0f766e !important;
+            border: 1px solid #99f6e4 !important;
+            border-radius: 10px !important;
+            padding: 0.48rem 0.9rem !important;
+            min-height: 38px !important;
+            font-weight: 700 !important;
           }
 
-          /* sub menu body separation */
-          div[data-testid="stTabs"] div[data-testid="stTabs"] > div[data-baseweb="tabs"] > div[role="tabpanel"] {
-            border-top: 1px solid #cbd5e1;
-            padding-top: 0.8rem;
+          .stTabs .stTabs > div[data-baseweb="tab-list"] button[data-baseweb="tab"] p,
+          .stTabs .stTabs > div[data-baseweb="tab-list"] button[role="tab"] p {
+            color: inherit !important;
+            font-weight: 700 !important;
+          }
+
+          .stTabs .stTabs > div[data-baseweb="tab-list"] button[data-baseweb="tab"]:hover,
+          .stTabs .stTabs > div[data-baseweb="tab-list"] button[role="tab"]:hover {
+            background: #ccfbf1 !important;
+            color: #115e59 !important;
+            border-color: #2dd4bf !important;
+          }
+
+          .stTabs .stTabs > div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"],
+          .stTabs .stTabs > div[data-baseweb="tab-list"] button[role="tab"][aria-selected="true"] {
+            background: linear-gradient(135deg, #14b8a6 0%, #0f766e 100%) !important;
+            color: #ffffff !important;
+            border-color: #14b8a6 !important;
+            box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.22), 0 6px 16px rgba(15, 118, 110, 0.18) !important;
+          }
+
+          .stTabs .stTabs > div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] p,
+          .stTabs .stTabs > div[data-baseweb="tab-list"] button[role="tab"][aria-selected="true"] p {
+            color: #ffffff !important;
+          }
+
+          .stTabs .stTabs > div[data-baseweb="tab-panel"] {
+            border-top: 1px solid #bae6fd !important;
+            padding-top: 0.85rem !important;
           }
 
           h2, h3 {
