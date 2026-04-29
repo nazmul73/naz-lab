@@ -2,22 +2,48 @@
 
 Naz Lab is a modular AI content production lab for Google Colab, Streamlit, Google Drive, Ollama, and future creative backends.
 
+## Official runtime entrypoint
+
+Use one Streamlit process for normal Colab testing and production-style dashboard work:
+
+```text
+master_dashboard/app_official.py
+```
+
+Colab path:
+
+```text
+/content/naz-lab/master_dashboard/app_official.py
+```
+
+The root `app.py` is only a compatibility wrapper that redirects to the official dashboard.
+
+## Official Colab launcher
+
+Use the notebook launcher:
+
+```text
+launchers/naz_lab_official_colab_launcher.ipynb
+```
+
+This notebook mounts Google Drive, prepares Naz Lab folders, downloads the latest `main` branch, installs lightweight requirements, validates key modules, starts the official dashboard on port `8502`, and opens the Colab proxy window.
+
+Legacy Markdown launchers may remain as documentation, but the notebook launcher is the recommended Colab path.
+
 ## Current vision
 
-Naz Lab is designed around this workflow:
+Naz Lab is now organized around a single dashboard command center:
 
 ```text
 Idea / Topic
--> Project package
--> Text package
--> Image prompt package
--> Voice package
--> Video package
--> Portrait package
--> Final posting package
+-> Text generation and metadata
+-> Image prompt/job queue
+-> Voice job workflow
+-> Review / approve / export workflow
+-> Facebook handoff
 ```
 
-The system is modular. Each workstation runs as a separate Streamlit app in Colab, while Google Drive stores outputs and JSON packages.
+No standalone tab named Complete Package is used.
 
 ## Global language rule
 
@@ -43,179 +69,21 @@ Default regional flavor:
 
 - Rangpur / Nilphamari / North Bengal
 
-Secondary regional tones are supported when requested:
-
-- Dhakaiya
-- Chattogram
-- Sylhet
-- Noakhali / Comilla
-
 True Noir Tales and ToolFlow can remain English-first project presets when selected.
 
-## Current workstation stack
+## Current dashboard stack
 
-| Workstation | Phase | Port | Path |
-|---|---:|---:|---|
-| Text Workstation | 1.8 stable | 8501 | `text_workstation/app.py` |
-| Master Dashboard | 2.9 stable | 8502 | `master_dashboard/app.py` |
-| Image Workstation | 3.x stable | 8503 | `image_workstation/app.py` |
-| Voice Workstation | 4.x reference workflow | 8504 | `voice_workstation/app.py` |
-| Video Workstation | 5.3 stable | 8505 | `video_workstation/app.py` |
-| Portrait Workstation | 6.3 stable | 8506 | `portrait_workstation/app.py` |
-| Project Workflow Workstation | 10.2 stable | 8507 | `project_workstation/app.py` |
+| Module | Status | Path |
+|---|---|---|
+| Official Dashboard | active | `master_dashboard/app_official.py` |
+| Dashboard implementation | active | `master_dashboard/naz_lab_dashboard_v12.py` |
+| Text panel | active | `master_dashboard/naz_lab_text_panel.py` |
+| Voice panel | active | `master_dashboard/naz_lab_voice_panel.py` |
+| Image panel | active | `master_dashboard/naz_lab_image_panel.py` |
+| Review panel | active | `master_dashboard/naz_lab_review_panel.py` |
+| Facebook panel | active/manual-gated | `master_dashboard/naz_lab_facebook_panel.py` |
 
-## Recommended launcher
-
-Use the all-in-one Colab launcher:
-
-```text
-launchers/all_in_one_colab_launcher.md
-```
-
-Supported `WORKSTATION` values:
-
-```text
-text
-dashboard
-image
-voice
-video
-portrait
-project
-```
-
-Most useful values:
-
-```bash
-WORKSTATION="dashboard"
-```
-
-```bash
-WORKSTATION="project"
-```
-
-## Project workflow workstation
-
-Project Workflow Workstation turns one topic/story/tool idea into a full package plan:
-
-```text
-Script/Post
-Image prompt
-Voice direction
-Video direction
-Posting package
-JSON package
-```
-
-Outputs save to:
-
-```text
-/content/drive/MyDrive/NazLab/project_packages
-```
-
-Current automation quality:
-
-```text
-True Noir Tales automation — polished
-ToolFlow automation — polished
-General Bangla automation — polished
-```
-
-### True Noir Tales automation
-
-Creates:
-
-```text
-script package
-image prompt
-voice direction
-video direction
-posting package
-safety notes
-```
-
-Style:
-
-- cinematic noir
-- suspenseful but restrained
-- psychology-aware
-- adult-focused
-- no gore / no dead body / no visible wounds
-
-### ToolFlow automation
-
-Creates:
-
-```text
-main post
-carousel plan
-reel package
-image prompt
-voice direction
-video direction
-posting package
-safety notes
-```
-
-Style:
-
-- modern
-- clean
-- practical
-- premium
-- trustworthy
-- useful
-- non-hype
-
-### General Bangla automation
-
-Creates:
-
-```text
-Bangla text package
-reel package
-image prompt
-voice direction
-video direction
-posting package
-regional note
-```
-
-Style:
-
-- natural spoken Bangla
-- Facebook-ready
-- netizen-friendly
-- voiceover-ready
-- light Rangpur / Nilphamari / North Bengal flavor by default
-
-## Project workflows
-
-Workflow documentation and templates live in:
-
-```text
-project_workflows/
-```
-
-Current workflows:
-
-- `true_noir_tales_workflow.md`
-- `true_noir_tales_package_template.json`
-- `toolflow_workflow.md`
-- `toolflow_package_template.json`
-- `project_workflows/README.md`
-
-## Bangla Quality Engine
-
-Core Bangla quality rules live in:
-
-```text
-docs/bangla_quality_engine.md
-shared/bangla_quality_engine.py
-docs/voice_video_bangla_quality.md
-voice_workstation/bangla_voice_quality.py
-video_workstation/bangla_video_quality.py
-```
+Legacy workstation apps may exist as fallback modules, but normal Colab use should not run seven separate Streamlit apps or ports. Use the official dashboard on port `8502`.
 
 ## Main Google Drive folders
 
@@ -228,61 +96,86 @@ Base path:
 Important folders:
 
 ```text
+models/ollama
 chat_outputs
 text_outputs
 script_outputs
 image_prompts
-image_jobs
+job_queue/image_jobs
+job_queue/voice_jobs
+job_queue/video_jobs
 image_outputs
 voice_outputs
-voice_packages
-voice_references
-audio_outputs
+voice_outputs/reference_audio
 video_outputs
-video_packages
-video_storyboards
-portrait_packages
-portrait_outputs
-portrait_references
-project_packages
-project_workflows
+social_review
+final_packages
+final_packages/exports
+reference_images
 logs
 config
 ```
 
+## Text Builder backend policy
+
+Recommended text models:
+
+```text
+gemma2:2b
+qwen2.5:1.5b
+qwen2.5:3b
+```
+
+Blocked for normal Text Builder Bangla generation:
+
+```text
+qwen2.5:0.5b
+tinyllama
+```
+
+Prompt Improver generates metadata and queues image jobs under:
+
+```text
+/content/drive/MyDrive/NazLab/job_queue/image_jobs
+```
+
+## Ollama persistence
+
+Ollama model persistence uses:
+
+```text
+/content/drive/MyDrive/NazLab/models/ollama
+```
+
+The helper `shared/ollama_persistence.py` attempts to keep the local Ollama model path pointed at the Drive-backed model store and tolerates common Colab/Drive path race conditions.
+
 ## Workstation purposes
 
-### Text Workstation
+### Text
 
-General Chat, Free Writer, Re-writer, Story Writer, Viral Script Writer, Caption Writer, Prompt Improver, Output Library, Settings, and Direct Test.
+General Chat, Free Writer, Story Writer, Viral Script Writer, Caption Writer, Prompt Improver, YouTube Script, metadata save, and image job handoff.
 
-### Master Dashboard
+### Voice
 
-Full-stack status, quick links, output folders, job queue, launcher notes, roadmap, and Bangla-first policy.
-
-### Image Workstation
-
-Image job builder, project presets, Bangladesh scenario policy, no-sindoor default rule, visual prompt package, and manual generator bridge.
-
-### Voice Workstation
-
-Narration direction, TTS direction, script draft, reference audio workflow, package JSON, and future audio backend metadata.
+Text-to-voice job planning, reference audio attachment, and voice output tracking.
 
 Reference voice/audio workflows must use user-provided or explicitly authorized reference audio only.
 
-### Video Workstation
+### Image
 
-Video hook, subtitles, scene sequence, timing guide, shot list, editor instruction, storyboard save, and video package JSON.
+Image job builder, reference upload, runtime checks, gallery, metadata, and job validation.
 
-### Portrait Workstation
+### Review / export workflow
 
-Portrait prompt packages, reference image path support, output path validation, positive/negative prompt, and portrait package library.
+Contextual review, approve, and export flow through Home/Review areas. No standalone Complete Package tab.
 
-Face references must be user-provided for the workflow.
+### Facebook Post
 
-### Project Workflow Workstation
+Approved package handoff, safe config, manual gate, and social log. Real Facebook posting stays disabled/manual-gated unless explicitly connected and approved.
 
-One-topic-to-full-package planner for True Noir Tales, ToolFlow, and General Bangla-first content.
+### Video
+
+Video generation is deferred. The current section is planning-only until text, image, voice, and posting workflows are fully verified.
 
 ## Visual safety defaults
 
@@ -299,25 +192,12 @@ Rules:
 - no exposed violence
 - adult-only for true-crime/noir content
 
-## Backend status
-
-Current workstations mostly create planning packages and metadata.
-
-Text generation uses Ollama when running Text Workstation.
-
-Future backend integrations can include:
-
-- image generation backend
-- TTS backend
-- authorized reference voice backend
-- video generation/editing backend
-- portrait/reference workflow backend
-
 ## Current next steps
 
 Recommended build order:
 
-1. Keep Bangla Quality Engine aligned across all workstations.
-2. Add safer reference managers where needed.
-3. Add optional backend integrations when ready.
-4. Improve dashboard reporting and package search/filter.
+1. Keep official Colab launcher passing.
+2. Verify Text > Create, metadata, and Prompt Improver job queue.
+3. Verify Voice attach-audio and Image reference upload UI.
+4. Verify Facebook Post safe/manual config.
+5. Add optional backend integrations only after dashboard workflow is stable.
