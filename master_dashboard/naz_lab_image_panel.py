@@ -7,6 +7,7 @@ app so image testing can happen from the command center.
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,15 +20,38 @@ from image_workstation.real_image_backend_phase31 import (
     runtime_status,
 )
 from master_dashboard.naz_lab_nav import render_nav
-from shared.drive_paths import IMAGE_JOBS, IMAGE_OUTPUTS
+from shared.drive_paths import BASE_PATH, IMAGE_JOBS, IMAGE_OUTPUTS
 from shared.job_queue_schema import read_json, summarize_job_file, validate_job_record
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 JSON_EXTENSIONS = {".json"}
+REFERENCE_IMAGE_DIR = BASE_PATH / "reference_images"
+
+
+def now_stamp() -> str:
+    return datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
 def json_text(data: Any) -> str:
     return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+def safe_upload_name(name: str) -> str:
+    return "".join(ch if ch.isalnum() or ch in ["_", "-", "."] else "_" for ch in name)
+
+
+def save_uploaded_reference_image(uploaded_file) -> Path:
+    REFERENCE_IMAGE_DIR.mkdir(parents=True, exist_ok=True)
+    path = REFERENCE_IMAGE_DIR / f"ref_image_{now_stamp()}_{safe_upload_name(uploaded_file.name)}"
+    path.write_bytes(uploaded_file.getbuffer())
+    return path
+
+
+def latest_reference_images() -> list[Path]:
+    if not REFERENCE_IMAGE_DIR.exists():
+        return []
+    files = [p for p in REFERENCE_IMAGE_DIR.rglob("*") if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS]
+    return sorted(files, key=lambda p: p.stat().st_mtime, reverse=True)
 
 
 def latest_jobs() -> list[Path]:
@@ -141,7 +165,25 @@ def render_job_preview() -> None:
 
 def render_reference_note() -> None:
     st.markdown("### Reference image support")
-    st.info("Reference image files are handled by the package/reference workflow and stored under /content/drive/MyDrive/NazLab/reference_images/. Direct reference-to-image generation controls will be added after the main image queue controls pass runtime testing.")
+    st.caption("Reference image upload করলে ফাইল Drive-এর NazLab/reference_images folder-এ সেভ হবে এবং package/reference workflow-এ ব্যবহার করা যাবে।")
+    uploaded = st.file_uploader("Upload reference image", type=["png", "jpg", "jpeg", "webp"], key="image_reference_upload")
+    if uploaded is not None:
+        if st.button("Save uploaded reference image", type="primary", key="save_reference_image"):
+            saved = save_uploaded_reference_image(uploaded)
+            st.success(f"Reference image saved: {saved}")
+            st.image(str(saved), caption=saved.name, use_container_width=True)
+
+    refs = latest_reference_images()
+    st.metric("Reference images", len(refs))
+    if refs:
+        st.markdown("#### Reference image library")
+        rows = [{"Name": p.name, "Path": str(p), "Size KB": round(p.stat().st_size / 1024, 1)} for p in refs]
+        st.dataframe(rows, use_container_width=True, hide_index=True)
+        selected = Path(st.selectbox("Preview reference image", [str(p) for p in refs], key="image_reference_preview"))
+        st.image(str(selected), caption=selected.name, use_container_width=True)
+        st.code(str(selected), language="text")
+    else:
+        st.info(f"No reference images found in {REFERENCE_IMAGE_DIR}")
 
 
 def render_image_panel() -> None:
