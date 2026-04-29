@@ -29,6 +29,7 @@ from text_workstation.app_phase110 import (
 TEXT_EXTENSIONS = {".txt", ".md", ".json"}
 JSON_EXTENSIONS = {".json"}
 AUTO_SAVE_MODES = {"Story Writer", "Viral Script Writer"}
+OUTPUT_AREA_KEY = "naz_text_output_area"
 
 
 def count_files(path: Path) -> int:
@@ -70,6 +71,7 @@ def file_rows(path: Path, extensions: set[str] | None = None, limit: int = 50) -
 def init_state() -> None:
     defaults = {
         "naz_text_output": "",
+        OUTPUT_AREA_KEY: "",
         "naz_text_saved_path": "",
         "naz_text_engine_status": "",
         "naz_text_last_job_path": "",
@@ -81,6 +83,11 @@ def init_state() -> None:
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
+
+
+def sync_output(result: str) -> None:
+    st.session_state.naz_text_output = result
+    st.session_state[OUTPUT_AREA_KEY] = result
 
 
 def render_builder() -> None:
@@ -130,7 +137,7 @@ def render_builder() -> None:
                 result = template_output(internal_mode, enriched_topic)
                 engine_status = f"template_after_error:{type(exc).__name__}"
                 st.warning(f"Model generation failed. Safe template output was used. Error: {exc}")
-        st.session_state.naz_text_output = result
+        sync_output(result)
         st.session_state.naz_text_engine_status = engine_status
         st.session_state.naz_text_last_mode = internal_mode
         st.session_state.naz_text_last_project = project
@@ -144,7 +151,7 @@ def render_builder() -> None:
         else:
             st.success("Generated. Output is displayed below. Not auto-saved; press Save current output only if needed.")
 
-    output_text = st.text_area("Output", value=st.session_state.naz_text_output, height=360, key="naz_text_output_area")
+    output_text = st.text_area("Output", height=360, key=OUTPUT_AREA_KEY)
     st.session_state.naz_text_output = output_text
     if st.session_state.naz_text_engine_status:
         st.caption(f"Engine status: {st.session_state.naz_text_engine_status}")
