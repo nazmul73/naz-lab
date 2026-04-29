@@ -82,10 +82,120 @@ def render_css() -> None:
     st.markdown(
         """
         <style>
-          .block-container {padding-top: 1.4rem; padding-bottom: 2rem;}
-          .naz-hero {padding: 1.4rem 1.5rem; border-radius: 26px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%); color: white; margin-bottom: 1rem; box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);}
-          .naz-hero h1 {margin:0; font-size:2.35rem; letter-spacing: -0.04em;}
-          .naz-hero p {margin:0.45rem 0 0 0; opacity:0.92; font-size:1.04rem;}
+          .block-container {
+            padding-top: 1.2rem;
+            padding-bottom: 2rem;
+          }
+
+          .naz-hero {
+            padding: 1.4rem 1.5rem;
+            border-radius: 26px;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            color: white;
+            margin-bottom: 1.1rem;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+          }
+
+          .naz-hero h1 {
+            margin: 0;
+            font-size: 2.35rem;
+            letter-spacing: -0.04em;
+          }
+
+          .naz-hero p {
+            margin: 0.45rem 0 0 0;
+            opacity: 0.92;
+            font-size: 1.04rem;
+          }
+
+          /* MAIN MENU BAR */
+          div[data-testid="stTabs"] > div[data-baseweb="tabs"] > div[role="tablist"] {
+            background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+            border: 1px solid #334155;
+            border-radius: 18px;
+            padding: 0.45rem;
+            gap: 0.50rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+          }
+
+          div[data-testid="stTabs"] > div[data-baseweb="tabs"] > div[role="tablist"] button[role="tab"] {
+            background: #0f172a;
+            color: #e5e7eb;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 0.55rem 1rem;
+            margin: 0;
+            font-weight: 600;
+            min-height: 42px;
+            transition: all 0.18s ease;
+          }
+
+          div[data-testid="stTabs"] > div[data-baseweb="tabs"] > div[role="tablist"] button[role="tab"]:hover {
+            background: #1e293b;
+            color: #ffffff;
+            border-color: #475569;
+          }
+
+          div[data-testid="stTabs"] > div[data-baseweb="tabs"] > div[role="tablist"] button[role="tab"][aria-selected="true"] {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #ffffff;
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.25);
+          }
+
+          /* main menu body separation */
+          div[data-testid="stTabs"] > div[data-baseweb="tabs"] > div[role="tabpanel"] {
+            border-top: 1px solid #1f2937;
+            padding-top: 0.85rem;
+          }
+
+          /* INNER / SUB MENU BAR */
+          div[data-testid="stTabs"] div[data-testid="stTabs"] > div[data-baseweb="tabs"] > div[role="tablist"] {
+            background: linear-gradient(135deg, #ecfeff 0%, #e0f2fe 100%);
+            border: 1px solid #bae6fd;
+            border-radius: 16px;
+            padding: 0.40rem;
+            gap: 0.40rem;
+            margin-top: 0.25rem;
+            margin-bottom: 0.9rem;
+            box-shadow: 0 6px 16px rgba(14, 116, 144, 0.08);
+          }
+
+          div[data-testid="stTabs"] div[data-testid="stTabs"] > div[data-baseweb="tabs"] > div[role="tablist"] button[role="tab"] {
+            background: #f8fafc;
+            color: #0f766e;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 0.48rem 0.9rem;
+            margin: 0;
+            font-weight: 600;
+            min-height: 38px;
+            transition: all 0.18s ease;
+          }
+
+          div[data-testid="stTabs"] div[data-testid="stTabs"] > div[data-baseweb="tabs"] > div[role="tablist"] button[role="tab"]:hover {
+            background: #ccfbf1;
+            color: #115e59;
+            border-color: #5eead4;
+          }
+
+          div[data-testid="stTabs"] div[data-testid="stTabs"] > div[data-baseweb="tabs"] > div[role="tablist"] button[role="tab"][aria-selected="true"] {
+            background: linear-gradient(135deg, #14b8a6 0%, #0f766e 100%);
+            color: #ffffff;
+            border-color: #14b8a6;
+            box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.18);
+          }
+
+          /* sub menu body separation */
+          div[data-testid="stTabs"] div[data-testid="stTabs"] > div[data-baseweb="tabs"] > div[role="tabpanel"] {
+            border-top: 1px solid #cbd5e1;
+            padding-top: 0.8rem;
+          }
+
+          h2, h3 {
+            letter-spacing: -0.02em;
+          }
         </style>
         """,
         unsafe_allow_html=True,
