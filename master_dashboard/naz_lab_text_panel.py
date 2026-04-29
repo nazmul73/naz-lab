@@ -8,14 +8,15 @@ from typing import Any
 import streamlit as st
 
 from master_dashboard.naz_lab_nav import render_nav
-from shared.drive_paths import CHAT_OUTPUTS, IMAGE_JOBS, IMAGE_PROMPTS, SCRIPT_OUTPUTS, TEXT_OUTPUTS
+from shared.drive_paths import CHAT_OUTPUTS, IMAGE_JOBS, IMAGE_PROMPTS, SCRIPT_OUTPUTS, TEXT_METADATA, TEXT_OUTPUTS
 from shared.job_queue_schema import read_json
+from shared.ollama_persistence import ensure_ollama_persistence
+from shared.text_pipeline import create_image_job_from_text, persist_text_result_and_optional_image_job
 from text_workstation.app_phase110 import (
     AVAILABLE_MODELS,
     CPU_RECOMMENDED_MODEL,
     MODE_CONFIG,
     call_ollama,
-    create_image_job,
     ensure_dirs as ensure_text_dirs,
     installed_model_names,
     model_installed,
@@ -102,13 +103,7 @@ def looks_like_casual_chat(text: str) -> bool:
 
 
 def resolve_effective_mode_language(selected_mode: str, internal_mode: str, language: str, topic: str) -> tuple[str, str, str]:
-    """Return mode/language that better matches the actual user input.
-
-    If the user types a short conversational message such as "how are you?",
-    treat it as chat even when the selected mode is Free Writer. If input is
-    English-only, do not force Bangla fallback just because the UI language
-    selector is still Bangla.
-    """
+    """Return mode/language that better matches the actual user input."""
     clean = topic.strip()
     effective_mode = internal_mode
     reason = "selected_mode"
@@ -131,7 +126,7 @@ def fallback_output(mode: str, topic: str, language: str) -> str:
         if lower == "how are you":
             return "I'm doing well, thanks for asking. How can I help you today?"
         if lower in ["who are you", "what are you"]:
-            return "I'm Naz Lab's AI assistant inside this dashboard. I can help with text, scripts, prompts, image jobs, voice jobs, and content packages."
+            return "I'm Naz Lab's AI assistant inside this dashboard. I can help with text, scripts, prompts, image jobs, voice jobs, and content workflow."
         return f"I understand: {clean}\n\nHow would you like me to help with this?"
     return template_output(mode, topic)
 
@@ -141,12 +136,14 @@ def init_state() -> None:
         "naz_text_output": "",
         "naz_text_output_version": 0,
         "naz_text_saved_path": "",
+        "naz_text_last_metadata_path": "",
         "naz_text_engine_status": "",
         "naz_text_last_job_path": "",
         "naz_text_last_mode": "",
         "naz_text_last_project": "",
         "naz_text_last_language": "",
         "naz_text_last_topic": "",
+        "naz_text_last_model": "",
         "naz_text_pending_success": "",
         "naz_text_pending_warning": "",
         "naz_text_last_selected_mode": "Free Writer",
@@ -190,6 +187,34 @@ def render_pending_messages() -> None:
         st.session_state.naz_text_pending_success = ""
 
 
+def persist_generated_text(
+    *,
+    mode: str,
+    project: str,
+    language: str,
+    topic: str,
+    model: str,
+    engine_status: str,
+    result: str,
+    saved_path: str | Path | None,
+    auto_image_job_for_prompt_improver: bool,
+    extra: dict[str, Any] | None = None,
+) -> dict[str, str]:
+    return persist_text_result_and_optional_image_job(
+        mode=mode,
+        project=project,
+        language=language,
+        topic=topic,
+        prompt=topic,
+        model=model,
+        engine_status=engine_status,
+        output_text=result,
+        output_text_path=saved_path,
+        auto_image_job_for_prompt_improver=auto_image_job_for_prompt_improver,
+        extra=extra or {},
+    )
+
+
 def render_builder() -> None:
     ensure_text_dirs()
     init_state()
@@ -221,7 +246,7 @@ def render_builder() -> None:
 
     enriched_topic = topic if style == "Default" else f"Style preset: {style}\n\n{topic}"
     auto_save = bool(policy.get("auto_save", False))
-    st.caption("Generate করলে output নিচে দেখা যাবে। Story Writer ও Viral Script Writer auto-save হবে; অন্য mode-এ প্রয়োজন হলে Save চাপুন।")
+    st.caption("Generate করলে output নিচে দেখা যাবে। Story Writer ও Viral Script Writer auto-save হবে; অন্য mode-এ প্রয়োজন হলে Save চাপুন। Prompt Improver image job auto-export করবে।")
 
     if generate:
         if not topic.strip():
@@ -254,13 +279,40 @@ def render_builder() -> None:
         st.session_state.naz_text_last_project = project
         st.session_state.naz_text_last_language = effective_language
         st.session_state.naz_text_last_topic = enriched_topic
+        st.session_state.naz_text_last_model = model
         st.session_state.naz_text_saved_path = ""
+        st.session_state.naz_text_last_metadata_path = ""
+        st.session_state.naz_text_last_job_path = ""
+
+        saved_path: str | Path | None = None
         if auto_save:
             saved_path = save_text_output(effective_mode, project, effective_language, enriched_topic, result, engine_status)
             st.session_state.naz_text_saved_path = str(saved_path)
-            st.session_state.naz_text_pending_success = f"Generated, displayed, and auto-saved for workflow: {saved_path}"
+
+        pipeline_result = persist_generated_text(
+            mode=effective_mode,
+            project=project,
+            language=effective_language,
+            topic=enriched_topic,
+            model=model,
+            engine_status=engine_status,
+            result=result,
+            saved_path=saved_path,
+            auto_image_job_for_prompt_improver=True,
+            extra={"selected_mode": mode, "style": style, "length": length, "template_first": template_first, "auto_save": auto_save},
+        )
+        st.session_state.naz_text_last_metadata_path = pipeline_result.get("metadata_path", "")
+        if pipeline_result.get("image_job_path"):
+            st.session_state.naz_text_last_job_path = pipeline_result["image_job_path"]
+
+        status_parts = ["Generated and displayed.", f"Metadata saved: {st.session_state.naz_text_last_metadata_path}"]
+        if saved_path:
+            status_parts.append(f"Auto-saved for workflow: {saved_path}")
         else:
-            st.session_state.naz_text_pending_success = "Generated. Output is displayed below. Not auto-saved; press Save current output only if needed."
+            status_parts.append("Not text auto-saved; press Save current output only if needed.")
+        if st.session_state.naz_text_last_job_path:
+            status_parts.append(f"Auto image job created: {st.session_state.naz_text_last_job_path}")
+        st.session_state.naz_text_pending_success = "\n".join(status_parts)
         if warnings:
             st.session_state.naz_text_pending_warning = "\n".join(warnings)
         st.rerun()
@@ -273,6 +325,8 @@ def render_builder() -> None:
         st.caption(f"Engine status: {st.session_state.naz_text_engine_status}")
     if st.session_state.naz_text_saved_path:
         st.success(f"Last saved: {st.session_state.naz_text_saved_path}")
+    if st.session_state.naz_text_last_metadata_path:
+        st.info(f"Last metadata: {st.session_state.naz_text_last_metadata_path}")
     if st.session_state.naz_text_last_job_path:
         st.info(f"Last image job: {st.session_state.naz_text_last_job_path}")
 
@@ -280,6 +334,7 @@ def render_builder() -> None:
     save_project = st.session_state.naz_text_last_project or project
     save_language = st.session_state.naz_text_last_language or language
     save_topic = st.session_state.naz_text_last_topic or enriched_topic
+    save_model = st.session_state.naz_text_last_model or model
     current_output = get_current_output()
 
     if save:
@@ -288,7 +343,21 @@ def render_builder() -> None:
         else:
             saved_path = save_text_output(save_mode, save_project, save_language, save_topic, current_output, st.session_state.naz_text_engine_status or "manual_save")
             st.session_state.naz_text_saved_path = str(saved_path)
+            pipeline_result = persist_generated_text(
+                mode=save_mode,
+                project=save_project,
+                language=save_language,
+                topic=save_topic,
+                model=save_model,
+                engine_status=st.session_state.naz_text_engine_status or "manual_save",
+                result=current_output,
+                saved_path=saved_path,
+                auto_image_job_for_prompt_improver=False,
+                extra={"manual_save": True},
+            )
+            st.session_state.naz_text_last_metadata_path = pipeline_result.get("metadata_path", "")
             st.success(f"Saved: {saved_path}")
+            st.info(f"Metadata saved: {st.session_state.naz_text_last_metadata_path}")
 
     if send_image:
         if not current_output.strip():
@@ -296,7 +365,15 @@ def render_builder() -> None:
         else:
             source = Path(st.session_state.naz_text_saved_path) if st.session_state.naz_text_saved_path else None
             image_prompt = current_output if save_mode == "Prompt Improver" else template_prompt(save_topic + "\n" + current_output[:500])
-            job_path = create_image_job(save_project, save_mode, save_topic, image_prompt, source)
+            job_path = create_image_job_from_text(
+                project=save_project,
+                mode=save_mode,
+                topic=save_topic,
+                output_text=image_prompt,
+                source_text_path=source,
+                metadata_path=st.session_state.naz_text_last_metadata_path,
+                auto_export=False,
+            )
             st.session_state.naz_text_last_job_path = str(job_path)
             st.success(f"Image job created: {job_path}")
             st.json(safe_json(job_path, {}))
@@ -319,13 +396,14 @@ def render_library_section(folder: Path, ext: set[str], label: str) -> None:
 
 def render_library() -> None:
     st.markdown("### Text Output Library")
-    selected = render_nav(["Chat outputs", "Text outputs", "Scripts", "Image prompts", "Image jobs"], key="text_library_sub", variant="sub")
+    selected = render_nav(["Chat outputs", "Text outputs", "Scripts", "Image prompts", "Image jobs", "Text metadata"], key="text_library_sub", variant="sub")
     mapping = {
         "Chat outputs": (CHAT_OUTPUTS, TEXT_EXTENSIONS),
         "Text outputs": (TEXT_OUTPUTS, TEXT_EXTENSIONS),
         "Scripts": (SCRIPT_OUTPUTS, TEXT_EXTENSIONS),
         "Image prompts": (IMAGE_PROMPTS, TEXT_EXTENSIONS),
         "Image jobs": (IMAGE_JOBS, JSON_EXTENSIONS),
+        "Text metadata": (TEXT_METADATA, JSON_EXTENSIONS),
     }
     folder, ext = mapping[selected]
     render_library_section(folder, ext, selected)
@@ -335,22 +413,42 @@ def render_status() -> None:
     st.markdown("### Backend Status")
     model = st.selectbox("Check model", AVAILABLE_MODELS, index=0, key="naz_text_check_model")
     names = installed_model_names()
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Phase", "Text merged")
+    persistence_status = ensure_ollama_persistence()
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Phase", "Text pipeline")
     c2.metric("Selected model installed", "yes" if model_installed(model) else "no")
     c3.metric("Installed models", len(names))
-    st.json({"recommended_cpu_model": CPU_RECOMMENDED_MODEL, "selected_model": model, "installed_models": names, "chat_outputs": str(CHAT_OUTPUTS), "text_outputs": str(TEXT_OUTPUTS), "script_outputs": str(SCRIPT_OUTPUTS), "image_prompts": str(IMAGE_PROMPTS), "image_jobs": str(IMAGE_JOBS), "bangla_safe_mode": "available/default on", "mode_policy": MODE_POLICY, "backend_modes": list(MODE_CONFIG.keys()), "casual_chat_detection": "enabled"})
+    c4.metric("Ollama persistence", "ok" if persistence_status.get("ok") else "check")
+    st.json({
+        "recommended_cpu_model": CPU_RECOMMENDED_MODEL,
+        "selected_model": model,
+        "installed_models": names,
+        "chat_outputs": str(CHAT_OUTPUTS),
+        "text_outputs": str(TEXT_OUTPUTS),
+        "script_outputs": str(SCRIPT_OUTPUTS),
+        "image_prompts": str(IMAGE_PROMPTS),
+        "image_jobs": str(IMAGE_JOBS),
+        "text_metadata": str(TEXT_METADATA),
+        "bangla_safe_mode": "available/default on",
+        "mode_policy": MODE_POLICY,
+        "backend_modes": list(MODE_CONFIG.keys()),
+        "casual_chat_detection": "enabled",
+        "prompt_improver_auto_image_job": "enabled",
+        "manual_image_job_schema": "1.20",
+        "ollama_persistence": persistence_status,
+    })
 
 
 def render_text_panel() -> None:
     st.subheader("Text Workstation")
-    st.write("Generate scripts, stories, captions, free writing, chat replies, and image prompts directly from Naz Lab. Save outputs and send prompts into the Image Job Queue.")
-    col_a, col_b, col_c, col_d, col_e = st.columns(5)
+    st.write("Generate scripts, stories, captions, free writing, chat replies, and image prompts directly from Naz Lab. Save outputs, metadata, and image queue jobs from one place.")
+    col_a, col_b, col_c, col_d, col_e, col_f = st.columns(6)
     col_a.metric("Chat outputs", count_files(CHAT_OUTPUTS))
     col_b.metric("Text outputs", count_files(TEXT_OUTPUTS))
     col_c.metric("Script outputs", count_files(SCRIPT_OUTPUTS))
     col_d.metric("Image prompts", count_files(IMAGE_PROMPTS))
     col_e.metric("Image jobs", count_files(IMAGE_JOBS))
+    col_f.metric("Text metadata", count_files(TEXT_METADATA))
     selected = render_nav(["Create", "Library", "Backend Status"], key="text_sub", variant="sub")
     if selected == "Create":
         render_builder()
