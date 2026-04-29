@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import streamlit as st
 
 from voice_workstation.voice_backend import (
     attach_audio_to_voice_job,
     create_voice_job,
+    get_voice_config,
     list_voice_jobs,
     list_voice_outputs,
+    save_voice_config,
     summarize_voice_job,
     voice_runtime_status,
 )
@@ -28,7 +29,32 @@ def render_runtime() -> None:
     c2.metric("Voice outputs", status.get("voice_outputs", 0))
     c3.metric("TTS engine", "connected" if status.get("tts_engine_connected") else "pending")
     st.json(status)
-    st.info("Voice job/output workflow is active. Real TTS engine connection remains pending unless an external backend is provided.")
+    st.info("Voice job/output workflow is active. Real TTS engine is optional and can be connected through the Engine Config tab.")
+
+
+def render_engine_config() -> None:
+    st.markdown("### Engine Config")
+    config = get_voice_config()
+    st.warning("Keep engine_enabled=false until a real TTS engine has been selected and tested. The Drive-backed voice job workflow works without a real engine.")
+    with st.form("voice_engine_config_form"):
+        engine_enabled = st.checkbox("Enable real TTS engine", value=bool(config.get("engine_enabled", False)))
+        engine_name = st.text_input("Engine name", value=str(config.get("engine_name", "pending_selection")))
+        engine_command = st.text_input("Engine command/path", value=str(config.get("engine_command", "")), help="Example later: python /content/tts/run.py --input {input} --output {output}")
+        output_extension = st.selectbox("Output extension", [".wav", ".mp3", ".m4a", ".ogg", ".flac"], index=[".wav", ".mp3", ".m4a", ".ogg", ".flac"].index(str(config.get("output_extension", ".wav"))) if str(config.get("output_extension", ".wav")) in [".wav", ".mp3", ".m4a", ".ogg", ".flac"] else 0)
+        notes = st.text_area("Notes", value=str(config.get("notes", "")), height=100)
+        submitted = st.form_submit_button("Save voice engine config")
+    if submitted:
+        saved = save_voice_config({
+            "engine_enabled": engine_enabled,
+            "engine_name": engine_name.strip() or "pending_selection",
+            "engine_command": engine_command.strip(),
+            "output_extension": output_extension,
+            "notes": notes,
+        })
+        st.success("Voice engine config saved")
+        st.json(saved)
+    else:
+        st.json(config)
 
 
 def render_create_job() -> None:
@@ -96,15 +122,17 @@ def render_attach_audio() -> None:
 
 def render_voice_panel() -> None:
     st.subheader("Voice / Text-to-Voice")
-    st.write("Create text-to-voice jobs, inspect audio outputs, and attach existing audio files from inside Naz Lab. Real TTS engine connection can be added later.")
-    tabs = st.tabs(["Runtime", "Create Job", "Jobs", "Outputs", "Attach Audio"])
+    st.write("Create text-to-voice jobs, inspect audio outputs, attach existing audio files, and configure a future TTS engine from inside Naz Lab.")
+    tabs = st.tabs(["Runtime", "Engine Config", "Create Job", "Jobs", "Outputs", "Attach Audio"])
     with tabs[0]:
         render_runtime()
     with tabs[1]:
-        render_create_job()
+        render_engine_config()
     with tabs[2]:
-        render_jobs()
+        render_create_job()
     with tabs[3]:
-        render_outputs()
+        render_jobs()
     with tabs[4]:
+        render_outputs()
+    with tabs[5]:
         render_attach_audio()
