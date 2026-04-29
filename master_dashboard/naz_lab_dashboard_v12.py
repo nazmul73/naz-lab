@@ -1,8 +1,8 @@
-"""Naz Lab dashboard v1.2.
+"""Naz Lab dashboard v1.3.
 
-Single app command center with Text controls merged. Other workstations remain
-visible and will be merged module-by-module. No tab named Complete Package is
-used.
+Single app command center with Text and Image controls merged. Other
+workstations remain visible and will be merged module-by-module. No tab named
+Complete Package is used.
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from master_dashboard.naz_lab_image_panel import render_image_panel  # noqa: E402
 from master_dashboard.naz_lab_text_panel import render_text_panel  # noqa: E402
 from shared.drive_paths import (  # noqa: E402
     BASE_PATH,
@@ -34,8 +35,8 @@ from shared.drive_paths import (  # noqa: E402
 from shared.job_queue_schema import read_json  # noqa: E402
 from shared.json_utils import update_workstation_status  # noqa: E402
 
-PHASE = "naz-lab-dashboard-1.2"
-STATUS = "text-workstation-merged"
+PHASE = "naz-lab-dashboard-1.3"
+STATUS = "text-and-image-workstations-merged"
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".ogg", ".flac"}
 JSON_EXTENSIONS = {".json"}
@@ -105,10 +106,10 @@ def render_status_strip() -> None:
     cols = st.columns(6)
     cols[0].metric("Text", "MERGED")
     cols[1].metric("Voice", "READY")
-    cols[2].metric("Image", "GPU PASS")
+    cols[2].metric("Image", "MERGED")
     cols[3].metric("Video", "DEFERRED")
     cols[4].metric("Facebook", "GATED")
-    cols[5].metric("System", "v1.2")
+    cols[5].metric("System", "v1.3")
 
 
 def render_home() -> None:
@@ -117,12 +118,12 @@ def render_home() -> None:
     c1, c2, c3 = st.columns(3)
     with c1:
         st.markdown("### Create")
-        st.success("Text Workstation controls are now inside Naz Lab.")
+        st.success("Text Workstation controls are inside Naz Lab.")
         st.write("Use Text to generate scripts, stories, captions, prompts, and image jobs.")
     with c2:
         st.markdown("### Visuals")
-        st.info("Image job queue and gallery are visible. Full GPU controls are next.")
-        st.write("Video remains deferred until the other tools are stable.")
+        st.success("Image Workstation controls are inside Naz Lab.")
+        st.write("Use Image for runtime checks, queue generation, gallery, metadata, and job validation.")
     with c3:
         st.markdown("### Publish")
         st.warning("Facebook posting remains disabled/manual-gated.")
@@ -144,38 +145,6 @@ def render_voice() -> None:
         st.dataframe(rows, use_container_width=True, hide_index=True)
         selected = st.selectbox("Open audio output", [row["Path"] for row in rows])
         st.audio(selected)
-
-
-def render_image() -> None:
-    st.subheader("Image Generation")
-    st.write("Inspect image jobs, generated images, and metadata. Real GPU controls will be merged next.")
-    c1, c2 = st.columns(2)
-    c1.metric("Image jobs", count_files(IMAGE_JOBS))
-    c2.metric("Generated images", len(latest_files(IMAGE_OUTPUTS, IMAGE_EXTENSIONS, limit=500)))
-    tabs = st.tabs(["Jobs", "Gallery", "Metadata"])
-    with tabs[0]:
-        rows = file_rows(IMAGE_JOBS, JSON_EXTENSIONS)
-        if rows:
-            st.dataframe(rows, use_container_width=True, hide_index=True)
-            selected = st.selectbox("Open image job", [row["Path"] for row in rows])
-            st.json(safe_json(Path(selected), {}))
-        else:
-            st.info(f"No image jobs found in {IMAGE_JOBS}")
-    with tabs[1]:
-        images = latest_files(IMAGE_OUTPUTS, IMAGE_EXTENSIONS, limit=12)
-        if images:
-            cols = st.columns(3)
-            for index, image_path in enumerate(images):
-                with cols[index % 3]:
-                    st.image(str(image_path), caption=image_path.name, use_container_width=True)
-        else:
-            st.info(f"No generated images found in {IMAGE_OUTPUTS}")
-    with tabs[2]:
-        rows = file_rows(IMAGE_OUTPUTS, JSON_EXTENSIONS)
-        if rows:
-            st.dataframe(rows, use_container_width=True, hide_index=True)
-            selected = st.selectbox("Open image metadata", [row["Path"] for row in rows])
-            st.json(safe_json(Path(selected), {}))
 
 
 def render_video() -> None:
@@ -246,8 +215,8 @@ def render_runbook() -> None:
     st.subheader("Runbook")
     st.code(
         """Naz Lab is the main command center.
-Text controls are merged into this dashboard.
-Next: merge Image generation controls, then contextual package/review actions.
+Text and Image controls are merged into this dashboard.
+Next: merge contextual package/review actions, then Facebook Post controls.
 No tab named Complete Package.
 Video generation stays deferred.
 Real Facebook posting stays disabled/manual-gated.
@@ -257,6 +226,7 @@ Real Facebook posting stays disabled/manual-gated.
     for rule in [
         "Use the all-in-one launcher as the official entrypoint.",
         "Use Text tab for generation, saving, and Image Job handoff.",
+        "Use Image tab for runtime checks, queue generation, gallery, metadata, and job validation.",
         "Keep phase apps as fallback backends until each module is fully merged.",
         "Keep real Facebook posting disabled/manual-gated.",
         "Keep video generation locked/deferred for now.",
@@ -277,7 +247,7 @@ def main() -> None:
     with tabs[2]:
         render_voice()
     with tabs[3]:
-        render_image()
+        render_image_panel()
     with tabs[4]:
         render_video()
     with tabs[5]:
