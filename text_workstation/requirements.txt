@@ -1,2 +1,5 @@
+# Text Workstation lightweight runtime
 streamlit
 requests
+Pillow
+watchdog
