@@ -7,6 +7,7 @@ from typing import Any
 
 import streamlit as st
 
+from master_dashboard.naz_lab_nav import render_nav
 from shared.drive_paths import IMAGE_JOBS, IMAGE_PROMPTS, SCRIPT_OUTPUTS, TEXT_OUTPUTS
 from shared.job_queue_schema import read_json
 from text_workstation.app_phase110 import (
@@ -157,24 +158,32 @@ def render_builder() -> None:
             st.json(safe_json(job_path, {}))
 
 
+def render_library_section(folder: Path, ext: set[str], label: str) -> None:
+    st.markdown(f"### {label}")
+    rows = file_rows(folder, ext)
+    if rows:
+        st.dataframe(rows, use_container_width=True, hide_index=True)
+        selected = st.selectbox("Preview file", [row["Path"] for row in rows], key=f"text_library_{folder.name}_{label}")
+        selected_path = Path(selected)
+        if selected_path.suffix.lower() == ".json":
+            st.json(safe_json(selected_path, {}))
+        else:
+            st.text_area("Preview", safe_text(selected_path), height=320, key=f"preview_{folder.name}_{label}")
+    else:
+        st.info(f"No files found in {folder}")
+
+
 def render_library() -> None:
     st.markdown("### Text Output Library")
-    tabs = st.tabs(["Text outputs", "Scripts", "Image prompts", "Image jobs"])
-    folders = [TEXT_OUTPUTS, SCRIPT_OUTPUTS, IMAGE_PROMPTS, IMAGE_JOBS]
-    extensions = [TEXT_EXTENSIONS, TEXT_EXTENSIONS, TEXT_EXTENSIONS, JSON_EXTENSIONS]
-    for tab, folder, ext in zip(tabs, folders, extensions):
-        with tab:
-            rows = file_rows(folder, ext)
-            if rows:
-                st.dataframe(rows, use_container_width=True, hide_index=True)
-                selected = st.selectbox("Preview file", [row["Path"] for row in rows], key=f"text_library_{folder.name}")
-                selected_path = Path(selected)
-                if selected_path.suffix.lower() == ".json":
-                    st.json(safe_json(selected_path, {}))
-                else:
-                    st.text_area("Preview", safe_text(selected_path), height=320, key=f"preview_{folder.name}")
-            else:
-                st.info(f"No files found in {folder}")
+    selected = render_nav(["Text outputs", "Scripts", "Image prompts", "Image jobs"], key="text_library_sub", variant="sub")
+    mapping = {
+        "Text outputs": (TEXT_OUTPUTS, TEXT_EXTENSIONS),
+        "Scripts": (SCRIPT_OUTPUTS, TEXT_EXTENSIONS),
+        "Image prompts": (IMAGE_PROMPTS, TEXT_EXTENSIONS),
+        "Image jobs": (IMAGE_JOBS, JSON_EXTENSIONS),
+    }
+    folder, ext = mapping[selected]
+    render_library_section(folder, ext, selected)
 
 
 def render_status() -> None:
@@ -196,10 +205,10 @@ def render_text_panel() -> None:
     col_b.metric("Script outputs", count_files(SCRIPT_OUTPUTS))
     col_c.metric("Image prompts", count_files(IMAGE_PROMPTS))
     col_d.metric("Image jobs", count_files(IMAGE_JOBS))
-    tabs = st.tabs(["Create", "Library", "Backend Status"])
-    with tabs[0]:
+    selected = render_nav(["Create", "Library", "Backend Status"], key="text_sub", variant="sub")
+    if selected == "Create":
         render_builder()
-    with tabs[1]:
+    elif selected == "Library":
         render_library()
-    with tabs[2]:
+    elif selected == "Backend Status":
         render_status()
