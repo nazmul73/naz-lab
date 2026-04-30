@@ -24,14 +24,14 @@ from master_dashboard.naz_lab_home_panel import render_home_panel  # noqa: E402
 from master_dashboard.naz_lab_image_panel import render_image_panel  # noqa: E402
 from master_dashboard.naz_lab_nav import render_nav  # noqa: E402
 from master_dashboard.naz_lab_runbook_panel import render_runbook_panel  # noqa: E402
-from master_dashboard.naz_lab_text_panel import render_text_panel  # noqa: E402
+from master_dashboard.naz_lab_text_runtime_patch import render_text_panel  # noqa: E402
 from master_dashboard.naz_lab_video_panel import render_video_panel  # noqa: E402
 from master_dashboard.naz_lab_voice_panel import render_voice_panel  # noqa: E402
 from shared.drive_paths import WORKSTATION_LINKS_JSON  # noqa: E402
 from shared.json_utils import update_workstation_status  # noqa: E402
 
-PHASE = "naz-lab-dashboard-v12-working-plan-v2.0-compatible"
-STATUS = "completion-v1.1-panel-routing-fixed"
+PHASE = "naz-lab-dashboard-v12-working-plan-v2.0-compatible-text-routing-fix"
+STATUS = "completion-v1.1-text-routing-fixed"
 HEALTH_TAB = "Health / Logs"
 
 
