@@ -1,4 +1,10 @@
-streamlit
+streamlit>=1.30
 requests
 Pillow
 watchdog
+# Optional real image generation backend dependencies.
+# These are required only when running Image > Generate on a GPU runtime.
+diffusers
+torch
+transformers
+accelerate

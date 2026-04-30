@@ -40,6 +40,7 @@ DRIVE_FOLDERS = [
     BASE_DIR / "social_review",
     BASE_DIR / "final_packages",
     BASE_DIR / "final_packages" / "exports",
+    BASE_DIR / "final_packages" / "drafts",
     BASE_DIR / "reference_images",
     BASE_DIR / "config",
     BASE_DIR / "logs",
@@ -48,11 +49,16 @@ DRIVE_FOLDERS = [
 COMPILE_TARGETS = [
     REPO_DIR / "master_dashboard" / "naz_lab_dashboard_v12.py",
     REPO_DIR / "master_dashboard" / "naz_lab_nav.py",
+    REPO_DIR / "master_dashboard" / "naz_lab_home_panel.py",
     REPO_DIR / "master_dashboard" / "naz_lab_text_panel.py",
     REPO_DIR / "master_dashboard" / "naz_lab_voice_panel.py",
     REPO_DIR / "master_dashboard" / "naz_lab_image_panel.py",
     REPO_DIR / "master_dashboard" / "naz_lab_review_panel.py",
     REPO_DIR / "master_dashboard" / "naz_lab_facebook_panel.py",
+    REPO_DIR / "master_dashboard" / "naz_lab_video_panel.py",
+    REPO_DIR / "master_dashboard" / "naz_lab_files_panel.py",
+    REPO_DIR / "master_dashboard" / "naz_lab_health_panel.py",
+    REPO_DIR / "master_dashboard" / "naz_lab_runbook_panel.py",
     REPO_DIR / "master_dashboard" / "app_main.py",
     REPO_DIR / "master_dashboard" / "app_official.py",
     REPO_DIR / "voice_workstation" / "voice_backend.py",
@@ -131,6 +137,7 @@ def print_backend_policy() -> None:
         "generation_backend": "shared.ollama_text_generation.call_ollama",
         "helper_backend": "shared.text_workstation_helpers",
         "legacy_app_phase110_active": False,
+        "image_job_creation": "master_dashboard.naz_lab_image_panel.create_image_job_record",
     })
 
 

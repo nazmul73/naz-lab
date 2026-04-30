@@ -1,7 +1,8 @@
 """Reusable Image Workstation panel for the Naz Lab dashboard.
 
-This panel brings the Phase 3.1 image backend controls into the main Naz Lab
-app so image testing can happen from the command center.
+This panel brings image job creation, queue inspection, runtime status, reference
+image upload, gallery, metadata, and manually controlled real generation into
+the main Naz Lab app.
 """
 
 from __future__ import annotations
@@ -21,11 +22,16 @@ from image_workstation.real_image_backend_phase31 import (
 )
 from master_dashboard.naz_lab_nav import render_nav
 from shared.drive_paths import BASE_PATH, IMAGE_JOBS, IMAGE_OUTPUTS
-from shared.job_queue_schema import read_json, summarize_job_file, validate_job_record
+from shared.job_queue_schema import make_job_id, read_json, summarize_job_file, validate_job_record, write_json
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 JSON_EXTENSIONS = {".json"}
 REFERENCE_IMAGE_DIR = BASE_PATH / "reference_images"
+DEFAULT_NEGATIVE_PROMPT = "no fake logo, no watermark, no distorted face"
+
+
+def now_iso() -> str:
+    return datetime.now().isoformat(timespec="seconds")
 
 
 def now_stamp() -> str:
@@ -74,6 +80,78 @@ def latest_metadata() -> list[Path]:
     return sorted(files, key=lambda p: p.stat().st_mtime, reverse=True)
 
 
+def create_image_job_record(*, project: str, topic: str, positive_prompt: str, negative_prompt: str, format_note: str, style_preset: str, reference_image_path: str = "") -> Path:
+    IMAGE_JOBS.mkdir(parents=True, exist_ok=True)
+    job_id = make_job_id("image")
+    created = now_iso()
+    record = {
+        "job_id": job_id,
+        "schema_version": "working-plan-v2.0",
+        "source_workstation": "image_workstation",
+        "target_workstation": "image_workstation",
+        "source_mode": "Image Create Job",
+        "project": project,
+        "topic": topic,
+        "status": "queued",
+        "review_status": "pending",
+        "created_at": created,
+        "updated_at": created,
+        "input_payload": {
+            "positive_prompt": positive_prompt,
+            "negative_prompt": negative_prompt or DEFAULT_NEGATIVE_PROMPT,
+            "format": format_note,
+            "style_preset": style_preset,
+            "reference_image_path": reference_image_path,
+        },
+        "source_text_path": "",
+        "output_path": "",
+        "errors": [],
+        "history": [
+            {"at": created, "event": "created", "by": "image_workstation"},
+            {"at": created, "event": "queued", "by": "image_workstation"},
+        ],
+    }
+    path = IMAGE_JOBS / f"{job_id}_{now_stamp()}.json"
+    write_json(path, record)
+    return path
+
+
+def render_create_job() -> None:
+    st.markdown("### Create Image Job")
+    st.caption("Prompt থেকে সরাসরি image job তৈরি করুন। Job creation lightweight runtime-এ কাজ করে; real image generation Colab GPU এবং image backend dependency চাইতে পারে।")
+    with st.form("naz_image_create_job_form"):
+        c1, c2 = st.columns(2)
+        with c1:
+            project = st.selectbox("Project", ["General Bangla", "True Noir Tales", "ToolFlow", "Custom"], index=0, key="naz_image_create_project")
+            topic = st.text_input("Topic / title", value="", key="naz_image_create_topic")
+            style_preset = st.selectbox("Style preset", ["Default", "True Noir Tales", "ToolFlow", "Realistic", "Cinematic", "Custom"], index=0, key="naz_image_create_style")
+        with c2:
+            aspect_ratio = st.selectbox("Aspect / format", ["1:1 square", "9:16 vertical", "16:9 widescreen", "4:5 portrait"], index=0, key="naz_image_create_aspect")
+            negative_prompt = st.text_input("Negative prompt", value=DEFAULT_NEGATIVE_PROMPT, key="naz_image_create_negative")
+        positive_prompt = st.text_area("Positive prompt", value="", height=180, placeholder="Write the image prompt here...", key="naz_image_create_prompt")
+        uploaded_ref = st.file_uploader("Reference image optional", type=["png", "jpg", "jpeg", "webp"], key="naz_image_create_reference")
+        submitted = st.form_submit_button("Create Image Job", type="primary")
+
+    if submitted:
+        if not positive_prompt.strip():
+            st.error("Positive prompt is required.")
+            return
+        reference_path = ""
+        if uploaded_ref is not None:
+            reference_path = str(save_uploaded_reference_image(uploaded_ref))
+        job_path = create_image_job_record(
+            project=project,
+            topic=topic.strip() or "Untitled Image Job",
+            positive_prompt=positive_prompt.strip(),
+            negative_prompt=negative_prompt.strip() or DEFAULT_NEGATIVE_PROMPT,
+            format_note=aspect_ratio,
+            style_preset=style_preset,
+            reference_image_path=reference_path,
+        )
+        st.success(f"Image job created: {job_path}")
+        st.json(read_json(job_path, {}))
+
+
 def render_runtime() -> None:
     st.markdown("### Runtime")
     status = runtime_status()
@@ -83,11 +161,12 @@ def render_runtime() -> None:
     c3.metric("Diffusers", "yes" if status.get("diffusers_available") else "no")
     st.json(status)
     if not status.get("cuda_available"):
-        st.warning("CUDA GPU is required for real image generation. Queue, gallery, and metadata views still work on CPU.")
+        st.warning("CUDA GPU is required for real image generation. Queue, gallery, metadata, job creation, and validation still work on CPU.")
 
 
 def render_generate() -> None:
     st.markdown("### Generate from Image Job Queue")
+    st.caption("Use Create Job first if the queue is empty. Real generation is manually controlled and should run on a Colab GPU runtime.")
     jobs = latest_jobs()
     rows = [summarize_job_file(path) for path in jobs]
     processable = [row for row in rows if row.get("Status") in ["created", "queued", "failed"] and row.get("Valid")]
@@ -189,8 +268,10 @@ def render_reference_note() -> None:
 def render_image_panel() -> None:
     st.subheader("Image Generation")
     st.write("Create, inspect, generate, and review image jobs from inside Naz Lab. Heavy image generation requires Colab GPU and remains manually controlled.")
-    selected = render_nav(["Runtime", "Generate", "Gallery", "Metadata", "Job Preview", "Reference"], key="image_sub", variant="sub")
-    if selected == "Runtime":
+    selected = render_nav(["Create Job", "Runtime", "Generate", "Gallery", "Metadata", "Job Preview", "Reference"], key="image_sub", variant="sub")
+    if selected == "Create Job":
+        render_create_job()
+    elif selected == "Runtime":
         render_runtime()
     elif selected == "Generate":
         render_generate()

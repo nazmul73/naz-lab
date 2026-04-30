@@ -1,7 +1,7 @@
 """Naz Lab official app hub.
 
 Working Plan v2.0 dashboard wrapper. This file orchestrates the stable Naz Lab
-same-window tabs without modifying app_official.py or naz_lab_dashboard_v12.py.
+same-window tabs without modifying app_official.py.
 """
 
 from __future__ import annotations
@@ -26,7 +26,8 @@ from master_dashboard.naz_lab_text_panel import render_text_panel  # noqa: E402
 from master_dashboard.naz_lab_video_panel import render_video_panel  # noqa: E402
 from master_dashboard.naz_lab_voice_panel import render_voice_panel  # noqa: E402
 
-PHASE = "working-plan-v2.0-missing-panels"
+PHASE = "working-plan-v2.0-completion-v1.1"
+HEALTH_TAB = "Health / Logs"
 
 
 def render_css() -> None:
@@ -44,7 +45,6 @@ def render_css() -> None:
           }
           .naz-hero h1 { margin: 0; font-size: 2.25rem; letter-spacing: -0.04em; }
           .naz-hero p { margin: 0.45rem 0 0 0; opacity: 0.92; font-size: 1.02rem; }
-          .naz-menu-label { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; margin: 0.35rem 0; color: #2563eb; }
           .naz-main-menu-shell, .naz-sub-menu-shell {
             border: 1px solid #e2e8f0;
             border-radius: 16px;
@@ -64,7 +64,7 @@ def render_header() -> None:
         f"""
         <div class="naz-hero">
           <h1>Naz Lab</h1>
-          <p>Unified command center for Text, Voice, Image, planning-only Video, Facebook handoff, Files, Health/Logs, and Runbook. Phase: {PHASE}</p>
+          <p>Unified command center for Text, Voice, Image, planning-only Video, Facebook handoff, Files, Health / Logs, and Runbook. Phase: {PHASE}</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -75,7 +75,7 @@ def main() -> None:
     st.set_page_config(page_title="Naz Lab", page_icon="🧪", layout="wide")
     render_css()
     render_header()
-    tabs = ["Home", "Text", "Voice", "Image", "Video", "Facebook Post", "Files", "Health/Logs", "Runbook"]
+    tabs = ["Home", "Text", "Voice", "Image", "Video", "Facebook Post", "Files", HEALTH_TAB, "Runbook"]
     selected = render_nav(tabs, key="main", variant="main")
     st.markdown('<div class="naz-section-body">', unsafe_allow_html=True)
     if selected == "Home":
@@ -92,7 +92,7 @@ def main() -> None:
         render_facebook_panel()
     elif selected == "Files":
         render_files_panel()
-    elif selected == "Health/Logs":
+    elif selected == HEALTH_TAB:
         render_health_panel()
     elif selected == "Runbook":
         render_runbook_panel()
