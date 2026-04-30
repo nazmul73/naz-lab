@@ -66,6 +66,7 @@ COMPILE_TARGETS = [
     "master_dashboard/naz_lab_nav.py",
     "master_dashboard/naz_lab_home_panel.py",
     "master_dashboard/naz_lab_text_panel.py",
+    "master_dashboard/naz_lab_text_runtime_patch.py",
     "master_dashboard/naz_lab_voice_panel.py",
     "master_dashboard/naz_lab_image_panel.py",
     "master_dashboard/naz_lab_review_panel.py",
