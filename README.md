@@ -14,6 +14,22 @@ master_dashboard/app_official.py -> master_dashboard/app_main.py -> panel module
 
 `master_dashboard/naz_lab_dashboard_v12.py` remains as a compatibility dashboard hub and now routes to the same canonical panel functions.
 
+## Quick Colab command
+
+In a Google Colab Python cell, run:
+
+```python
+!wget -q -O /content/naz_lab_colab_run.py https://raw.githubusercontent.com/nazmul73/naz-lab/main/launchers/naz_lab_colab_run.py && python /content/naz_lab_colab_run.py
+```
+
+This downloads the permanent launcher, mounts Drive, downloads the latest `main` branch, installs minimal dashboard dependencies, validates key files, starts Streamlit on port `8502`, and opens the Colab proxy window.
+
+For optional real GPU image generation dependencies, run this instead:
+
+```python
+!wget -q -O /content/naz_lab_colab_run.py https://raw.githubusercontent.com/nazmul73/naz-lab/main/launchers/naz_lab_colab_run.py && NAZLAB_INSTALL_IMAGE_DEPS=1 python /content/naz_lab_colab_run.py
+```
+
 ## Official runtime entrypoint
 
 Use one Streamlit process for normal Colab testing and production-style dashboard work:
@@ -32,15 +48,15 @@ The root `app.py` is only a compatibility wrapper that redirects to the official
 
 ## Official Colab launcher
 
-Use the notebook launcher:
+Use either the quick command above or the notebook launcher:
 
 ```text
 launchers/naz_lab_official_colab_launcher.ipynb
 ```
 
-This notebook mounts Google Drive, prepares Naz Lab folders, downloads the latest `main` branch, installs requirements, validates all key dashboard/panel/backend modules, starts the official dashboard on port `8502`, and opens the Colab proxy window.
+The notebook mounts Google Drive, prepares Naz Lab folders, downloads the latest `main` branch, installs requirements, validates all key dashboard/panel/backend modules, starts the official dashboard on port `8502`, and opens the Colab proxy window.
 
-Legacy Markdown launchers may remain as documentation, but the notebook launcher is the recommended Colab path.
+Legacy Markdown launchers may remain as documentation.
 
 ## Current vision
 
@@ -54,8 +70,6 @@ Idea / Topic
 -> Review / approve / export workflow
 -> Facebook handoff
 ```
-
-No standalone tab named Complete Package is used.
 
 ## Global language rule
 
@@ -201,7 +215,7 @@ Image job creation, reference upload, runtime checks, queue generation, gallery,
 
 ### Review / export workflow
 
-Contextual review, approve, and export flow through Home/Review areas. No standalone Complete Package tab.
+Contextual review, approve, and export flow through Home/Review areas.
 
 ### Facebook Post
 
