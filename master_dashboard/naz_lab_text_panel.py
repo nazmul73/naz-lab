@@ -6,8 +6,6 @@ legacy text_workstation.app_phase110 is not imported.
 
 from __future__ import annotations
 
-import json
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -17,11 +15,11 @@ import streamlit as st
 from master_dashboard.naz_lab_nav import render_nav
 from shared.chat_autosave import append_chat_turn, ensure_chat_session
 from shared.drive_paths import CHAT_OUTPUTS, IMAGE_JOBS, PACKAGE_DRAFTS, SCRIPT_OUTPUTS, TEXT_METADATA, TEXT_OUTPUTS, VOICE_JOBS
-from shared.job_queue_schema import make_job_id, read_json, write_json
+from shared.job_queue_schema import read_json
 from shared.model_policy import BLOCKED_TEXT_MODELS, MINIMUM_CPU_TEXT_MODEL, RECOMMENDED_TEXT_MODEL, blocked_model_reason, filter_allowed_text_models, model_policy_status, normalize_text_model
 from shared.ollama_persistence import ensure_ollama_persistence
 from shared.ollama_text_generation import call_ollama, generation_policy_status, user_requested_bangla
-from shared.text_pipeline import create_image_job_from_text, persist_text_result_and_optional_image_job
+from shared.text_pipeline import create_image_job_from_text, create_package_draft, create_voice_job, persist_text_result_and_optional_image_job
 from shared.text_workstation_helpers import MODE_CONFIG, ensure_dirs as ensure_text_dirs, installed_model_names, model_installed, needs_safe_bangla, save_text_output, template_output, template_prompt
 
 TEXT_EXTENSIONS = {".txt", ".md", ".json", ".jsonl"}
@@ -39,10 +37,6 @@ MODE_POLICY: dict[str, dict[str, Any]] = {
     "Prompt Improver": {"internal_mode": "Prompt Improver", "auto_save": False, "template_default": True},
     "YouTube Script": {"internal_mode": "YouTube Script", "auto_save": False, "template_default": True},
 }
-
-
-def now_iso() -> str:
-    return datetime.now().isoformat(timespec="seconds")
 
 
 def count_files(path: Path) -> int:
@@ -64,6 +58,7 @@ def safe_json(path: Path, default: Any) -> Any:
     try:
         return read_json(path, default)
     except Exception as exc:
+        st.error(f"Could not read {path.name}: {exc}")
         return {"error": str(exc), "path": str(path)}
 
 
@@ -188,62 +183,6 @@ def auto_save_chat_turn(*, user_message: str, assistant_message: str, mode: str,
         st.session_state.naz_text_last_chat_autosave_path = session["jsonl_path"]
     except Exception as exc:
         st.session_state.naz_text_pending_warning = f"Chat autosave failed: {exc}"
-
-
-def create_voice_job(*, project: str, mode: str, language: str, topic: str, output_text: str, source_text_path: str = "") -> Path:
-    VOICE_JOBS.mkdir(parents=True, exist_ok=True)
-    job_id = make_job_id("voice")
-    path = VOICE_JOBS / f"{job_id}.json"
-    record = {
-        "job_id": job_id,
-        "schema_version": "working-plan-v2.0",
-        "source_workstation": "text_workstation",
-        "target_workstation": "voice_workstation",
-        "source_mode": mode,
-        "project": project,
-        "language": language,
-        "topic": topic,
-        "status": "queued",
-        "review_status": "pending",
-        "created_at": now_iso(),
-        "updated_at": now_iso(),
-        "source_text_path": source_text_path,
-        "input_payload": {"text": output_text, "voice_preset": "default", "requires_reference_audio_consent": True},
-        "output_path": "",
-        "errors": [],
-        "history": [{"at": now_iso(), "event": "created", "by": "text_workstation"}],
-    }
-    write_json(path, record)
-    return path
-
-
-def create_package_draft(*, project: str, mode: str, language: str, topic: str, output_text: str, source_text_path: str = "", metadata_path: str = "", image_job_path: str = "", voice_job_path: str = "") -> Path:
-    PACKAGE_DRAFTS.mkdir(parents=True, exist_ok=True)
-    draft_id = make_job_id("package")
-    path = PACKAGE_DRAFTS / f"{draft_id}.json"
-    record = {
-        "package_id": draft_id,
-        "schema_version": "working-plan-v2.0",
-        "status": "draft",
-        "review_status": "pending",
-        "created_at": now_iso(),
-        "updated_at": now_iso(),
-        "project": project,
-        "mode": mode,
-        "language": language,
-        "topic": topic,
-        "content": output_text,
-        "source_text_path": source_text_path,
-        "metadata_path": metadata_path,
-        "image_job_path": image_job_path,
-        "voice_job_path": voice_job_path,
-        "manual_gate": True,
-        "facebook_posting_enabled": False,
-        "video_generation_enabled": False,
-        "notes": "Contextual package draft. No Complete Package tab per Working Plan v2.0.",
-    }
-    write_json(path, record)
-    return path
 
 
 def render_builder() -> None:
