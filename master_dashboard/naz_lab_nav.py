@@ -17,12 +17,11 @@ def render_nav(options: list[str], *, key: str, variant: str = "main") -> str:
     if state_key not in st.session_state or st.session_state[state_key] not in options:
         st.session_state[state_key] = options[0]
 
-    label = "MAIN MENU" if variant == "main" else "SECTION MENU"
     css_class = "naz-main-menu-shell" if variant == "main" else "naz-sub-menu-shell"
-    st.markdown(f'<div class="{css_class}"><div class="naz-menu-label">{label}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="{css_class}">', unsafe_allow_html=True)
     try:
         selected = st.segmented_control(
-            label,
+            "Navigation",
             options,
             default=st.session_state[state_key],
             key=f"{state_key}_segmented",
@@ -30,7 +29,7 @@ def render_nav(options: list[str], *, key: str, variant: str = "main") -> str:
         )
     except Exception:
         selected = st.radio(
-            label,
+            "Navigation",
             options,
             index=options.index(st.session_state[state_key]),
             horizontal=True,
