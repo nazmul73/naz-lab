@@ -1,8 +1,10 @@
 """Text Builder persistence and job-queue helpers for Naz Lab.
 
-This module centralizes the two fragile workflow pieces:
+This module centralizes fragile workflow pieces:
 1. Structured metadata sidecar files for every saved/generated text output.
 2. Automatic Image Job JSON export for Prompt Improver outputs.
+3. Text-to-Voice job creation.
+4. Package draft creation.
 
 It is intentionally dependency-light so both the unified dashboard and legacy
 Text Workstation can import it safely in Colab.
@@ -16,9 +18,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from shared.drive_paths import IMAGE_JOBS, TEXT_METADATA
+from shared.drive_paths import IMAGE_JOBS, OUTPUT_LOG_JSON, PACKAGE_DRAFTS, TEXT_METADATA, VOICE_JOBS
 from shared.json_utils import append_output_log, safe_write_json
-from shared.drive_paths import OUTPUT_LOG_JSON
 
 DEFAULT_NEGATIVE_PROMPT = "no fake logo, no watermark, no distorted face"
 
@@ -38,6 +39,8 @@ def safe_slug(text: str) -> str:
 def ensure_text_pipeline_dirs() -> None:
     TEXT_METADATA.mkdir(parents=True, exist_ok=True)
     IMAGE_JOBS.mkdir(parents=True, exist_ok=True)
+    VOICE_JOBS.mkdir(parents=True, exist_ok=True)
+    PACKAGE_DRAFTS.mkdir(parents=True, exist_ok=True)
     OUTPUT_LOG_JSON.parent.mkdir(parents=True, exist_ok=True)
 
 
@@ -147,6 +150,97 @@ def create_image_job_from_text(
         workstation="text_workstation",
         event="image_job_created",
         details={"path": str(path), "job_id": job_id, "auto_export": auto_export, "source_mode": mode},
+    )
+    return path
+
+
+def create_voice_job(
+    *,
+    project: str,
+    mode: str,
+    language: str,
+    topic: str,
+    output_text: str,
+    source_text_path: str | Path | None = None,
+) -> Path:
+    """Create a Voice Workstation-compatible queued JSON job from text output."""
+    ensure_text_pipeline_dirs()
+    job_id = f"voice_{uuid.uuid4().hex[:10]}"
+    path = VOICE_JOBS / f"{job_id}.json"
+    created = now_iso()
+    record = {
+        "job_id": job_id,
+        "schema_version": "working-plan-v2.0",
+        "source_workstation": "text_workstation",
+        "target_workstation": "voice_workstation",
+        "source_mode": mode,
+        "project": project,
+        "language": language,
+        "topic": topic,
+        "status": "queued",
+        "review_status": "pending",
+        "created_at": created,
+        "updated_at": created,
+        "source_text_path": str(source_text_path or ""),
+        "input_payload": {"text": output_text, "voice_preset": "default", "requires_reference_audio_consent": True},
+        "output_path": "",
+        "errors": [],
+        "history": [{"at": created, "event": "created", "by": "text_workstation"}],
+    }
+    safe_write_json(path, record)
+    append_output_log(
+        OUTPUT_LOG_JSON,
+        workstation="text_workstation",
+        event="voice_job_created",
+        details={"path": str(path), "job_id": job_id, "source_mode": mode},
+    )
+    return path
+
+
+def create_package_draft(
+    *,
+    project: str,
+    mode: str,
+    language: str,
+    topic: str,
+    output_text: str,
+    source_text_path: str | Path | None = None,
+    metadata_path: str | Path | None = None,
+    image_job_path: str | Path | None = None,
+    voice_job_path: str | Path | None = None,
+) -> Path:
+    """Create a package draft JSON from the current Text Workstation output."""
+    ensure_text_pipeline_dirs()
+    draft_id = f"package_{uuid.uuid4().hex[:10]}"
+    path = PACKAGE_DRAFTS / f"{draft_id}.json"
+    created = now_iso()
+    record = {
+        "package_id": draft_id,
+        "schema_version": "working-plan-v2.0",
+        "status": "draft",
+        "review_status": "pending",
+        "created_at": created,
+        "updated_at": created,
+        "project": project,
+        "mode": mode,
+        "language": language,
+        "topic": topic,
+        "content": output_text,
+        "source_text_path": str(source_text_path or ""),
+        "metadata_path": str(metadata_path or ""),
+        "image_job_path": str(image_job_path or ""),
+        "voice_job_path": str(voice_job_path or ""),
+        "manual_gate": True,
+        "facebook_posting_enabled": False,
+        "video_generation_enabled": False,
+        "notes": "Contextual package draft created from Text Workstation.",
+    }
+    safe_write_json(path, record)
+    append_output_log(
+        OUTPUT_LOG_JSON,
+        workstation="text_workstation",
+        event="package_draft_created",
+        details={"path": str(path), "package_id": draft_id, "source_mode": mode},
     )
     return path
 
