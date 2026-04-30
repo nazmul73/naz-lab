@@ -51,6 +51,7 @@ COMPILE_TARGETS = [
     REPO_DIR / "master_dashboard" / "naz_lab_nav.py",
     REPO_DIR / "master_dashboard" / "naz_lab_home_panel.py",
     REPO_DIR / "master_dashboard" / "naz_lab_text_panel.py",
+    REPO_DIR / "master_dashboard" / "naz_lab_text_runtime_patch.py",
     REPO_DIR / "master_dashboard" / "naz_lab_voice_panel.py",
     REPO_DIR / "master_dashboard" / "naz_lab_image_panel.py",
     REPO_DIR / "master_dashboard" / "naz_lab_review_panel.py",
@@ -136,6 +137,7 @@ def print_backend_policy() -> None:
     print("BACKEND POLICY:", {
         "generation_backend": "shared.ollama_text_generation.call_ollama",
         "helper_backend": "shared.text_workstation_helpers",
+        "text_runtime_patch": "master_dashboard.naz_lab_text_runtime_patch",
         "legacy_app_phase110_active": False,
         "image_job_creation": "master_dashboard.naz_lab_image_panel.create_image_job_record",
     })
