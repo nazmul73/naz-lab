@@ -22,11 +22,11 @@ from master_dashboard.naz_lab_home_panel import render_home_panel  # noqa: E402
 from master_dashboard.naz_lab_image_panel import render_image_panel  # noqa: E402
 from master_dashboard.naz_lab_nav import render_nav  # noqa: E402
 from master_dashboard.naz_lab_runbook_panel import render_runbook_panel  # noqa: E402
-from master_dashboard.naz_lab_text_panel import render_text_panel  # noqa: E402
+from master_dashboard.naz_lab_text_runtime_patch import render_text_panel  # noqa: E402
 from master_dashboard.naz_lab_video_panel import render_video_panel  # noqa: E402
 from master_dashboard.naz_lab_voice_panel import render_voice_panel  # noqa: E402
 
-PHASE = "working-plan-v2.0-completion-v1.1"
+PHASE = "working-plan-v2.0-completion-v1.1-text-routing-fix"
 HEALTH_TAB = "Health / Logs"
 
 
