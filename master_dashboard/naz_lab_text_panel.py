@@ -16,7 +16,7 @@ import streamlit as st
 
 from master_dashboard.naz_lab_nav import render_nav
 from shared.chat_autosave import append_chat_turn, ensure_chat_session
-from shared.drive_paths import CHAT_OUTPUTS, IMAGE_JOBS, SCRIPT_OUTPUTS, TEXT_METADATA, TEXT_OUTPUTS, VOICE_JOBS
+from shared.drive_paths import CHAT_OUTPUTS, IMAGE_JOBS, PACKAGE_DRAFTS, SCRIPT_OUTPUTS, TEXT_METADATA, TEXT_OUTPUTS, VOICE_JOBS
 from shared.job_queue_schema import make_job_id, read_json, write_json
 from shared.model_policy import BLOCKED_TEXT_MODELS, MINIMUM_CPU_TEXT_MODEL, RECOMMENDED_TEXT_MODEL, blocked_model_reason, filter_allowed_text_models, model_policy_status, normalize_text_model
 from shared.ollama_persistence import ensure_ollama_persistence
@@ -29,7 +29,6 @@ JSON_EXTENSIONS = {".json", ".jsonl"}
 OUTPUT_AREA_BASE_KEY = "naz_text_output_area"
 TEMPLATE_CHECKBOX_KEY = "naz_text_template_first"
 AVAILABLE_MODELS = filter_allowed_text_models()
-PACKAGE_DRAFTS = Path("/content/drive/MyDrive/NazLab/final_packages/drafts")
 
 MODE_POLICY: dict[str, dict[str, Any]] = {
     "General Chat": {"internal_mode": "General Chat", "auto_save": False, "template_default": False},
@@ -276,13 +275,12 @@ def render_builder() -> None:
     style = st.selectbox("Style preset", ["Default", "Simple Bangla", "True Noir Tales", "ToolFlow", "Custom"], index=0, key="naz_text_style")
     template_first = st.checkbox("Template-first / structured fallback", key=TEMPLATE_CHECKBOX_KEY, help="General Chat/Free Writer default OFF. Structured modes default ON.")
 
-    b1, b2, b3 = st.columns(3)
+    b1, b2, b3, b4, b5 = st.columns(5)
     generate = b1.button("Generate", type="primary", use_container_width=True, key="naz_text_generate")
-    save = b2.button("Save current output", use_container_width=True, key="naz_text_save")
-    send_image = b3.button("Send to Image Job", use_container_width=True, key="naz_text_send_image")
-    v1, v2 = st.columns(2)
-    send_voice = v1.button("Send to Voice Job", use_container_width=True, key="naz_text_send_voice")
-    package_draft = v2.button("Create Package Draft", use_container_width=True, key="naz_text_package_draft")
+    save = b2.button("Save", use_container_width=True, key="naz_text_save")
+    send_image = b3.button("🖼️ Image", use_container_width=True, key="naz_text_send_image")
+    send_voice = b4.button("🎙️ Voice", use_container_width=True, key="naz_text_send_voice")
+    package_draft = b5.button("📦 Package", use_container_width=True, key="naz_text_package_draft")
 
     enriched_topic = topic if style == "Default" else f"Style preset: {style}\n\n{topic}"
     st.caption("Prompt Improver auto-exports image jobs. Text metadata is saved for every generation. Legacy app_phase110 is not used.")
